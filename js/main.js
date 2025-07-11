@@ -1,7 +1,11 @@
+// js/main.js
+
 // Application Entry Point
 import { initializeCharts, changeProductivityView } from './charts.js';
 import { 
     initializePlanner, 
+    cleanupPlanner, // Import the new cleanup function
+    deleteAgent, // Import delete function for agent removal
     applyPresetRange, 
     setRangeType, 
     toggleMonth, 
@@ -14,13 +18,9 @@ import {
     toggleCompactView, 
     resetFilters, 
     applyFilters, 
-    savePlannerChanges, 
     exportToCSV,
     renderPlannerTable,
-    toggleCalendar,
-    navigateCalendar,
-    setToday,
-    closeCalendar
+    clearSelection // Import the clearSelection function
 } from './planner.js';
 import { 
     initializeThemeAndLanguage, 
@@ -43,28 +43,26 @@ const appState = {
     performanceStartTime: Date.now()
 };
 
-// Main initialization function
-function initializeApp() {
+// Main initialization function (Modified)
+async function initializeApp() {
     if (appState.initialized) return;
     
     console.log('Initializing Sherpa Application...');
     
+    // REMOVED: await uploadAllAgents(); // This is no longer needed.
+
     try {
         // Initialize all modules
         initializeThemeAndLanguage();
         initializeCharts();
-        initializePlanner();
         
-        // Set up event listeners
+        // This now sets up the real-time listener but doesn't block.
+        // The UI will render once data is received from Firestore.
+        initializePlanner(); 
+        
         setupEventListeners();
-        
-        // Initialize UI state
         initializeUI();
-        
-        // Setup global listeners
         setupGlobalEventListeners();
-        
-        // Monitor performance
         monitorPerformance();
         
         appState.initialized = true;
@@ -104,13 +102,8 @@ function setupEventListeners() {
         item.addEventListener('click', (e) => {
             const sectionId = item.dataset.tooltip;
             if (sectionId) {
-                showSection(sectionId);
-                
-                // Update active nav item
-                document.querySelectorAll('.nav-item').forEach(navItem => {
-                    navItem.classList.remove('active');
-                });
-                item.classList.add('active');
+                // Pass the sectionId and the clicked element itself (item)
+                showSection(sectionId, item); 
             }
         });
     });
@@ -162,162 +155,123 @@ function setupEventListeners() {
         presetRange.addEventListener('change', applyPresetRange);
     }
     
-    // Calendar event handlers
-    document.querySelectorAll('input[onclick*="toggleCalendar"]').forEach(input => {
-        input.addEventListener('click', (e) => {
-            const calendarType = input.getAttribute('onclick').includes('start') ? 'start' : 'end';
-            toggleCalendar(calendarType);
+    // Month grid handlers
+    const monthGrid = document.getElementById('monthGrid');
+    if (monthGrid) {
+        monthGrid.addEventListener('click', (e) => {
+            const monthButton = e.target.closest('.month-button');
+            if (monthButton) {
+                const monthKey = monthButton.dataset.month;
+                if (monthKey) {
+                    toggleMonth(monthKey);
+                }
+            }
         });
-    });
-    
-    document.querySelectorAll('button[onclick*="toggleCalendar"]').forEach(button => {
-        button.addEventListener('click', (e) => {
-            const calendarType = button.getAttribute('onclick').includes('start') ? 'start' : 'end';
-            toggleCalendar(calendarType);
-        });
-    });
-    
-    document.querySelectorAll('button[onclick*="navigateCalendar"]').forEach(button => {
-        button.addEventListener('click', (e) => {
-            const onclick = button.getAttribute('onclick');
-            const calendarType = onclick.includes('start') ? 'start' : 'end';
-            const direction = onclick.includes('prev') ? 'prev' : 'next';
-            navigateCalendar(calendarType, direction);
-        });
-    });
-    
-    document.querySelectorAll('button[onclick*="setToday"]').forEach(button => {
-        button.addEventListener('click', (e) => {
-            const calendarType = button.getAttribute('onclick').includes('start') ? 'start' : 'end';
-            setToday(calendarType);
-        });
-    });
-    
-    document.querySelectorAll('button[onclick*="closeCalendar"]').forEach(button => {
-        button.addEventListener('click', (e) => {
-            const calendarType = button.getAttribute('onclick').includes('start') ? 'start' : 'end';
-            closeCalendar(calendarType);
-        });
-    });
-    
-    // Month selection buttons
-    const selectAllMonthsBtn = document.querySelector('button[onclick*="selectAllMonths"]');
-    if (selectAllMonthsBtn) {
-        selectAllMonthsBtn.addEventListener('click', selectAllMonths);
     }
     
-    const clearMonthSelectionBtn = document.querySelector('button[onclick*="clearMonthSelection"]');
-    if (clearMonthSelectionBtn) {
-        clearMonthSelectionBtn.addEventListener('click', clearMonthSelection);
-    }
-    
+    // Agent Search
     const agentSearch = document.getElementById('agentSearch');
     if (agentSearch) {
-        agentSearch.addEventListener('keyup', filterAgents);
+        agentSearch.addEventListener('input', filterAgents);
         agentSearch.addEventListener('focus', showAgentSuggestions);
-        agentSearch.addEventListener('blur', (e) => {
-            // Delay hiding suggestions to allow clicks
-            setTimeout(() => hideAgentSuggestions(e), 200);
-        });
+        agentSearch.addEventListener('blur', hideAgentSuggestions);
     }
     
-    // Checkboxes
-    const showWeekTotals = document.getElementById('showWeekTotals');
-    if (showWeekTotals) {
-        showWeekTotals.addEventListener('change', renderPlannerTable);
-    }
-    
-    const highlightWeekends = document.getElementById('highlightWeekends');
-    if (highlightWeekends) {
-        highlightWeekends.addEventListener('change', renderPlannerTable);
-    }
-    
+    // View Options
     const compactView = document.getElementById('compactView');
     if (compactView) {
         compactView.addEventListener('change', toggleCompactView);
     }
     
-    // Filter buttons
-    const resetFiltersBtn = document.querySelector('button[onclick*="resetFilters"]');
+    // Filter Actions
+    const resetFiltersBtn = document.getElementById('resetFiltersBtn');
     if (resetFiltersBtn) {
         resetFiltersBtn.addEventListener('click', resetFilters);
     }
     
-    const applyFiltersBtn = document.querySelector('button[onclick*="applyFilters"]');
+    const applyFiltersBtn = document.getElementById('applyFiltersBtn');
     if (applyFiltersBtn) {
         applyFiltersBtn.addEventListener('click', applyFilters);
     }
-
-    // Planner Action Buttons
-    const exportBtn = document.querySelector('button[onclick*="exportToCSV"]');
-    if (exportBtn) {
-        exportBtn.addEventListener('click', exportToCSV);
-    }
     
-    const saveBtn = document.querySelector('button[onclick*="savePlannerChanges"]');
-    if (saveBtn) {
-        saveBtn.addEventListener('click', savePlannerChanges);
-    }
-
-    // Productivity chart buttons
-    document.querySelectorAll('button[onclick*="changeProductivityView"]').forEach(button => {
-        button.addEventListener('click', (e) => {
-            const onclick = button.getAttribute('onclick');
-            const match = onclick.match(/changeProductivityView\('([^']+)'\)/);
-            if (match) {
-                changeProductivityView(match[1]);
-            }
-        });
-    });
-
-    // Edit Modal
+    // Modal Event Listeners
     const editModal = document.getElementById('editModal');
-    const editModalClose = document.querySelector('.edit-modal-close');
-    
-    if (editModalClose) {
-        editModalClose.addEventListener('click', closeEditModal);
+    if (editModal) {
+        // Edit Modal Open (from selection counter)
+        const editSelectionBtn = document.getElementById('editSelectionBtn');
+        if (editSelectionBtn) {
+            editSelectionBtn.addEventListener('click', openEditModal);
+        }
+        
+        // Cancel Selection Button
+        const cancelSelectionBtn = document.getElementById('cancelSelectionBtn');
+        if (cancelSelectionBtn) {
+            cancelSelectionBtn.addEventListener('click', clearSelection);
+        }
+        
+        // Edit Modal Close
+        const closeBtn = document.querySelector('.edit-modal-close');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', closeEditModal);
+        }
+        
+        // Edit Options
+        document.querySelectorAll('.edit-option').forEach(option => {
+            option.addEventListener('click', () => {
+                const type = option.dataset.type;
+                if (type) {
+                    selectEditType(type);
+                }
+            });
+        });
+        
+        // Save Changes
+        const saveButton = document.getElementById('saveButton');
+        if (saveButton) {
+            saveButton.addEventListener('click', saveModalChanges);
+        }
+        
+        // Cancel Button
+        const cancelBtn = document.querySelector('.edit-actions .btn-secondary');
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', closeEditModal);
+        }
+        
+        // Team allocation inputs
+        document.addEventListener('input', (e) => {
+            if (e.target.classList.contains('team-input')) {
+                updateTotalHours();
+            }
+        });
     }
     
-    // Edit options
-    document.querySelectorAll('.edit-option').forEach(option => {
-        option.addEventListener('click', () => {
-            const editType = option.dataset.type;
-            if (editType) {
-                selectEditType(editType);
-            }
+    // Productivity Chart Controls
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const view = btn.textContent.toLowerCase();
+            changeProductivityView(view);
         });
     });
     
-    // Save button in modal
-    const saveButton = document.getElementById('saveButton');
-    if (saveButton) {
-        saveButton.addEventListener('click', saveModalChanges);
+    // Month Selection (Multi-month view)
+    const selectAllBtn = document.querySelector('.month-actions .btn-ghost:first-child');
+    if (selectAllBtn) {
+        selectAllBtn.addEventListener('click', selectAllMonths);
     }
     
-    // Cancel button in modal
-    const cancelButton = document.querySelector('.edit-actions .btn-secondary');
-    if (cancelButton) {
-        cancelButton.addEventListener('click', closeEditModal);
+    const clearSelectionBtn = document.querySelector('.month-actions .btn-ghost:last-child');
+    if (clearSelectionBtn) {
+        clearSelectionBtn.addEventListener('click', clearMonthSelection);
     }
     
-    // Selection counter edit button
-    const selectionCounterEditBtn = document.querySelector('#selectionCounter button');
-    if (selectionCounterEditBtn) {
-        selectionCounterEditBtn.addEventListener('click', openEditModal);
-    }
-    
-    // Team allocation inputs (will be set up when modal is opened)
-    document.addEventListener('input', (e) => {
-        if (e.target.matches('#teamAllocation input[type="number"]')) {
-            updateTotalHours();
-        }
-    });
-    
-    // Click outside modal to close
-    if (editModal) {
-        editModal.addEventListener('click', (e) => {
-            if (e.target === editModal) {
-                closeEditModal();
+    // Agent Delete Button Listener (using event delegation)
+    const plannerBody = document.getElementById('plannerTableBody');
+    if (plannerBody) {
+        plannerBody.addEventListener('click', (e) => {
+            const deleteBtn = e.target.closest('.delete-agent-btn');
+            if (deleteBtn) {
+                const agentId = deleteBtn.dataset.agentId;
+                deleteAgent(agentId);
             }
         });
     }
@@ -328,56 +282,52 @@ function setupGlobalEventListeners() {
     // Window resize handler
     window.addEventListener('resize', handleWindowResize);
     
-    // Online/offline status
+    // Online/offline detection
     window.addEventListener('online', handleOnlineStatus);
     window.addEventListener('offline', handleOfflineStatus);
     
-    // Page visibility change
+    // Visibility change (tab switching)
     document.addEventListener('visibilitychange', handleVisibilityChange);
     
-    // Before unload warning
+    // Before unload (warn about unsaved changes)
     window.addEventListener('beforeunload', handleBeforeUnload);
     
-    // Global click handler for modals and dropdowns
-    document.addEventListener('click', (e) => {
-        // Close language menu when clicking outside
-        if (!e.target.closest('.language-selector')) {
-            const menu = document.getElementById('languageMenu');
-            const dropdown = document.querySelector('.language-dropdown');
-            if (menu) menu.classList.remove('open');
-            if (dropdown) dropdown.classList.remove('open');
-        }
-        
-        // Close edit modal when clicking outside
-        if (e.target.classList.contains('edit-modal')) {
-            closeEditModal();
-        }
-        
-        // Close calendar widgets when clicking outside
-        if (!e.target.closest('.date-input-with-calendar')) {
-            document.querySelectorAll('.calendar-widget').forEach(cal => {
-                cal.classList.remove('active');
-            });
-        }
-    });
-    
-    // Global keyboard shortcuts
+    // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {
         // Escape key to close modals
         if (e.key === 'Escape') {
-            closeEditModal();
-            
-            // Close language menu
-            const menu = document.getElementById('languageMenu');
-            const dropdown = document.querySelector('.language-dropdown');
-            if (menu) menu.classList.remove('open');
-            if (dropdown) dropdown.classList.remove('open');
+            const activeModal = document.querySelector('.edit-modal.active');
+            if (activeModal) {
+                closeEditModal();
+            }
         }
         
         // Ctrl+S to save
         if (e.ctrlKey && e.key === 's') {
             e.preventDefault();
-            savePlannerChanges();
+            // savePlannerChanges(); // Function removed - changes are saved via edit modal
+        }
+        
+        // Ctrl+E to export
+        if (e.ctrlKey && e.key === 'e') {
+            e.preventDefault();
+            exportToCSV();
+        }
+    });
+    
+    // Click outside to close dropdowns
+    document.addEventListener('click', (e) => {
+        // Close language menu
+        if (!e.target.closest('.language-selector')) {
+            const langMenu = document.getElementById('languageMenu');
+            if (langMenu) {
+                langMenu.classList.remove('open');
+            }
+        }
+        
+        // Close agent suggestions
+        if (!e.target.closest('.agent-search-container')) {
+            hideAgentSuggestions();
         }
     });
 }
@@ -388,97 +338,102 @@ function handleWindowResize() {
     updateResponsiveElements();
     
     // Recalculate chart dimensions if needed
-    if (window.Chart) {
-        Object.values(window.Chart.instances).forEach(chart => {
-            if (chart && chart.resize) {
-                chart.resize();
-            }
+    if (typeof window.Chart !== 'undefined') {
+        Object.values(Chart.instances).forEach(chart => {
+            if (chart) chart.resize();
         });
     }
 }
 
 function handleOnlineStatus() {
     console.log('Application is online');
-    // Update UI to show online status
+    // Could show a notification or update UI
 }
 
 function handleOfflineStatus() {
     console.log('Application is offline');
-    showErrorMessage('You are currently offline. Some features may not work properly.');
+    // Could show offline indicator
 }
 
 function handleVisibilityChange() {
-    if (document.visibilityState === 'visible') {
-        // Page became visible - refresh data if needed
-        console.log('Page became visible');
+    if (document.hidden) {
+        console.log('Application is hidden (tab switched)');
+        // Could pause certain operations
     } else {
-        // Page became hidden - pause animations, etc.
-        console.log('Page became hidden');
+        console.log('Application is visible');
+        // Could resume operations or refresh data
     }
 }
 
 function handleBeforeUnload(event) {
-    // Check if there are unsaved changes
+    // Only show warning if there are unsaved changes
     if (hasUnsavedChanges()) {
         event.preventDefault();
-        event.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
-        return event.returnValue;
+        event.returnValue = '';
+        return '';
     }
 }
 
 function updateResponsiveElements() {
-    // Update table layouts for different screen sizes
-    const tables = document.querySelectorAll('.planner-table');
-    tables.forEach(table => {
-        if (window.innerWidth < 768) {
-            table.classList.add('mobile-view');
-        } else {
-            table.classList.remove('mobile-view');
-        }
-    });
+    // Update sidebar state based on window size
+    const sidebar = document.getElementById('sidebar');
+    if (window.innerWidth < 768) {
+        sidebar.classList.add('collapsed');
+    } else {
+        sidebar.classList.remove('collapsed');
+    }
 }
 
 function hasUnsavedChanges() {
-    // Check if there are any unsaved changes in the planner
-    return false; // Placeholder - implement actual check
+    // Check if there are any unsaved changes
+    return false; // Placeholder - implement actual logic
 }
 
 function showErrorMessage(message) {
+    // Create error notification
     const errorDiv = document.createElement('div');
-    errorDiv.className = 'error-message temporary-message';
-    errorDiv.textContent = message;
-    errorDiv.style.cssText = `
-        position: fixed;
-        top: 2rem;
-        right: 2rem;
-        background: rgba(244, 67, 54, 0.9);
-        color: white;
-        padding: 1rem 2rem;
-        border-radius: 8px;
-        font-weight: 600;
-        z-index: 2000;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    errorDiv.className = 'error-message';
+    errorDiv.innerHTML = `
+        <div class="error-content">
+            <svg class="error-icon" viewBox="0 0 24 24" width="24" height="24">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+            </svg>
+            <span>${message}</span>
+            <button class="error-close">&times;</button>
+        </div>
     `;
     
     document.body.appendChild(errorDiv);
     
+    // Auto-remove after 5 seconds
     setTimeout(() => {
-        errorDiv.remove();
+        if (errorDiv.parentNode) {
+            errorDiv.parentNode.removeChild(errorDiv);
+        }
     }, 5000);
+    
+    // Manual close
+    errorDiv.querySelector('.error-close').addEventListener('click', () => {
+        if (errorDiv.parentNode) {
+            errorDiv.parentNode.removeChild(errorDiv);
+        }
+    });
 }
 
+// Performance monitoring
 function monitorPerformance() {
     const loadTime = Date.now() - appState.performanceStartTime;
-    console.log(`Application loaded in ${loadTime}ms`);
+    console.log(`%cApplication loaded in ${loadTime}ms`, 'color: #4caf50; font-weight: bold;');
     
-    // Monitor memory usage if available
+    // Monitor memory usage (if available)
     if (performance.memory) {
-        console.log('Memory usage:', {
-            used: Math.round(performance.memory.usedJSHeapSize / 1024 / 1024) + 'MB',
-            total: Math.round(performance.memory.totalJSHeapSize / 1024 / 1024) + 'MB'
-        });
+        const memory = performance.memory;
+        console.log(`Memory usage: ${(memory.usedJSHeapSize / 1024 / 1024).toFixed(2)} MB`);
     }
 }
+
+// Add a cleanup function for when the window is closed
+window.addEventListener('beforeunload', cleanupPlanner);
 
 // Initialize the application when DOM is ready
 if (document.readyState === 'loading') {

@@ -10,6 +10,11 @@
         font-size: 0.55rem;
         padding: 0.4rem 0.25rem;
     }
+    
+    .planner-cell.multi-team {
+        font-size: 0.55rem;
+        padding: 0.25rem 0.1rem;
+    }
 }
 
 /* Responsive */
@@ -70,6 +75,12 @@
         font-size: 0.5rem;
         width: 15%;
         padding: 0.25rem 0.2rem;
+    }
+    
+    .planner-cell.multi-team {
+        font-size: 0.5rem;
+        padding: 0.2rem 0.05rem;
+        line-height: 1.0;
     }
 
     /* Auto-collapse sidebar on tablet */
@@ -148,6 +159,12 @@
         width: 18%;
         padding: 0.2rem 0.2rem;
     }
+    
+    .planner-cell.multi-team {
+        font-size: 0.45rem;
+        padding: 0.15rem 0.05rem;
+        line-height: 0.95;
+    }
 }
 
 @media (max-width: 480px) {
@@ -185,6 +202,12 @@
         font-size: 0.4rem;
         width: 20%;
         padding: 0.2rem 0.2rem;
+    }
+    
+    .planner-cell.multi-team {
+        font-size: 0.4rem;
+        padding: 0.1rem 0.05rem;
+        line-height: 0.9;
     }
 }
 

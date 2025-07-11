@@ -1,5 +1,9 @@
+// js/ui.js
+
 // === THEME AND LANGUAGE FUNCTIONALITY ===
 import { languageConfig, translations } from './config.js';
+// Import the new Firestore functions from planner.js
+import { addAgent, applyChangesToSelectedCells } from './planner.js';
 
 // Theme and language state
 let currentTheme = localStorage.getItem('theme') || 'dark';
@@ -14,6 +18,9 @@ export function initializeThemeAndLanguage() {
     // Set language
     updateLanguageDisplay(currentLanguage);
     translatePage(currentLanguage);
+    
+    // Initialize the new user form
+    initializeNewUserForm();
 }
 
 // Theme Management
@@ -101,12 +108,14 @@ export function toggleSidebar() {
 }
 
 // Navigation
-export function showSection(sectionId) {
+export function showSection(sectionId, clickedElement) {
     // Update active nav
     document.querySelectorAll('.nav-item').forEach(item => {
         item.classList.remove('active');
     });
-    event.currentTarget.classList.add('active');
+    if (clickedElement) {
+        clickedElement.classList.add('active');
+    }
     
     // Show section
     document.querySelectorAll('.section').forEach(section => {
@@ -150,21 +159,17 @@ export function toggleDay(selectedDay) {
     }, 200);
 }
 
-// Modal Functions
+// --- Modal Functions (Refactored for Firestore) ---
+
 export function openEditModal() {
-    console.log('openEditModal called');
     const selectedCells = document.querySelectorAll('.day-cell.selected');
     if (selectedCells.length === 0) {
-        console.log('No cells selected, showing alert');
         alert('Selectează cel puțin o celulă pentru editare.');
         return;
     }
-    
-    console.log('Opening edit modal...');
     populateSelectionInfo();
     document.getElementById('editModal').classList.add('active');
     resetEditModal();
-    console.log('Edit modal opened successfully');
 }
 
 export function closeEditModal() {
@@ -201,20 +206,25 @@ export function populateSelectionInfo() {
 }
 
 export function selectEditType(type) {
-    // Update UI
+    // Clear previous selection
     document.querySelectorAll('.edit-option').forEach(option => {
         option.classList.remove('selected');
     });
-    document.querySelector(`[data-type="${type}"]`).classList.add('selected');
     
-    // Hide all edit sections
+    // Select current option
+    const selectedOption = document.querySelector(`.edit-option[data-type="${type}"]`);
+    if (selectedOption) {
+        selectedOption.classList.add('selected');
+    }
+    
+    // Hide all sections first
     const workingSection = document.getElementById('workingHoursSection');
     const dayOffSection = document.getElementById('dayOffSection');
     
     if (workingSection) workingSection.style.display = 'none';
     if (dayOffSection) dayOffSection.style.display = 'none';
     
-    // Show relevant section
+    // Show appropriate section
     if (type === 'working') {
         showWorkingHoursSection();
     } else if (type === 'dayoff') {
@@ -223,68 +233,69 @@ export function selectEditType(type) {
 }
 
 export function showWorkingHoursSection() {
-    const section = document.getElementById('workingHoursSection');
+    const workingSection = document.getElementById('workingHoursSection');
     const teamAllocation = document.getElementById('teamAllocation');
     
-    if (!section || !teamAllocation) return;
+    if (!workingSection || !teamAllocation) return;
     
-    // Get all available teams
-    const allTeams = ['RO', 'HU', 'IT', 'NL', 'DE'];
+    // Show the section
+    workingSection.style.display = 'block';
     
-    teamAllocation.innerHTML = allTeams.map(team => `
+    // Create team input fields
+    const teams = ['RO', 'HU', 'IT', 'NL', 'DE']; // Common teams
+    teamAllocation.innerHTML = teams.map(team => `
         <div class="team-input-group">
-            <label class="team-input-label">${team}</label>
+            <label for="${team.toLowerCase()}Hours">${team} zooplus</label>
             <input type="number" 
+                   id="${team.toLowerCase()}Hours" 
                    class="team-input" 
                    data-team="${team}" 
                    min="0" 
                    max="12" 
-                   value="0" 
-                   onchange="updateTotalHours()">
+                   value="0">
         </div>
     `).join('');
     
-    section.style.display = 'block';
+    // Update total hours display
     updateTotalHours();
 }
 
 export function updateTotalHours() {
     const teamInputs = document.querySelectorAll('.team-input');
-    let total = 0;
+    let totalHours = 0;
     
     teamInputs.forEach(input => {
-        total += parseInt(input.value) || 0;
+        const hours = parseInt(input.value) || 0;
+        totalHours += hours;
     });
     
     const totalDisplay = document.getElementById('totalHoursDisplay');
     if (totalDisplay) {
-        totalDisplay.textContent = `Total: ${total} ore`;
-    }
-    
-    // Validate total hours (should not exceed 12)
-    const saveButton = document.getElementById('saveButton');
-    if (total > 12) {
-        if (saveButton) saveButton.disabled = true;
-        showEditMessage('Totalul orelor nu poate depăși 12 ore pe zi.', 'error');
-    } else {
-        if (saveButton) saveButton.disabled = false;
-        hideEditMessage();
+        totalDisplay.textContent = `Total: ${totalHours} ore`;
+        
+        // Add warning if over 12 hours
+        if (totalHours > 12) {
+            totalDisplay.style.color = 'var(--error)';
+            totalDisplay.textContent += ' (Depășește limita de 12 ore)';
+        } else {
+            totalDisplay.style.color = 'var(--text-primary)';
+        }
     }
 }
 
 export function showEditMessage(message, type) {
-    const messageDiv = document.getElementById('editMessage');
-    if (messageDiv) {
-        messageDiv.className = type === 'error' ? 'error-message' : 'success-message';
-        messageDiv.textContent = message;
-        messageDiv.style.display = 'block';
+    const messageElement = document.getElementById('editMessage');
+    if (messageElement) {
+        messageElement.textContent = message;
+        messageElement.className = `edit-message ${type}`;
+        messageElement.style.display = 'block';
     }
 }
 
 export function hideEditMessage() {
-    const messageDiv = document.getElementById('editMessage');
-    if (messageDiv) {
-        messageDiv.style.display = 'none';
+    const messageElement = document.getElementById('editMessage');
+    if (messageElement) {
+        messageElement.style.display = 'none';
     }
 }
 
@@ -294,73 +305,178 @@ export function saveModalChanges() {
         alert('Selectează un tip de modificare.');
         return;
     }
-    
+
     const type = selectedOption.dataset.type;
-    
+    let newValue = '';
+
     if (type === 'working') {
-        // Apply working hours changes
         const teamInputs = document.querySelectorAll('.team-input');
         let totalHours = 0;
         const allocations = [];
-        
         teamInputs.forEach(input => {
             const hours = parseInt(input.value) || 0;
             if (hours > 0) {
                 totalHours += hours;
-                allocations.push(`${hours} ${input.dataset.team}`);
+                allocations.push(`${hours}${input.dataset.team}`); // Format as "8RO"
             }
         });
-        
+
         if (totalHours > 12) {
             alert('Totalul orelor nu poate depăși 12 ore pe zi.');
             return;
         }
-        
-        const newValue = allocations.join(' + ');
-        applyChangesToSelectedCells(newValue);
-    } else if (type === 'holiday' || type === 'sick' || type === 'dayoff') {
-        const values = {
-            holiday: 'Co',
-            sick: 'CM',
-            dayoff: 'LB'
-        };
-        applyChangesToSelectedCells(values[type]);
+        newValue = allocations.join('+');
+    } else {
+        const values = { holiday: 'Co', sick: 'CM', dayoff: 'LB' };
+        newValue = values[type];
     }
-    
+
+    // Get the keys of all selected cells
+    const selectedCellKeys = new Set();
+    document.querySelectorAll('.day-cell.selected').forEach(cell => {
+        const cellKey = `${cell.dataset.agentId}-${cell.dataset.day}`;
+        selectedCellKeys.add(cellKey);
+    });
+
+    // Call the refactored function in planner.js to handle the database update
+    if (selectedCellKeys.size > 0) {
+        applyChangesToSelectedCells(selectedCellKeys, newValue);
+    }
+
     closeEditModal();
-    showTemporaryMessage('Modificările au fost aplicate cu succes!', 'success');
+    // The success message is now shown in applyChangesToSelectedCells
 }
 
-function applyChangesToSelectedCells(newValue) {
-    const selectedCells = document.querySelectorAll('.day-cell.selected');
-    
-    selectedCells.forEach(cell => {
-        const cellContent = cell.querySelector('.cell-content');
-        if (cellContent) {
-            cellContent.textContent = newValue;
-        }
-        cell.classList.remove('selected');
-    });
+// --- New User Form Logic ---
+
+/**
+ * Attaches an event listener to the "Create Agent" button.
+ */
+function initializeNewUserForm() {
+    // Now uses the specific button ID
+    const createAgentBtn = document.getElementById('createAgentBtn');
+    if (createAgentBtn) {
+        createAgentBtn.addEventListener('click', handleCreateAgent);
+    }
 }
+
+/**
+ * Handles the click event for creating a new agent.
+ * Gathers form data, validates it, and calls the addAgent Firestore function.
+ */
+async function handleCreateAgent() {
+    // Gather data from form fields using their new, reliable IDs
+    const fullName = document.getElementById('newAgentFullName').value;
+    const username = document.getElementById('newAgentUsername').value;
+    const contractHours = document.getElementById('newAgentContractHours').value;
+    const contractType = document.getElementById('newAgentContractType').value;
+    const primaryTeam = document.getElementById('newAgentPrimaryTeam').value;
+    const hireDate = document.getElementById('newAgentHireDate').value;
+
+    // Basic Validation
+    if (!fullName || !username || !hireDate) {
+        showTemporaryMessage("Please fill all required fields.", "error");
+        return;
+    }
+    if (!username.endsWith('.fsp')) {
+        showTemporaryMessage("Username must end with .fsp", "error");
+        return;
+    }
+
+    // Construct the new agent object
+    const newAgent = {
+        fullName: fullName,
+        username: username,
+        contractHours: parseInt(contractHours) || 8,
+        contractType: contractType,
+        primaryTeam: primaryTeam,
+        teams: [primaryTeam.split(' ')[0]], // e.g., "RO zooplus" -> "RO"
+        hireDate: new Date(hireDate),
+        isActive: true,
+        // Create a default 31-day schedule for the new agent
+        days: Array(31).fill(''), 
+    };
+
+    // Call the Firestore function from planner.js
+    await addAgent(newAgent);
+
+    // Clear the form for the next entry
+    document.getElementById('newUserForm').reset();
+}
+
+// --- Utility Functions ---
 
 export function showTemporaryMessage(message, type) {
     const messageDiv = document.createElement('div');
-    messageDiv.className = `temporary-message ${type === 'success' ? 'success-message' : 'error-message'}`;
+    messageDiv.className = `temporary-message ${type}`;
     messageDiv.textContent = message;
-    messageDiv.style.position = 'fixed';
-    messageDiv.style.top = '2rem';
-    messageDiv.style.right = '2rem';
-    messageDiv.style.zIndex = '2000';
-    messageDiv.style.padding = '1rem 2rem';
-    messageDiv.style.borderRadius = '8px';
-    messageDiv.style.fontWeight = '600';
+    
+    // Style the message
+    messageDiv.style.cssText = `
+        position: fixed;
+        top: 2rem;
+        right: 2rem;
+        padding: 1rem 2rem;
+        border-radius: 8px;
+        font-weight: 600;
+        z-index: 2000;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        animation: slideIn 0.3s ease-out;
+    `;
+    
+    // Set colors based on type
+    if (type === 'success') {
+        messageDiv.style.background = 'rgba(76, 175, 80, 0.9)';
+        messageDiv.style.color = 'white';
+    } else if (type === 'error') {
+        messageDiv.style.background = 'rgba(244, 67, 54, 0.9)';
+        messageDiv.style.color = 'white';
+    } else if (type === 'info') {
+        messageDiv.style.background = 'rgba(33, 150, 243, 0.9)';
+        messageDiv.style.color = 'white';
+    }
     
     document.body.appendChild(messageDiv);
     
+    // Auto-remove after 3 seconds
     setTimeout(() => {
-        messageDiv.remove();
+        if (messageDiv.parentNode) {
+            messageDiv.style.animation = 'slideOut 0.3s ease-out';
+            setTimeout(() => {
+                if (messageDiv.parentNode) {
+                    messageDiv.parentNode.removeChild(messageDiv);
+                }
+            }, 300);
+        }
     }, 3000);
 }
+
+// Add CSS animations for the temporary messages
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slideIn {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+    
+    @keyframes slideOut {
+        from {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        to {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+    }
+`;
+document.head.appendChild(style);
 
 // Event Listeners
 document.addEventListener('click', function(event) {

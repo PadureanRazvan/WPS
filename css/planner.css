@@ -24,43 +24,26 @@
 /* Synchronize column widths between header and body tables */
 .planner-header-table th:nth-child(1),
 .planner-body-table td:nth-child(1) {
-    width: 3%;
+    width: 180px; /* Agent name column - fixed width */
 }
 
 .planner-header-table th:nth-child(2),
 .planner-body-table td:nth-child(2) {
-    width: 12%;
+    width: 60px; /* Hours column - fixed width */
 }
 
-.planner-header-table th:nth-child(3),
-.planner-body-table td:nth-child(3) {
-    width: 8%;
-}
-
-.planner-header-table th:nth-child(4),
-.planner-body-table td:nth-child(4) {
-    width: 6%;
-}
-
-/* Day columns - calculated dynamically but start with reasonable default */
-.planner-header-table th:nth-child(n+5):nth-child(-n+35),
-.planner-body-table td:nth-child(n+5):nth-child(-n+35) {
-    width: 2.2%;
-    min-width: 25px;
-}
-
-/* Week total columns */
-.planner-header-table th.week-total,
-.planner-body-table td.week-total {
-    width: 2.5%;
-    min-width: 30px;
+/* Day columns - all day columns should have the same width */
+.planner-header-table th:nth-child(n+3):not(:last-child),
+.planner-body-table td:nth-child(n+3):not(:last-child) {
+    width: 50px;
+    min-width: 50px;
 }
 
 /* Month total column */
 .planner-header-table th:last-child,
 .planner-body-table td:last-child {
-    width: 4%;
-    min-width: 40px;
+    width: 70px;
+    min-width: 70px;
 }
 
 .planner-header-table th {
@@ -84,18 +67,22 @@
 }
 
 .planner-body-table td {
-    padding: 0.75rem 0.25rem;
+    padding: 0.5rem 0.25rem;
     text-align: center;
     border-right: 1px solid var(--border);
     border-top: 1px solid var(--border);
-    font-size: 0.7rem;
+    font-size: 0.65rem;
     font-weight: 500;
     color: var(--text-primary);
     word-wrap: break-word;
     overflow: hidden;
     text-overflow: ellipsis;
     box-sizing: border-box;
-    line-height: 1.4;
+    line-height: 1.2;
+    white-space: pre-line; /* Allow line breaks from \n */
+    vertical-align: middle;
+    height: auto;
+    min-height: 2.5rem;
 }
 
 .planner-body-table .agent-name {
@@ -109,6 +96,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
     color: var(--accent);
+    vertical-align: middle;
 }
 
 .planner-table .weekend {
@@ -324,4 +312,49 @@
     right: 1px;
     font-size: 0.6rem;
     opacity: 0.8;
+}
+
+/* Delete Agent Button */
+.delete-agent-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0 4px;
+    opacity: 0.2;
+    transition: opacity 0.2s;
+}
+
+.agent-row:hover .delete-agent-btn {
+    opacity: 1;
+}
+
+.delete-agent-btn svg {
+    width: 14px;
+    height: 14px;
+    fill: var(--error);
+}
+
+.delete-agent-btn:hover svg {
+    fill: #d32f2f;
+}
+
+/* Multi-team display styling */
+.planner-cell br {
+    line-height: 1.1;
+}
+
+.planner-cell.multi-team {
+    font-size: 0.6rem;
+    line-height: 1.1;
+    padding: 0.3rem 0.2rem;
+}
+
+.planner-cell.working {
+    background: rgba(76, 175, 80, 0.1);
+    color: var(--success);
+    font-weight: 600;
+}
+
+.planner-cell.working.multi-team {
+    background: rgba(76, 175, 80, 0.15);
 } 

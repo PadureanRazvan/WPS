@@ -1,120 +1,194 @@
-// Planner Data and State Management
+// js/planner.js
+
+// --- Firestore & Application Imports ---
+import { db } from './firebase-config.js';
+import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, Timestamp } from "https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore.js";
 import { showTemporaryMessage } from './ui.js';
 
-// Agent Notes Storage
-const agentNotes = {};
+// --- Local State Management ---
+// This will hold the live data from Firestore. It's our local, in-memory copy.
+let plannerData = []; 
+// This holds the unsubscribe function for our real-time listener.
+let unsubscribeFromAgents; 
 
-// Helper function to generate realistic schedules
-function generateSchedule(pattern) {
-    const schedule = [];
-    // Add space between number and team code
-    const formattedPattern = pattern.replace(/(\d+)([A-Z]+)/g, '$1 $2');
-    
-    for (let i = 0; i < 31; i++) {
-        const dayOfWeek = (i + 3) % 7; // Assuming 1st is a Thursday
-        if (dayOfWeek === 5 || dayOfWeek === 6) { // Saturday or Sunday
-            schedule.push('SL');
-        } else if (Math.random() < 0.05) { // 5% chance of sick leave/vacation
-            schedule.push(Math.random() < 0.7 ? 'SL' : 'Co');
-        } else {
-            schedule.push(formattedPattern);
-        }
-    }
-    return schedule;
+// --- Core Firestore Integration ---
+
+/**
+ * [REAL-TIME] Sets up a listener to the 'agents' collection in Firestore.
+ * This function is the new heart of the planner. It automatically receives updates
+ * when data changes in the database and re-renders the planner.
+ */
+export function initializePlanner() {
+    console.log("Setting up real-time listener for agents...");
+    const agentsCollection = collection(db, 'agents');
+
+    // onSnapshot returns an 'unsubscribe' function which we can call to detach the listener
+    unsubscribeFromAgents = onSnapshot(agentsCollection, (querySnapshot) => {
+        console.log(`%c[Firestore] Received update. Found ${querySnapshot.size} agents.`, 'color: #4caf50; font-weight: bold;');
+        
+        // Clear the old local data
+        plannerData = [];
+        
+        querySnapshot.forEach((doc) => {
+            const agentData = doc.data();
+            // Convert Firestore Timestamps to JS Date objects if they exist
+            if (agentData.hireDate && agentData.hireDate.toDate) {
+                agentData.hireDate = agentData.hireDate.toDate();
+            }
+            // Add the Firestore document ID to our local object. This is CRITICAL for updates/deletes.
+            plannerData.push({ id: doc.id, ...agentData });
+        });
+
+        // Sort agents by name for consistent display
+        plannerData.sort((a, b) => a.fullName.localeCompare(b.fullName));
+
+        // Now that we have the latest data, re-render the entire UI that depends on it.
+        // This ensures the UI is always in sync with the database.
+        initializeMonthGrid();
+        initializeTeamChips();
+        renderPlannerTable();
+        console.log("[Planner] UI re-rendered with fresh data.");
+
+    }, (error) => {
+        // This function is called if the listener fails
+        console.error("❌ Firebase onSnapshot Error: ", error);
+        showTemporaryMessage("Error connecting to the database. Data may be stale.", "error");
+    });
 }
 
-// Planner Mock Data
-const plannerData = [
-    // RO zooplus team (25 agents)
-    { name: 'Popescu Maria.fsp', contract: '8h', teams: ['RO'], days: generateSchedule('8RO') },
-    { name: 'Ionescu Ana.fsp', contract: '8h', teams: ['RO'], days: generateSchedule('8RO') },
-    { name: 'Dumitrescu Elena.fsp', contract: '8h', teams: ['RO'], days: generateSchedule('8RO') },
-    { name: 'Georgescu Ioana.fsp', contract: '8h', teams: ['RO'], days: generateSchedule('8RO') },
-    { name: 'Stoica Carmen.fsp', contract: '8h', teams: ['RO'], days: generateSchedule('8RO') },
-    { name: 'Marin Daniela.fsp', contract: '8h', teams: ['RO'], days: generateSchedule('8RO') },
-    { name: 'Constantin Mihaela.fsp', contract: '8h', teams: ['RO'], days: generateSchedule('8RO') },
-    { name: 'Stan Andreea.fsp', contract: '8h', teams: ['RO'], days: generateSchedule('8RO') },
-    { name: 'Dobre Cristina.fsp', contract: '8h', teams: ['RO'], days: generateSchedule('8RO') },
-    { name: 'Radu Simona.fsp', contract: '6h', teams: ['RO'], days: generateSchedule('6RO') },
-    { name: 'Enache Raluca.fsp', contract: '8h', teams: ['RO'], days: generateSchedule('8RO') },
-    { name: 'Fratila Diana.fsp', contract: '8h', teams: ['RO'], days: generateSchedule('8RO') },
-    { name: 'Tudor Roxana.fsp', contract: '8h', teams: ['RO'], days: generateSchedule('8RO') },
-    { name: 'Varga Madalina.fsp', contract: '8h', teams: ['RO'], days: generateSchedule('8RO') },
-    { name: 'Matei Florina.fsp', contract: '6h', teams: ['RO'], days: generateSchedule('6RO') },
-    { name: 'Sandu Corina.fsp', contract: '8h', teams: ['RO'], days: generateSchedule('8RO') },
-    { name: 'Popa Alina.fsp', contract: '8h', teams: ['RO'], days: generateSchedule('8RO') },
-    { name: 'Moldovan Lavinia.fsp', contract: '8h', teams: ['RO'], days: generateSchedule('8RO') },
-    { name: 'Nistor Bianca.fsp', contract: '8h', teams: ['RO'], days: generateSchedule('8RO') },
-    { name: 'Ciobanu Alexandra.fsp', contract: '8h', teams: ['RO'], days: generateSchedule('8RO') },
-    { name: 'Festeu Cristina.fsp', contract: '8h', teams: ['RO', 'IT'], days: generateSchedule('4RO+4IT') },
-    { name: 'Lungu Gabriela.fsp', contract: '6h', teams: ['RO'], days: generateSchedule('6RO') },
-    { name: 'Iliescu Monica.fsp', contract: '8h', teams: ['RO'], days: generateSchedule('8RO') },
-    { name: 'Andrei Claudia.fsp', contract: '8h', teams: ['RO'], days: generateSchedule('8RO') },
-    { name: 'Ungureanu Paula.fsp', contract: '8h', teams: ['RO'], days: generateSchedule('8RO') },
+/**
+ * Detaches the real-time listener when it's no longer needed (e.g., user logs out).
+ * This is good practice to prevent memory leaks.
+ */
+export function cleanupPlanner() {
+    if (unsubscribeFromAgents) {
+        console.log("Detaching Firestore listener.");
+        unsubscribeFromAgents();
+    }
+}
 
-    // HU zooplus team (20 agents)
-    { name: 'Nagy Eszter.fsp', contract: '8h', teams: ['HU'], days: generateSchedule('8HU') },
-    { name: 'Kiss Andrea.fsp', contract: '8h', teams: ['HU'], days: generateSchedule('8HU') },
-    { name: 'Szabo Zsuzsanna.fsp', contract: '8h', teams: ['HU'], days: generateSchedule('8HU') },
-    { name: 'Toth Katalin.fsp', contract: '8h', teams: ['HU'], days: generateSchedule('8HU') },
-    { name: 'Horvath Judit.fsp', contract: '8h', teams: ['HU'], days: generateSchedule('8HU') },
-    { name: 'Varga Peter.fsp', contract: '8h', teams: ['HU'], days: generateSchedule('8HU') },
-    { name: 'Kovacs Gabor.fsp', contract: '8h', teams: ['HU'], days: generateSchedule('8HU') },
-    { name: 'Farkas Aniko.fsp', contract: '8h', teams: ['HU'], days: generateSchedule('8HU') },
-    { name: 'Molnar Bea.fsp', contract: '6h', teams: ['HU'], days: generateSchedule('6HU') },
-    { name: 'Balazs Diana.fsp', contract: '8h', teams: ['HU', 'IT'], days: generateSchedule('4HU+4IT') },
-    { name: 'Banga Kristina.fsp', contract: '8h', teams: ['HU'], days: generateSchedule('8HU') },
-    { name: 'Nyikora Norbert.fsp', contract: '8h', teams: ['HU'], days: generateSchedule('8HU') },
-    { name: 'Gabor Eniko.fsp', contract: '8h', teams: ['HU'], days: generateSchedule('8HU') },
-    { name: 'Lakatos Monika.fsp', contract: '8h', teams: ['HU'], days: generateSchedule('8HU') },
-    { name: 'Feher Timea.fsp', contract: '6h', teams: ['HU'], days: generateSchedule('6HU') },
-    { name: 'Racz Eva.fsp', contract: '8h', teams: ['HU'], days: generateSchedule('8HU') },
-    { name: 'Nemeth Ildiko.fsp', contract: '8h', teams: ['HU'], days: generateSchedule('8HU') },
-    { name: 'Balogh Krisztina.fsp', contract: '8h', teams: ['HU'], days: generateSchedule('8HU') },
-    { name: 'Papp Renata.fsp', contract: '8h', teams: ['HU'], days: generateSchedule('8HU') },
-    { name: 'Simon Beata.fsp', contract: '8h', teams: ['HU'], days: generateSchedule('8HU') },
 
-    // IT zooplus team (18 agents)
-    { name: 'Rossi Marco.fsp', contract: '8h', teams: ['IT'], days: generateSchedule('8IT') },
-    { name: 'Bianchi Giulia.fsp', contract: '8h', teams: ['IT'], days: generateSchedule('8IT') },
-    { name: 'Romano Francesco.fsp', contract: '8h', teams: ['IT'], days: generateSchedule('8IT') },
-    { name: 'Ferretti Chiara.fsp', contract: '8h', teams: ['IT'], days: generateSchedule('8IT') },
-    { name: 'Ricci Valentina.fsp', contract: '8h', teams: ['IT'], days: generateSchedule('8IT') },
-    { name: 'Marino Sofia.fsp', contract: '8h', teams: ['IT'], days: generateSchedule('8IT') },
-    { name: 'Greco Elena.fsp', contract: '8h', teams: ['IT'], days: generateSchedule('8IT') },
-    { name: 'Bruno Alessandra.fsp', contract: '8h', teams: ['IT'], days: generateSchedule('8IT') },
-    { name: 'Gallo Federica.fsp', contract: '6h', teams: ['IT'], days: generateSchedule('6IT') },
-    { name: 'Conti Martina.fsp', contract: '8h', teams: ['IT'], days: generateSchedule('8IT') },
-    { name: 'De Luca Francesca.fsp', contract: '8h', teams: ['IT'], days: generateSchedule('8IT') },
-    { name: 'Mancini Serena.fsp', contract: '8h', teams: ['IT'], days: generateSchedule('8IT') },
-    { name: 'Costa Roberta.fsp', contract: '8h', teams: ['IT'], days: generateSchedule('8IT') },
-    { name: 'Giordano Alice.fsp', contract: '6h', teams: ['IT'], days: generateSchedule('6IT') },
-    { name: 'Rizzo Paola.fsp', contract: '8h', teams: ['IT'], days: generateSchedule('8IT') },
-    { name: 'Lombardi Silvia.fsp', contract: '8h', teams: ['IT'], days: generateSchedule('8IT') },
-    { name: 'Moretti Laura.fsp', contract: '8h', teams: ['IT'], days: generateSchedule('8IT') },
-    { name: 'Barbieri Claudia.fsp', contract: '8h', teams: ['IT'], days: generateSchedule('8IT') },
+// --- CRUD (Create, Read, Update, Delete) Operations ---
 
-    // NL zooplus team (12 agents)
-    { name: 'Van Der Berg Emma.fsp', contract: '8h', teams: ['NL'], days: generateSchedule('8NL') },
-    { name: 'De Jong Lisa.fsp', contract: '8h', teams: ['NL'], days: generateSchedule('8NL') },
-    { name: 'Jansen Sophie.fsp', contract: '8h', teams: ['NL'], days: generateSchedule('8NL') },
-    { name: 'Van Dijk Anna.fsp', contract: '8h', teams: ['NL'], days: generateSchedule('8NL') },
-    { name: 'Peters Julia.fsp', contract: '8h', teams: ['NL'], days: generateSchedule('8NL') },
-    { name: 'Van Den Berg Lotte.fsp', contract: '6h', teams: ['NL'], days: generateSchedule('6NL') },
-    { name: 'Smit Sanne.fsp', contract: '8h', teams: ['NL'], days: generateSchedule('8NL') },
-    { name: 'Mulder Fleur.fsp', contract: '8h', teams: ['NL'], days: generateSchedule('8NL') },
-    { name: 'De Vries Iris.fsp', contract: '8h', teams: ['NL'], days: generateSchedule('8NL') },
-    { name: 'Van Leeuwen Mila.fsp', contract: '6h', teams: ['NL'], days: generateSchedule('6NL') },
-    { name: 'Bakker Noa.fsp', contract: '8h', teams: ['NL'], days: generateSchedule('8NL') },
-    { name: 'Visser Luna.fsp', contract: '8h', teams: ['NL'], days: generateSchedule('8NL') },
+/**
+ * [CREATE] Adds a new agent document to the 'agents' collection in Firestore.
+ * @param {object} agentObject - The agent data to add.
+ * @returns {Promise<void>}
+ */
+export async function addAgent(agentObject) {
+    console.log("[Firestore] Attempting to add new agent:", agentObject);
+    try {
+        // Convert JS Date back to Firestore Timestamp for consistency
+        if(agentObject.hireDate) {
+            agentObject.hireDate = Timestamp.fromDate(agentObject.hireDate);
+        }
+        const docRef = await addDoc(collection(db, "agents"), agentObject);
+        console.log("✅ Agent added successfully with ID:", docRef.id);
+        showTemporaryMessage("Agent created successfully!", "success");
+    } catch (error) {
+        console.error("❌ Error adding agent: ", error);
+        showTemporaryMessage("Failed to create agent. Check console for details.", "error");
+    }
+}
 
-    // Flexible/Multi-team agents (5 agents)
-    { name: 'Schmidt Laura.fsp', contract: '8h', teams: ['DE', 'NL'], days: generateSchedule('4DE+4NL') },
-    { name: 'Mueller Sarah.fsp', contract: '8h', teams: ['DE'], days: generateSchedule('8DE') },
-    { name: 'Weber Lisa.fsp', contract: '6h', teams: ['DE'], days: generateSchedule('6DE') },
-    { name: 'Wagner Anna.fsp', contract: '8h', teams: ['DE', 'IT'], days: generateSchedule('4DE+4IT') },
-    { name: 'Becker Marie.fsp', contract: '8h', teams: ['DE'], days: generateSchedule('8DE') },
-];
+/**
+ * [UPDATE] Updates specific fields of an agent document in Firestore.
+ * @param {string} agentId - The Firestore document ID of the agent to update.
+ * @param {object} updatedData - An object containing the fields to change.
+ * @returns {Promise<void>}
+ */
+export async function updateAgent(agentId, updatedData) {
+    if (!agentId) {
+        console.error("❌ updateAgent failed: agentId is missing.");
+        return;
+    }
+    console.log(`[Firestore] Attempting to update agent ${agentId} with:`, updatedData);
+    const agentRef = doc(db, "agents", agentId);
+    try {
+        await updateDoc(agentRef, updatedData);
+        console.log(`✅ Agent ${agentId} updated successfully.`);
+        // No success message here to avoid spamming on every cell change.
+    } catch (error) {
+        console.error(`❌ Error updating agent ${agentId}:`, error);
+        showTemporaryMessage(`Failed to update agent ${agentId}.`, "error");
+    }
+}
+
+/**
+ * [DELETE] Deletes an agent document from Firestore.
+ * @param {string} agentId - The Firestore document ID of the agent to delete.
+ * @returns {Promise<void>}
+ */
+export async function deleteAgent(agentId) {
+     if (!agentId) {
+        console.error("❌ deleteAgent failed: agentId is missing.");
+        return;
+    }
+    // A simple confirmation dialog. In a real app, use a custom modal.
+    if (!confirm(`Are you sure you want to delete agent ${agentId}? This action cannot be undone.`)) {
+        return;
+    }
+    console.log(`[Firestore] Attempting to delete agent ${agentId}...`);
+    try {
+        await deleteDoc(doc(db, "agents", agentId));
+        console.log(`✅ Agent ${agentId} deleted successfully.`);
+        showTemporaryMessage("Agent deleted.", "success");
+    } catch (error) {
+        console.error(`❌ Error deleting agent ${agentId}:`, error);
+        showTemporaryMessage("Failed to delete agent.", "error");
+    }
+}
+
+// --- Data Modification Logic ---
+/**
+ * This is a critical function that takes a list of selected cells and a new value,
+ * then orchestrates the update to Firestore.
+ * @param {Set<string>} selectedCellKeys - A Set of keys like 'agentId-dayIndex'.
+ * @param {string} newValue - The new value for the day (e.g., '8 RO', 'SL').
+ */
+export async function applyChangesToSelectedCells(selectedCellKeys, newValue) {
+    console.log(`Applying value "${newValue}" to ${selectedCellKeys.size} cells.`);
+    const updates = new Map(); // Use a Map to group changes by agentId
+
+    // 1. Group all changes by agent ID
+    selectedCellKeys.forEach(key => {
+        const [agentId, dayIndexStr] = key.split('-');
+        const dayIndex = parseInt(dayIndexStr, 10);
+
+        if (!updates.has(agentId)) {
+            updates.set(agentId, []);
+        }
+        updates.get(agentId).push({ dayIndex, newValue });
+    });
+
+    // 2. For each agent, apply the changes and update Firestore
+    for (const [agentId, changes] of updates.entries()) {
+        // Find the full agent object from our local data store
+        const agent = plannerData.find(a => a.id === agentId);
+        if (!agent) {
+            console.error(`Could not find agent with ID ${agentId} in local data.`);
+            continue;
+        }
+
+        // Create a mutable copy of the agent's days array
+        const newDays = [...agent.days];
+        changes.forEach(({ dayIndex, newValue }) => {
+            if (dayIndex >= 0 && dayIndex < newDays.length) {
+                newDays[dayIndex] = newValue;
+            }
+        });
+
+        // 3. Call the updateAgent function to save the modified 'days' field to Firestore
+        await updateAgent(agentId, { days: newDays });
+    }
+    
+    showTemporaryMessage("Changes saved to database!", "success");
+}
+
+
+// --- Existing Planner Logic (Refactored to use live `plannerData`) ---
+// NOTE: Most of the functions below this point are the same as before, but now
+// they operate on the `plannerData` array which is kept in sync by Firestore.
 
 // Enhanced Planner State
 let plannerState = {
@@ -138,15 +212,6 @@ const selectionState = {
     currentEditType: null,
     bulkEditMode: false
 };
-
-// Initialize Enhanced Planner
-export function initializePlanner() {
-    initializeMonthGrid();
-    initializeTeamChips();
-    initializeAgentSearch();
-    applyPresetRange();
-    renderPlannerTable();
-}
 
 // Month Grid Management
 function initializeMonthGrid() {
@@ -203,32 +268,26 @@ export function clearMonthSelection() {
 }
 
 function updateMonthDisplay() {
-    document.querySelectorAll('.month-card').forEach(card => {
+    const monthCards = document.querySelectorAll('.month-card');
+    monthCards.forEach(card => {
         const isSelected = plannerState.selectedMonths.includes(card.dataset.month);
         card.classList.toggle('selected', isSelected);
     });
 }
 
-// Team Management
 function initializeTeamChips() {
-    const teamChips = document.getElementById('teamChips');
+    const teamChips = document.querySelector('.team-chips');
     if (!teamChips) return;
     
     const allTeams = getAllTeams();
+    const teamsHtml = [
+        '<div class="team-chip active" data-team="all">Toate Echipele</div>',
+        ...allTeams.map(team => `<div class="team-chip" data-team="${team}">${team} zooplus</div>`)
+    ].join('');
     
-    const chips = [
-        { id: 'all', name: 'Toate echipele', class: 'all' },
-        ...allTeams.map(team => ({ id: team, name: team }))
-    ];
-
-    teamChips.innerHTML = chips.map(chip => `
-        <div class="team-chip ${chip.class || ''} ${plannerState.selectedTeams.includes(chip.id) ? 'active' : ''}" 
-             data-team="${chip.id}">
-            ${chip.name}
-        </div>
-    `).join('');
+    teamChips.innerHTML = teamsHtml;
     
-    // Add event listeners to team chips
+    // Add event listeners
     teamChips.querySelectorAll('.team-chip').forEach(chip => {
         chip.addEventListener('click', () => toggleTeam(chip.dataset.team));
     });
@@ -238,11 +297,12 @@ export function toggleTeam(teamId) {
     if (teamId === 'all') {
         plannerState.selectedTeams = ['all'];
     } else {
-        const allIndex = plannerState.selectedTeams.indexOf('all');
-        if (allIndex > -1) {
-            plannerState.selectedTeams.splice(allIndex, 1);
+        // Remove 'all' if it exists
+        if (plannerState.selectedTeams.includes('all')) {
+            plannerState.selectedTeams = [];
         }
         
+        // Toggle this team
         const index = plannerState.selectedTeams.indexOf(teamId);
         if (index > -1) {
             plannerState.selectedTeams.splice(index, 1);
@@ -250,48 +310,46 @@ export function toggleTeam(teamId) {
             plannerState.selectedTeams.push(teamId);
         }
         
+        // If no teams selected, default to 'all'
         if (plannerState.selectedTeams.length === 0) {
             plannerState.selectedTeams = ['all'];
         }
     }
+    
     updateTeamDisplay();
 }
 
 function updateTeamDisplay() {
-    document.querySelectorAll('.team-chip').forEach(chip => {
+    const teamChips = document.querySelectorAll('.team-chip');
+    teamChips.forEach(chip => {
         const isSelected = plannerState.selectedTeams.includes(chip.dataset.team);
         chip.classList.toggle('active', isSelected);
     });
 }
 
-// Range Type Management
 export function setRangeType(type) {
     plannerState.rangeType = type;
     
-    // Update tab active state
+    // Update tab display
     document.querySelectorAll('.filter-tab').forEach(tab => {
         tab.classList.toggle('active', tab.dataset.range === type);
     });
     
-    // Show/hide containers
-    const presetContainer = document.getElementById('presetRangeContainer');
-    const customContainer = document.getElementById('customRangeContainer');
-    const multiContainer = document.getElementById('multiMonthContainer');
-    
-    if (presetContainer) presetContainer.style.display = type === 'preset' ? 'block' : 'none';
-    if (customContainer) customContainer.style.display = type === 'custom' ? 'block' : 'none';
-    if (multiContainer) multiContainer.style.display = type === 'multi-month' ? 'block' : 'none';
+    // Show/hide appropriate containers
+    document.getElementById('presetRangeContainer').style.display = type === 'preset' ? 'block' : 'none';
+    document.getElementById('customRangeContainer').style.display = type === 'custom' ? 'flex' : 'none';
+    document.getElementById('multiMonthContainer').style.display = type === 'multi-month' ? 'block' : 'none';
 }
 
-// Preset Range Management
 export function applyPresetRange() {
     const presetSelect = document.getElementById('presetRange');
-    const preset = presetSelect ? presetSelect.value : plannerState.presetRange;
-    plannerState.presetRange = preset;
+    if (!presetSelect) return;
     
+    plannerState.presetRange = presetSelect.value;
     const currentDate = new Date();
     
-    switch (preset) {
+    // Calculate date range based on preset
+    switch (presetSelect.value) {
         case 'current-month':
             plannerState.dateRange.start = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
             plannerState.dateRange.end = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
@@ -300,262 +358,336 @@ export function applyPresetRange() {
             plannerState.dateRange.start = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
             plannerState.dateRange.end = new Date(currentDate.getFullYear(), currentDate.getMonth() + 2, 0);
             break;
-        case 'current-quarter':
-            const quarterStart = Math.floor(currentDate.getMonth() / 3) * 3;
-            plannerState.dateRange.start = new Date(currentDate.getFullYear(), quarterStart, 1);
-            plannerState.dateRange.end = new Date(currentDate.getFullYear(), quarterStart + 3, 0);
+        case 'today':
+            plannerState.dateRange.start = new Date(currentDate);
+            plannerState.dateRange.end = new Date(currentDate);
             break;
-        case 'next-quarter':
-            const nextQuarterStart = Math.floor(currentDate.getMonth() / 3) * 3 + 3;
-            plannerState.dateRange.start = new Date(currentDate.getFullYear(), nextQuarterStart, 1);
-            plannerState.dateRange.end = new Date(currentDate.getFullYear(), nextQuarterStart + 3, 0);
+        case 'tomorrow':
+            const tomorrow = new Date(currentDate);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            plannerState.dateRange.start = tomorrow;
+            plannerState.dateRange.end = tomorrow;
             break;
+        // Add more cases as needed
     }
     
     renderPlannerTable();
 }
 
-// Agent Search
 function initializeAgentSearch() {
-    const searchInput = document.getElementById('agentSearch');
-    if (!searchInput) return;
+    const agentSearch = document.getElementById('agentSearch');
+    if (!agentSearch) return;
     
-    searchInput.addEventListener('input', function(e) {
-        const searchTerm = e.target.value.toLowerCase();
-        if (searchTerm === '') {
-            plannerState.selectedAgents = [];
-        } else {
-            plannerState.selectedAgents = plannerData
-                .filter(agent => agent.name.toLowerCase().includes(searchTerm))
-                .map(agent => agent.name);
-        }
-        renderPlannerTable();
-    });
+    agentSearch.addEventListener('input', filterAgents);
+    agentSearch.addEventListener('focus', showAgentSuggestions);
+    agentSearch.addEventListener('blur', hideAgentSuggestions);
 }
 
-export function filterAgents(event) {
-    const searchTerm = event.target.value.toLowerCase();
-    if (searchTerm === '') {
-        plannerState.selectedAgents = [];
-    } else {
-        plannerState.selectedAgents = plannerData
-            .filter(agent => agent.name.toLowerCase().includes(searchTerm))
-            .map(agent => agent.name);
-    }
+export function filterAgents() {
     renderPlannerTable();
 }
 
 export function showAgentSuggestions() {
-    // Implementation for showing agent suggestions
+    // Show agent suggestions dropdown
 }
 
 export function hideAgentSuggestions() {
-    // Implementation for hiding agent suggestions
+    // Hide agent suggestions dropdown
 }
 
-// Utility Functions
 function getAllTeams() {
     const teams = new Set();
+    // Operates on the live plannerData
     plannerData.forEach(agent => {
-        agent.teams.forEach(team => teams.add(team));
+        if (agent.teams && Array.isArray(agent.teams)) {
+            agent.teams.forEach(team => teams.add(team));
+        }
     });
     return Array.from(teams).sort();
 }
 
 function getFilteredAgents() {
-    let filteredAgents = plannerData;
-    
-    // Filter by teams
+    // This function is now always using the most up-to-date data from Firestore
+    let filteredAgents = [...plannerData]; // Use a copy
+
+    // Apply team filter
     if (!plannerState.selectedTeams.includes('all')) {
         filteredAgents = filteredAgents.filter(agent => 
-            agent.teams.some(team => plannerState.selectedTeams.includes(team))
+            agent.teams && agent.teams.some(team => plannerState.selectedTeams.includes(team))
         );
     }
-    
-    // Filter by agent search
-    if (plannerState.selectedAgents.length > 0) {
-        filteredAgents = filteredAgents.filter(agent => 
-            plannerState.selectedAgents.includes(agent.name)
+
+    // Apply agent search filter
+    const searchTerm = document.getElementById('agentSearch')?.value?.toLowerCase();
+    if (searchTerm) {
+        filteredAgents = filteredAgents.filter(agent =>
+            (agent.fullName && agent.fullName.toLowerCase().includes(searchTerm)) ||
+            (agent.username && agent.username.toLowerCase().includes(searchTerm))
         );
     }
-    
+
     return filteredAgents;
 }
 
-// Table Rendering
-function renderPlannerTable() {
-    const headerTable = document.querySelector('.planner-header-table');
-    const bodyTable = document.querySelector('.planner-body-table');
-    
-    if (!headerTable || !bodyTable) return;
-    
-    const filteredAgents = getFilteredAgents();
-    
-    if (filteredAgents.length === 0) {
-        const container = document.querySelector('.planner-body-container');
-        if (container) {
-            container.innerHTML = '<p style="padding: 2rem; text-align: center;">Nu există agenți care să corespundă criteriilor de filtrare.</p>';
-        }
+// Table Rendering (now renders live data)
+export function renderPlannerTable() {
+    const headerContainer = document.getElementById('plannerTableHeader');
+    const bodyContainer = document.getElementById('plannerTableBody');
+
+    if (!headerContainer || !bodyContainer) {
+        console.error("Planner table containers not found!");
         return;
     }
-    
-    const daysInMonth = 31; // May 2025
-    
+
+    // === FIX START: Use date range from state ===
+    let { start, end } = plannerState.dateRange;
+
+    // Fallback to current month if no range is set
+    if (!start || !end) {
+        const now = new Date();
+        start = new Date(now.getFullYear(), now.getMonth(), 1);
+        end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    }
+
+    const days = [];
+    for (let dt = new Date(start); dt <= end; dt.setDate(dt.getDate() + 1)) {
+        days.push(new Date(dt));
+    }
+    // === FIX END ===
+
     // Render header
-    const headerHTML = `
-        <tr>
-            <th style="width: 3%;">#</th>
-            <th style="width: 12%;">Agent</th>
-            <th style="width: 8%;">Contract</th>
-            <th style="width: 6%;">Echipă</th>
-            ${Array.from({length: daysInMonth}, (_, i) => `<th style="width: 2.2%;" class="day-column">${i + 1}</th>`).join('')}
-            <th style="width: 4%;">Total</th>
-        </tr>
+    const headerRow = document.createElement('tr');
+    headerRow.innerHTML = `
+        <th class="agent-name-header">Agent</th>
+        <th class="hours-header">Ore</th>
+        ${days.map(date => {
+            const dayNum = date.getDate();
+            const dayOfWeek = date.getDay();
+            const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+            return `<th class="day-header ${isWeekend ? 'weekend' : ''}">${dayNum}</th>`;
+        }).join('')}
+        <th class="total-header">Total</th>
     `;
-    
-    headerTable.innerHTML = headerHTML;
-    
+    headerContainer.innerHTML = '';
+    headerContainer.appendChild(headerRow);
+
     // Render body
-    const bodyHTML = filteredAgents.map((agent, index) => renderAgentRow(agent, daysInMonth, index + 1)).join('');
-    bodyTable.innerHTML = bodyHTML;
-    
-    // Add event listeners for cell selection
+    const filteredAgents = getFilteredAgents();
+    bodyContainer.innerHTML = '';
+
+    filteredAgents.forEach((agent) => {
+        // Pass the array of dates to renderAgentRow
+        const row = renderAgentRow(agent, days);
+        bodyContainer.appendChild(row);
+    });
+
+    // Add cell event listeners
     addCellEventListeners();
 }
 
-function renderAgentRow(agent, daysInMonth, rowNumber) {
-    const totalHours = calculateAgentTotalHours(agent);
-    
-    return `
-        <tr class="agent-row" data-agent="${agent.name}">
-            <td style="width: 3%;">${rowNumber}</td>
-            <td class="agent-name" style="width: 12%;">${agent.name}</td>
-            <td class="contract-hours" style="width: 8%;">${agent.contract}</td>
-            <td class="team-list" style="width: 6%;">${agent.teams.join(', ')}</td>
-            ${agent.days.slice(0, daysInMonth).map((day, index) => `
-                <td class="day-cell planner-cell selectable ${getCellClass(day, index)}" 
-                    style="width: 2.2%;"
-                    data-agent="${agent.name}" 
-                    data-day="${index}"
-                    data-original-value="${day}">
-                    <div class="cell-content">${formatCellContent(day)}</div>
-                </td>
-            `).join('')}
-            <td class="total-hours" style="width: 4%;">${totalHours}h</td>
-        </tr>
+function renderAgentRow(agent, dates) {
+    const row = document.createElement('tr');
+    row.className = 'agent-row';
+
+    // Agent name cell
+    const nameCell = document.createElement('td');
+    nameCell.className = 'agent-name';
+    nameCell.innerHTML = `
+        <span>${agent.fullName || agent.name || 'Unknown Agent'}</span>
+        <button class="delete-agent-btn" data-agent-id="${agent.id}" title="Delete Agent">
+            <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+        </button>
     `;
+
+    // Hours cell
+    const hoursCell = document.createElement('td');
+    hoursCell.className = 'agent-hours';
+    hoursCell.textContent = agent.contractHours ? `${agent.contractHours}h` : '8h';
+
+    // Day cells
+    const dayCells = dates.map(date => {
+        const dayIndex = date.getDate() - 1; // agent.days is 0-indexed (0 for 1st, 1 for 2nd)
+
+        const cell = document.createElement('td');
+        cell.className = 'planner-cell selectable';
+        cell.dataset.agentId = agent.id; // Use Firestore document ID
+        cell.dataset.day = dayIndex;
+
+        // This assumes agent.days stores data for the month of the current date
+        // This is a design limitation but we'll work with it for now.
+        const dayValue = agent.days && agent.days[dayIndex] ? agent.days[dayIndex] : '';
+        const formattedContent = formatCellContent(dayValue);
+        
+        // Use innerHTML for proper line break display
+        if (formattedContent.includes('\n')) {
+            cell.innerHTML = formattedContent.replace(/\n/g, '<br>');
+            cell.classList.add('multi-team');
+        } else {
+            cell.textContent = formattedContent;
+        }
+        
+        cell.classList.add(...getCellClass(dayValue, date));
+
+        return cell;
+    });
+
+    // Total cell
+    const totalCell = document.createElement('td');
+    totalCell.className = 'agent-total';
+    totalCell.textContent = calculateAgentTotalHours(agent);
+
+    // Append all cells
+    row.appendChild(nameCell);
+    row.appendChild(hoursCell);
+    dayCells.forEach(cell => row.appendChild(cell));
+    row.appendChild(totalCell);
+
+    return row;
 }
 
-function getCellClass(day, dayIndex) {
-    const dayOfWeek = (dayIndex + 3) % 7; // Assuming 1st is Thursday
-    let classes = [];
-    
-    if (dayOfWeek === 5 || dayOfWeek === 6) {
-        classes.push('weekend');
-    }
-    
-    if (day === 'SL') {
+function getCellClass(day, date) { // <-- Changed to accept 'date' object
+    const classes = ['day-cell'];
+
+    if (!day || day.trim() === '') {
+        classes.push('empty');
+    } else if (day === 'SL') {
         classes.push('sick-leave');
     } else if (day === 'Co') {
-        classes.push('vacation');
+        classes.push('holiday');
+    } else if (day === 'CM') {
+        classes.push('medical-leave');
     } else if (day === 'LB') {
-        classes.push('legal-holiday');
-    } else if (day.includes('RO')) {
-        classes.push('ro-team');
-    } else if (day.includes('HU')) {
-        classes.push('hu-team');
-    } else if (day.includes('IT')) {
-        classes.push('it-team');
-    } else if (day.includes('NL')) {
-        classes.push('nl-team');
-    } else if (day.includes('DE')) {
-        classes.push('de-team');
+        classes.push('day-off');
+    } else if (day.match(/\d+\s*(RO|HU|IT|NL|DE|BRO|BDE)/i)) {
+        classes.push('working');
+        // Check if it's a multi-team day (contains + or multiple teams)
+        if (day.includes('+') || day.match(/(\d+\s*(RO|HU|IT|NL|DE|BRO|BDE).*){2,}/i)) {
+            classes.push('multi-team');
+        }
     }
-    
-    return classes.join(' ');
+
+    // Add weekend class using the passed date object
+    const dayOfWeek = date.getDay();
+    if (dayOfWeek === 0 || dayOfWeek === 6) {
+        classes.push('weekend');
+    }
+
+    return classes;
 }
 
 function formatCellContent(day) {
-    if (day === 'SL') return 'SL';
-    if (day === 'Co') return 'Co';
-    if (day === 'LB') return 'LB';
+    if (!day || day.trim() === '') return '';
     
-    // Format team allocations with line breaks
-    return day.replace(/\s*\+\s*/g, '<br>');
+    // Handle special cases
+    if (['SL', 'Co', 'CM', 'LB'].includes(day)) {
+        return day;
+    }
+    
+    // Handle multiple teams (e.g., "4HU + 4IT" or "4HU+4IT" -> "4HU\n+\n4IT")
+    if (day.includes('+')) {
+        const parts = day.split('+');
+        // Clean up each part and join with newlines and + symbols for better display
+        return parts.map(part => part.trim().replace(/\s+/g, '')).join('\n+\n');
+    }
+    
+    // Format single team working hours (e.g., "8 RO" -> "8RO")
+    return day.replace(/\s+/g, '');
 }
 
 function calculateAgentTotalHours(agent) {
-    let total = 0;
+    if (!agent.days || !Array.isArray(agent.days)) return '0h';
+    
+    let totalHours = 0;
     agent.days.forEach(day => {
-        if (day !== 'SL' && day !== 'Co' && day !== 'LB') {
-            const matches = day.match(/\d+/g);
-            if (matches) {
-                total += matches.reduce((sum, num) => sum + parseInt(num), 0);
+        if (day && day.match(/\d+/)) {
+            const hours = day.match(/\d+/g);
+            if (hours) {
+                totalHours += hours.reduce((sum, h) => sum + parseInt(h), 0);
             }
         }
     });
-    return total;
+    
+    return `${totalHours}h`;
 }
 
-// Cell Selection and Editing
+// Cell Selection Logic (Refactored to use Firestore Document ID)
 function addCellEventListeners() {
     const cells = document.querySelectorAll('.planner-cell.selectable');
     cells.forEach(cell => {
+        // Remove old listeners to prevent duplicates
+        cell.removeEventListener('mousedown', handleCellMouseDown);
         cell.addEventListener('mousedown', handleCellMouseDown);
+        cell.removeEventListener('mouseover', handleCellMouseOver);
         cell.addEventListener('mouseover', handleCellMouseOver);
+        cell.removeEventListener('mouseup', handleCellMouseUp);
         cell.addEventListener('mouseup', handleCellMouseUp);
+        
+        // Add right-click listener to clear selection
+        cell.removeEventListener('contextmenu', handleCellRightClick);
+        cell.addEventListener('contextmenu', handleCellRightClick);
     });
     
+    // Add global mouse up listener
+    document.removeEventListener('mouseup', handleDocumentMouseUp);
     document.addEventListener('mouseup', handleDocumentMouseUp);
+    
+    // Add global right-click listener to clear selection
+    document.removeEventListener('contextmenu', handleDocumentRightClick);
+    document.addEventListener('contextmenu', handleDocumentRightClick);
 }
 
 function handleCellMouseDown(e) {
-    e.preventDefault();
     const cell = e.currentTarget;
-    const cellKey = `${cell.dataset.agent}-${cell.dataset.day}`;
+    // CRITICAL CHANGE: The key now uses the Firestore document ID (agent.id)
+    // instead of the agent's name, which is more robust.
+    const cellKey = `${cell.dataset.agentId}-${cell.dataset.day}`;
     
-    if (e.ctrlKey || e.metaKey) {
-        // Ctrl+click for multi-select
-        if (selectionState.selectedCells.has(cellKey)) {
-            selectionState.selectedCells.delete(cellKey);
-            cell.classList.remove('selected');
-        } else {
-            selectionState.selectedCells.add(cellKey);
-            cell.classList.add('selected');
-        }
+    selectionState.selectionStarted = true;
+    
+    if (selectionState.selectedCells.has(cellKey)) {
+        selectionState.selectedCells.delete(cellKey);
+        cell.classList.remove('selected');
     } else {
-        // Regular click - start new selection
-        clearSelection();
         selectionState.selectedCells.add(cellKey);
         cell.classList.add('selected');
-        selectionState.selectionStarted = true;
     }
     
     updateSelectionCounter();
+    e.preventDefault();
 }
 
 function handleCellMouseOver(e) {
-    if (selectionState.selectionStarted) {
-        const cell = e.currentTarget;
-        const cellKey = `${cell.dataset.agent}-${cell.dataset.day}`;
-        
-        if (!selectionState.selectedCells.has(cellKey)) {
-            selectionState.selectedCells.add(cellKey);
-            cell.classList.add('selected');
-        }
+    if (!selectionState.selectionStarted) return;
+    
+    const cell = e.currentTarget;
+    const cellKey = `${cell.dataset.agentId}-${cell.dataset.day}`;
+    
+    if (!selectionState.selectedCells.has(cellKey)) {
+        selectionState.selectedCells.add(cellKey);
+        cell.classList.add('selected');
+        updateSelectionCounter();
     }
 }
 
 function handleCellMouseUp() {
     selectionState.selectionStarted = false;
-    updateSelectionCounter();
 }
 
 function handleDocumentMouseUp() {
     selectionState.selectionStarted = false;
 }
 
-function clearSelection() {
+function handleCellRightClick(e) {
+    e.preventDefault(); // Prevent default context menu
+    clearSelection();
+}
+
+function handleDocumentRightClick(e) {
+    e.preventDefault(); // Prevent default context menu
+    clearSelection();
+}
+
+export function clearSelection() {
     selectionState.selectedCells.clear();
     document.querySelectorAll('.planner-cell.selected').forEach(cell => {
         cell.classList.remove('selected');
@@ -564,47 +696,31 @@ function clearSelection() {
 }
 
 function updateSelectionCounter() {
-    const selectedCount = selectionState.selectedCells.size;
     const counter = document.getElementById('selectionCounter');
-    
-    if (counter) {
-        if (selectedCount === 0) {
-            counter.classList.remove('visible');
-        } else {
-            counter.classList.add('visible');
-            counter.querySelector('#selectionCount').textContent = `${selectedCount} celule selectate`;
-        }
+    const countElement = document.getElementById('selectionCount');
+
+    if (!counter || !countElement) return;
+
+    if (selectionState.selectedCells.size > 0) {
+        counter.classList.add('visible'); // FIX: Use a class to show the element
+        countElement.textContent = `${selectionState.selectedCells.size} celule selectate`;
+    } else {
+        counter.classList.remove('visible'); // FIX: Use a class to hide the element
     }
 }
 
-// View options
+// Other utility functions
 export function toggleCompactView() {
-    const compactCheckbox = document.getElementById('compactView');
-    const isCompact = compactCheckbox ? compactCheckbox.checked : false;
-    
-    const tableContainer = document.querySelector('.enhanced-table');
-    if (tableContainer) {
-        tableContainer.classList.toggle('compact-view', isCompact);
-    }
+    plannerState.viewOptions.compactView = !plannerState.viewOptions.compactView;
+    document.body.classList.toggle('compact-view', plannerState.viewOptions.compactView);
+    renderPlannerTable();
 }
 
-// Filter actions
 export function resetFilters() {
     plannerState.selectedTeams = ['all'];
     plannerState.selectedAgents = [];
-    plannerState.rangeType = 'preset';
-    plannerState.presetRange = 'current-month';
-    
-    // Reset UI
-    const agentSearch = document.getElementById('agentSearch');
-    if (agentSearch) agentSearch.value = '';
-    
-    const presetSelect = document.getElementById('presetRange');
-    if (presetSelect) presetSelect.value = 'current-month';
-    
-    // Update display
-    initializeTeamChips();
-    applyPresetRange();
+    document.getElementById('agentSearch').value = '';
+    updateTeamDisplay();
     renderPlannerTable();
 }
 
@@ -612,46 +728,7 @@ export function applyFilters() {
     renderPlannerTable();
 }
 
-// Export functions
 export function exportToCSV() {
-    const filteredAgents = getFilteredAgents();
-    console.log('Exporting to CSV...', filteredAgents);
-    // Implementation for CSV export
-}
-
-export function savePlannerChanges() {
-    console.log('Saving planner changes...');
-    showTemporaryMessage('Modificările au fost salvate!', 'success');
-}
-
-// Export renderPlannerTable function
-export { renderPlannerTable };
-
-// Calendar functions
-export function toggleCalendar(calendarType) {
-    const calendar = document.querySelector(`.calendar-popup[data-type="${calendarType}"]`);
-    if (calendar) {
-        calendar.style.display = calendar.style.display === 'none' ? 'block' : 'none';
-    }
-}
-
-export function navigateCalendar(calendarType, direction) {
-    console.log(`Navigating ${calendarType} calendar ${direction}`);
-    // Implementation for calendar navigation
-}
-
-export function setToday(calendarType) {
-    const input = document.querySelector(`input[data-calendar="${calendarType}"]`);
-    if (input) {
-        const today = new Date();
-        const formattedDate = today.toISOString().split('T')[0];
-        input.value = formattedDate;
-    }
-}
-
-export function closeCalendar(calendarType) {
-    const calendar = document.querySelector(`.calendar-popup[data-type="${calendarType}"]`);
-    if (calendar) {
-        calendar.style.display = 'none';
-    }
+    console.log('Exporting to CSV...');
+    showTemporaryMessage("CSV export functionality coming soon!", "info");
 } 

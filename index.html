@@ -12,6 +12,23 @@
     <link rel="stylesheet" href="css/components.css">
     <link rel="stylesheet" href="css/planner.css">
     <link rel="stylesheet" href="css/responsive.css">
+    <style>
+        /* FIX: Styles for the selection counter visibility */
+        .selection-counter {
+            display: flex; /* Ensures content is aligned correctly */
+            align-items: center;
+            transform: translateY(120%);
+            transition: transform 0.3s ease-in-out;
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .selection-counter.visible {
+            transform: translateY(0);
+            opacity: 1;
+            visibility: visible;
+        }
+    </style>
 </head>
 <body>
     <div class="app-container">
@@ -217,46 +234,47 @@
                     <h2 class="header-title">Adaugă Agent Nou</h2>
                 </header>
                 <div class="content">
-                    <div style="max-width: 600px;">
+                    <form id="newUserForm" style="max-width: 600px;">
                         <div class="form-group">
                             <label>Nume Complet</label>
-                            <input type="text" placeholder="Prenume Nume">
+                            <input type="text" id="newAgentFullName" placeholder="Prenume Nume">
                         </div>
                         <div class="form-group">
                             <label>Username</label>
-                            <input type="text" placeholder="username.fsp">
+                            <input type="text" id="newAgentUsername" placeholder="username.fsp">
                         </div>
                         <div class="form-group">
                             <label>Ore Contract/Zi</label>
-                            <select>
-                                <option>4 ore</option>
-                                <option>6 ore</option>
-                                <option>7 ore</option>
-                                <option selected>8 ore</option>
+                            <select id="newAgentContractHours">
+                                <option value="4">4 ore</option>
+                                <option value="6">6 ore</option>
+                                <option value="7">7 ore</option>
+                                <option value="8" selected>8 ore</option>
                             </select>
                         </div>
                         <div class="form-group">
                             <label>Tip Contract</label>
-                            <select>
-                                <option selected>Full-time</option>
+                            <select id="newAgentContractType">
+                                <option>Full-time</option>
                                 <option>Part-time</option>
                             </select>
                         </div>
                         <div class="form-group">
                             <label>Echipa Primară</label>
-                            <select>
+                            <select id="newAgentPrimaryTeam">
                                 <option>RO zooplus</option>
                                 <option>HU zooplus</option>
                                 <option>IT zooplus</option>
                                 <option>NL zooplus</option>
+                                <option>DE zooplus</option>
                             </select>
                         </div>
                         <div class="form-group">
                             <label>Data Angajare</label>
-                            <input type="date">
+                            <input type="date" id="newAgentHireDate">
                         </div>
-                        <button class="btn btn-primary">Creează Agent</button>
-                    </div>
+                        <button type="button" id="createAgentBtn" class="btn btn-primary">Creează Agent</button>
+                    </form>
                 </div>
             </section>
 
@@ -264,10 +282,6 @@
             <section id="planner" class="section">
                 <header class="header">
                     <h2 class="header-title">Planificare Ore</h2>
-                    <div class="planner-actions">
-                        <button class="btn btn-secondary">Export CSV</button>
-                        <button class="btn btn-primary">Salvează</button>
-                    </div>
                 </header>
                 <div class="content">
                     <div class="alert alert-warning">
@@ -404,8 +418,8 @@
                         
                         <div class="filters-row">
                             <div class="filter-actions">
-                                <button class="btn btn-secondary">Resetează</button>
-                                <button class="btn btn-primary">Aplică Filtrele</button>
+                                <button id="resetFiltersBtn" class="btn btn-secondary">Resetează</button>
+                                <button id="applyFiltersBtn" class="btn btn-primary">Aplică Filtrele</button>
                             </div>
                         </div>
                     </div>
@@ -435,15 +449,6 @@
                                     <!-- Rows will be populated by JS -->
                                 </tbody>
                             </table>
-                        </div>
-                    </div>
-                    
-                    <!-- Debug: Add some extra content to test scrolling -->
-                    <div style="height: 800px; background: rgba(255,215,0,0.1); margin: 2rem 0; padding: 1rem; border-radius: 8px;">
-                        <h3 style="color: var(--accent);">Test Scrolling Area</h3>
-                        <p>This area should be visible by scrolling down. If you can see this, scrolling is working properly.</p>
-                        <div style="height: 600px; display: flex; align-items: center; justify-content: center; color: var(--text-secondary);">
-                            Scroll test content - if you can see this by scrolling, the fix is working!
                         </div>
                     </div>
                 </div>
@@ -714,9 +719,17 @@
     <!-- Selection Counter -->
     <div id="selectionCounter" class="selection-counter">
         <span id="selectionCount">0 celule selectate</span>
-        <button style="margin-left: 1rem; background: transparent; border: none; color: inherit; cursor: pointer;">
-            Editează
-        </button>
+        <div class="selection-actions">
+            <button id="cancelSelectionBtn" class="btn-ghost" style="margin-left: 1rem;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="margin-right: 0.5rem;">
+                    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                </svg>
+                Anulează
+            </button>
+            <button id="editSelectionBtn" class="btn-primary" style="margin-left: 0.5rem;">
+                Editează
+            </button>
+        </div>
     </div>
 
     <!-- JavaScript Files -->

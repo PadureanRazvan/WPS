@@ -1147,19 +1147,67 @@ input:focus, select:focus, textarea:focus {
     position: fixed;
     bottom: 2rem;
     right: 2rem;
-    background: var(--accent);
-    color: var(--primary-dark);
-    padding: 0.75rem 1.5rem;
-    border-radius: 25px;
-    font-weight: 600;
+    background: var(--primary-dark);
+    padding: 1rem;
+    border-radius: 8px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    transform: translateY(100px);
-    transition: transform 0.3s ease;
-    z-index: 100;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    border: 1px solid var(--border);
+    transform: translateY(120%);
+    transition: transform 0.3s ease-in-out;
+    opacity: 0;
+    visibility: hidden;
 }
 
 .selection-counter.visible {
     transform: translateY(0);
+    opacity: 1;
+    visibility: visible;
+}
+
+.selection-counter .selection-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.selection-counter .btn-ghost {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    font-size: 0.9rem;
+}
+
+.selection-counter .btn-ghost:hover {
+    background: var(--primary);
+    color: var(--text-primary);
+    border-color: var(--accent);
+}
+
+.selection-counter .btn-primary {
+    background: var(--accent);
+    border: 1px solid var(--accent);
+    color: var(--primary-dark);
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+.selection-counter .btn-primary:hover {
+    background: var(--accent-light);
+    transform: translateY(-1px);
 }
 
 /* Theme Toggle and Language Selector Styles */
