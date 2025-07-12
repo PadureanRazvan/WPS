@@ -281,7 +281,10 @@
             <!-- Planner Section -->
             <section id="planner" class="section">
                 <header class="header">
-                    <h2 class="header-title">Planificare Ore</h2>
+                    <div class="header-title-group">
+                        <h2 class="header-title">Planificare Ore</h2>
+                        <h3 class="header-subtitle" id="plannerDateRange"></h3>
+                    </div>
                 </header>
                 <div class="content">
                     <div class="alert alert-warning">
@@ -292,135 +295,24 @@
                     </div>
 
                     <div class="planner-controls">
-                        <div class="filters-row">
-                            <div class="filter-group">
-                                <label>Perioada</label>
-                                <div class="filter-tabs">
-                                    <button class="filter-tab active" data-range="preset">Predefinit</button>
-                                    <button class="filter-tab" data-range="custom">Personalizat</button>
-                                    <button class="filter-tab" data-range="multi-month">Multi-lună</button>
-                                </div>
-                            </div>
-                            
-                            <div class="filter-content">
-                                <div class="preset-range" id="presetRangeContainer">
-                                    <select id="presetRange" class="enhanced-select">
-                                        <option value="current-month">Luna Curentă</option>
-                                        <option value="next-month">Luna Următoare</option>
-                                        <option value="current-quarter">Trimestrul Curent</option>
-                                        <option value="next-quarter">Trimestrul Următor</option>
-                                        <option value="current-year">Anul Curent</option>
-                                        <option value="last-30-days">Ultimele 30 zile</option>
-                                        <option value="next-30-days">Următoarele 30 zile</option>
-                                        <option value="last-7-days">Ultimele 7 zile</option>
-                                        <option value="next-7-days">Următoarele 7 zile</option>
-                                        <option value="yesterday">Ieri</option>
-                                        <option value="today">Azi</option>
-                                        <option value="tomorrow">Mâine</option>
-                                        <option value="last-week">Săptămâna Trecută</option>
-                                        <option value="this-week">Săptămâna Aceasta</option>
-                                        <option value="next-week">Săptămâna Viitoare</option>
-                                    </select>
-                                </div>
-                                
-                                <div class="custom-range" id="customRangeContainer" style="display: none;">
-                                    <div class="date-input-group">
-                                        <label>Data Început</label>
-                                        <div class="date-input-wrapper">
-                                            <input type="text" class="date-input" id="startDate" placeholder="Selectează data" readonly>
-                                            <button class="calendar-trigger" type="button">
-                                                <svg viewBox="0 0 24 24" width="16" height="16">
-                                                    <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/>
-                                                </svg>
-                                            </button>
-                                        </div>
-                                        <div class="calendar-popup" id="startCalendar" data-type="start">
-                                            <div class="calendar-header">
-                                                <button class="calendar-nav-btn">‹</button>
-                                                <span class="calendar-month-year">Mai 2025</span>
-                                                <button class="calendar-nav-btn">›</button>
-                                            </div>
-                                            <div class="calendar-grid" id="startCalendarGrid"></div>
-                                            <div class="calendar-actions">
-                                                <button class="btn-ghost">Astăzi</button>
-                                                <button class="btn-ghost">Închide</button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="date-input-group">
-                                        <label>Data Sfârșit</label>
-                                        <div class="date-input-wrapper">
-                                            <input type="text" class="date-input" id="endDate" placeholder="Selectează data" readonly>
-                                            <button class="calendar-trigger" type="button">
-                                                <svg viewBox="0 0 24 24" width="16" height="16">
-                                                    <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/>
-                                                </svg>
-                                            </button>
-                                        </div>
-                                        <div class="calendar-popup" id="endCalendar" data-type="end">
-                                            <div class="calendar-header">
-                                                <button class="calendar-nav-btn">‹</button>
-                                                <span class="calendar-month-year">Mai 2025</span>
-                                                <button class="calendar-nav-btn">›</button>
-                                            </div>
-                                            <div class="calendar-grid" id="endCalendarGrid"></div>
-                                            <div class="calendar-actions">
-                                                <button class="btn-ghost">Astăzi</button>
-                                                <button class="btn-ghost">Închide</button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div class="multi-month-range" id="multiMonthContainer" style="display: none;">
-                                    <div class="month-selector">
-                                        <div class="month-grid" id="monthGrid"></div>
-                                        <div class="month-actions">
-                                            <button class="btn-ghost">Selectează Toate</button>
-                                            <button class="btn-ghost">Șterge Selecția</button>
-                                        </div>
-                                    </div>
-                                </div>
+                        <div class="filter-section">
+                            <div class="filter-label">PERIOADA</div>
+                            <div class="period-tabs">
+                                <button class="period-tab active" data-tab="custom">Personalizat</button>
                             </div>
                         </div>
-
-                        <div class="filters-row">
-                            <div class="filter-group">
-                                <label>Agenți</label>
-                                <div class="agent-search-container">
-                                    <input type="text" 
-                                           id="agentSearch" 
-                                           placeholder="Caută agenți..."
-                                           class="agent-search">
-                                    <div class="agent-suggestions" id="agentSuggestions"></div>
-                                </div>
+                        <div class="date-range-section">
+                            <div class="date-group">
+                                <div class="date-label">DATA ÎNCEPUT</div>
+                                <input type="date" id="startDate" class="date-input" value="2025-05-01">
                             </div>
-                            
-                            <div class="filter-group">
-                                <label>Opțiuni Vizualizare</label>
-                                <div class="view-options">
-                                    <label class="checkbox-label">
-                                        <input type="checkbox" id="showWeekTotals" checked>
-                                        <span>Totaluri Săptămânale</span>
-                                    </label>
-                                    <label class="checkbox-label">
-                                        <input type="checkbox" id="highlightWeekends" checked>
-                                        <span>Evidențiază Weekend-uri</span>
-                                    </label>
-                                    <label class="checkbox-label">
-                                        <input type="checkbox" id="compactView">
-                                        <span>Vedere Compactă</span>
-                                    </label>
-                                </div>
+                            <div class="date-group">
+                                <div class="date-label">DATA SFÂRȘIT</div>
+                                <input type="date" id="endDate" class="date-input" value="2025-05-31">
                             </div>
                         </div>
-                        
-                        <div class="filters-row">
-                            <div class="filter-actions">
-                                <button id="resetFiltersBtn" class="btn btn-secondary">Resetează</button>
-                                <button id="applyFiltersBtn" class="btn btn-primary">Aplică Filtrele</button>
-                            </div>
+                        <div class="filter-actions">
+                            <button id="resetFiltersBtn" class="btn-reset">RESETEAZĂ</button>
                         </div>
                     </div>
 
@@ -431,25 +323,7 @@
 
                     <!-- Table Container -->
                     <div class="table-container enhanced-table">
-                        <!-- Fixed Header Table -->
-                        <div class="planner-header-container">
-                            <table class="planner-header-table">
-                                <thead>
-                                    <tr id="plannerTableHeader">
-                                        <!-- Headers will be populated dynamically -->
-                                    </tr>
-                                </thead>
-                            </table>
-                        </div>
-                        
-                        <!-- Scrollable Body Table -->
-                        <div class="planner-body-container">
-                            <table class="planner-body-table">
-                                <tbody id="plannerTableBody">
-                                    <!-- Rows will be populated by JS -->
-                                </tbody>
-                            </table>
-                        </div>
+                        <!-- Table will be populated dynamically -->
                     </div>
                 </div>
             </section>

@@ -292,6 +292,20 @@
     letter-spacing: -0.3px;
 }
 
+.header-title-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.header-subtitle {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    line-height: 1.1;
+}
+
 .header-actions {
     display: flex;
     align-items: center;

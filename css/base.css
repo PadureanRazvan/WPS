@@ -7,15 +7,15 @@
 :root {
     --primary: #1a237e;
     --primary-dark: #0a0e27;
-    --primary-light: #141937;
+    --primary-light: #1C233A; /* Slightly lighter for less harshness */
     --accent: #ffd700;
     --text-primary: #ffffff;
     --text-secondary: #c1c5e8;
-    --border: #2a3f5f;
+    --border: #3B4B6F; /* Brighter for more defined cells */
     --success: #4caf50;
     --warning: #ff9800;
     --error: #f44336;
-    --hover: rgba(255, 215, 0, 0.1);
+    --hover: rgba(255, 215, 0, 0.15); /* More noticeable hover */
 }
 
 /* Light Theme Variables */

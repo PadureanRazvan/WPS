@@ -3,7 +3,7 @@
 // === THEME AND LANGUAGE FUNCTIONALITY ===
 import { languageConfig, translations } from './config.js';
 // Import the new Firestore functions from planner.js
-import { addAgent, applyChangesToSelectedCells } from './planner.js';
+import { addAgent, applyChangesToSelectedCells, renderPlannerTable } from './planner.js';
 
 // Theme and language state
 let currentTheme = localStorage.getItem('theme') || 'dark';
@@ -124,6 +124,14 @@ export function showSection(sectionId, clickedElement) {
     const targetSection = document.getElementById(sectionId);
     if (targetSection) {
         targetSection.classList.add('active');
+        
+        // If switching to planner section, trigger a render
+        if (sectionId === 'planner') {
+            // Use setTimeout to ensure the section is visible first
+            setTimeout(() => {
+                renderPlannerTable();
+            }, 10);
+        }
     }
 }
 

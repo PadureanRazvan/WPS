@@ -46,7 +46,7 @@ export function initializePlanner() {
         // This ensures the UI is always in sync with the database.
         initializeMonthGrid();
         initializeTeamChips();
-        renderPlannerTable();
+        renderPlannerIfActive();
         console.log("[Planner] UI re-rendered with fresh data.");
 
     }, (error) => {
@@ -190,6 +190,29 @@ export async function applyChangesToSelectedCells(selectedCellKeys, newValue) {
 // NOTE: Most of the functions below this point are the same as before, but now
 // they operate on the `plannerData` array which is kept in sync by Firestore.
 
+// --- Date Range Display Function ---
+function updatePlannerHeader() {
+    const dateRangeEl = document.getElementById('plannerDateRange');
+    if (!dateRangeEl) return;
+
+    const { start, end } = plannerState.dateRange;
+    if (!start || !end) {
+        dateRangeEl.textContent = 'Selectați o perioadă';
+        return;
+    }
+
+    const startMonth = start.toLocaleDateString('ro-RO', { month: 'long' });
+    const endMonth = end.toLocaleDateString('ro-RO', { month: 'long' });
+    const startYear = start.getFullYear();
+    const endYear = end.getFullYear();
+
+    if (startMonth === endMonth && startYear === endYear) {
+        dateRangeEl.textContent = `${startMonth.charAt(0).toUpperCase() + startMonth.slice(1)} ${startYear}`;
+    } else {
+        dateRangeEl.textContent = `${start.toLocaleDateString('ro-RO')} - ${end.toLocaleDateString('ro-RO')}`;
+    }
+}
+
 // Enhanced Planner State
 let plannerState = {
     selectedMonths: [],
@@ -198,6 +221,7 @@ let plannerState = {
     dateRange: { start: null, end: null },
     rangeType: 'preset',
     presetRange: 'current-month',
+    agentSearchTerm: '',
     viewOptions: {
         showWeekTotals: true,
         highlightWeekends: true,
@@ -276,7 +300,7 @@ function updateMonthDisplay() {
 }
 
 function initializeTeamChips() {
-    const teamChips = document.querySelector('.team-chips');
+    const teamChips = document.getElementById('teamChips');
     if (!teamChips) return;
     
     const allTeams = getAllTeams();
@@ -317,6 +341,7 @@ export function toggleTeam(teamId) {
     }
     
     updateTeamDisplay();
+    applyFiltersAndRender(); // Re-render automatically
 }
 
 function updateTeamDisplay() {
@@ -329,6 +354,7 @@ function updateTeamDisplay() {
 
 export function setRangeType(type) {
     plannerState.rangeType = type;
+    const applyBtn = document.getElementById('applyMultiMonthBtn');
     
     // Update tab display
     document.querySelectorAll('.filter-tab').forEach(tab => {
@@ -339,6 +365,17 @@ export function setRangeType(type) {
     document.getElementById('presetRangeContainer').style.display = type === 'preset' ? 'block' : 'none';
     document.getElementById('customRangeContainer').style.display = type === 'custom' ? 'flex' : 'none';
     document.getElementById('multiMonthContainer').style.display = type === 'multi-month' ? 'block' : 'none';
+    
+    if (type === 'multi-month') {
+        applyBtn.style.display = 'block'; // Show button for multi-month view
+    } else {
+        applyBtn.style.display = 'none'; // Hide for other views
+    }
+
+    // Immediately render if switching away from multi-month
+    if (type !== 'multi-month') {
+        applyFiltersAndRender();
+    }
 }
 
 export function applyPresetRange() {
@@ -371,7 +408,7 @@ export function applyPresetRange() {
         // Add more cases as needed
     }
     
-    renderPlannerTable();
+    applyFiltersAndRender(); // Use the new reactive function
 }
 
 function initializeAgentSearch() {
@@ -384,7 +421,9 @@ function initializeAgentSearch() {
 }
 
 export function filterAgents() {
-    renderPlannerTable();
+    // This function is now called by the reactive system
+    // The actual filtering logic is handled in getFilteredAgents()
+    // No need to call renderPlannerTable directly since it's handled by the reactive system
 }
 
 export function showAgentSuggestions() {
@@ -417,8 +456,8 @@ function getFilteredAgents() {
         );
     }
 
-    // Apply agent search filter
-    const searchTerm = document.getElementById('agentSearch')?.value?.toLowerCase();
+    // Apply agent search filter using plannerState
+    const searchTerm = plannerState.agentSearchTerm?.toLowerCase();
     if (searchTerm) {
         filteredAgents = filteredAgents.filter(agent =>
             (agent.fullName && agent.fullName.toLowerCase().includes(searchTerm)) ||
@@ -430,58 +469,86 @@ function getFilteredAgents() {
 }
 
 // Table Rendering (now renders live data)
-export function renderPlannerTable() {
-    const headerContainer = document.getElementById('plannerTableHeader');
-    const bodyContainer = document.getElementById('plannerTableBody');
-
-    if (!headerContainer || !bodyContainer) {
-        console.error("Planner table containers not found!");
-        return;
-    }
-
-    // === FIX START: Use date range from state ===
-    let { start, end } = plannerState.dateRange;
-
-    // Fallback to current month if no range is set
+export function renderPlannerTable(container, startDate, endDate) {
+    // Use passed-in dates or fallback to state
+    let start = startDate;
+    let end = endDate;
+    
     if (!start || !end) {
-        const now = new Date();
-        start = new Date(now.getFullYear(), now.getMonth(), 1);
-        end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        const { start: stateStart, end: stateEnd } = plannerState.dateRange;
+        start = stateStart;
+        end = stateEnd;
+        
+        // Fallback to current month if no range is set
+        if (!start || !end) {
+            const now = new Date();
+            start = new Date(now.getFullYear(), now.getMonth(), 1);
+            end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        }
     }
 
     const days = [];
     for (let dt = new Date(start); dt <= end; dt.setDate(dt.getDate() + 1)) {
         days.push(new Date(dt));
     }
-    // === FIX END ===
+
+    // Get the table container - use the enhanced table container by default
+    const tableContainer = container || document.querySelector('.table-container.enhanced-table');
+    if (!tableContainer) {
+        console.log("Planner table container not found - section might not be active yet. Skipping render.");
+        return;
+    }
+
+    // Call the function to update the header with the date range
+    updatePlannerHeader(); 
+
+    // Clear previous content
+    tableContainer.innerHTML = '';
+
+    // Create table structure
+    const table = document.createElement('table');
+    table.className = 'unified-planner-table'; // Use the new class for sticky styles
+
+    const thead = document.createElement('thead');
+    const tbody = document.createElement('tbody');
+    tbody.id = 'plannerTableBody'; // Keep ID for event delegation
 
     // Render header
     const headerRow = document.createElement('tr');
     headerRow.innerHTML = `
         <th class="agent-name-header">Agent</th>
         <th class="hours-header">Ore</th>
-        ${days.map(date => {
+        ${days.map((date, index) => {
             const dayNum = date.getDate();
             const dayOfWeek = date.getDay();
             const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-            return `<th class="day-header ${isWeekend ? 'weekend' : ''}">${dayNum}</th>`;
+            const weekendClass = plannerState.viewOptions.highlightWeekends && isWeekend ? 'weekend' : '';
+            
+            // Weekly total column logic
+            let extraColumn = '';
+            if (plannerState.viewOptions.showWeekTotals && dayOfWeek === 0) { // After every Sunday
+                extraColumn = `<th class="week-total-header">Total Săpt.</th>`;
+            }
+            return `<th class="day-header ${weekendClass}">${dayNum}</th>${extraColumn}`;
         }).join('')}
         <th class="total-header">Total</th>
     `;
-    headerContainer.innerHTML = '';
-    headerContainer.appendChild(headerRow);
+    thead.appendChild(headerRow);
 
     // Render body
     const filteredAgents = getFilteredAgents();
-    bodyContainer.innerHTML = '';
-
     filteredAgents.forEach((agent) => {
         // Pass the array of dates to renderAgentRow
         const row = renderAgentRow(agent, days);
-        bodyContainer.appendChild(row);
+        tbody.appendChild(row);
     });
 
-    // Add cell event listeners
+    // Assemble table
+    table.appendChild(thead);
+    table.appendChild(tbody);
+    tableContainer.appendChild(table);
+
+    // Re-attach event listeners after every render
     addCellEventListeners();
 }
 
@@ -492,6 +559,7 @@ function renderAgentRow(agent, dates) {
     // Agent name cell
     const nameCell = document.createElement('td');
     nameCell.className = 'agent-name';
+    nameCell.title = agent.fullName || agent.name || 'Unknown Agent'; // Add tooltip
     nameCell.innerHTML = `
         <span>${agent.fullName || agent.name || 'Unknown Agent'}</span>
         <button class="delete-agent-btn" data-agent-id="${agent.id}" title="Delete Agent">
@@ -504,8 +572,11 @@ function renderAgentRow(agent, dates) {
     hoursCell.className = 'agent-hours';
     hoursCell.textContent = agent.contractHours ? `${agent.contractHours}h` : '8h';
 
-    // Day cells
-    const dayCells = dates.map(date => {
+    // Day cells with weekly totals support
+    const dayCells = [];
+    let weeklyHours = 0;
+    
+    dates.forEach(date => {
         const dayIndex = date.getDate() - 1; // agent.days is 0-indexed (0 for 1st, 1 for 2nd)
 
         const cell = document.createElement('td');
@@ -528,7 +599,35 @@ function renderAgentRow(agent, dates) {
         
         cell.classList.add(...getCellClass(dayValue, date));
 
-        return cell;
+        // Add today class if this is the current day
+        const today = new Date();
+        const isToday = date.getDate() === today.getDate() && 
+                       date.getMonth() === today.getMonth() && 
+                       date.getFullYear() === today.getFullYear();
+        
+        if (isToday) {
+            cell.classList.add('today');
+        }
+
+        // Add to cells array
+        dayCells.push(cell);
+        
+        // Track weekly hours for weekly totals
+        if (plannerState.viewOptions.showWeekTotals) {
+            const hoursMatch = dayValue.match(/\d+/g);
+            if (hoursMatch) {
+                weeklyHours += hoursMatch.reduce((sum, h) => sum + parseInt(h, 10), 0);
+            }
+            
+            // Add weekly total cell after Sunday
+            if (date.getDay() === 0) {
+                const weeklyCell = document.createElement('td');
+                weeklyCell.className = 'week-total-cell';
+                weeklyCell.textContent = `${weeklyHours}h`;
+                dayCells.push(weeklyCell);
+                weeklyHours = 0; // Reset for the next week
+            }
+        }
     });
 
     // Total cell
@@ -631,9 +730,14 @@ function addCellEventListeners() {
     document.removeEventListener('mouseup', handleDocumentMouseUp);
     document.addEventListener('mouseup', handleDocumentMouseUp);
     
-    // Add global right-click listener to clear selection
-    document.removeEventListener('contextmenu', handleDocumentRightClick);
-    document.addEventListener('contextmenu', handleDocumentRightClick);
+    // Add scoped listener to the table body (works with new unified table structure)
+    const plannerBody = document.getElementById('plannerTableBody');
+    if (plannerBody) {
+        // Remove any old listener to prevent duplicates
+        plannerBody.removeEventListener('contextmenu', handleScopedRightClick);
+        // Add the new scoped listener
+        plannerBody.addEventListener('contextmenu', handleScopedRightClick);
+    }
 }
 
 function handleCellMouseDown(e) {
@@ -682,9 +786,13 @@ function handleCellRightClick(e) {
     clearSelection();
 }
 
-function handleDocumentRightClick(e) {
-    e.preventDefault(); // Prevent default context menu
-    clearSelection();
+function handleScopedRightClick(e) {
+    // Check if the click happened on a selectable cell
+    if (e.target.closest('.planner-cell.selectable')) {
+        e.preventDefault(); // Prevent context menu ONLY on the grid
+        clearSelection();
+    }
+    // If not on a cell, the event proceeds as normal, showing the native context menu.
 }
 
 export function clearSelection() {
@@ -711,21 +819,104 @@ function updateSelectionCounter() {
 
 // Other utility functions
 export function toggleCompactView() {
-    plannerState.viewOptions.compactView = !plannerState.viewOptions.compactView;
+    const compactViewCheckbox = document.getElementById('compactView');
+    plannerState.viewOptions.compactView = compactViewCheckbox.checked;
     document.body.classList.toggle('compact-view', plannerState.viewOptions.compactView);
-    renderPlannerTable();
+    applyFiltersAndRender(); // Re-render automatically
 }
 
 export function resetFilters() {
     plannerState.selectedTeams = ['all'];
     plannerState.selectedAgents = [];
-    document.getElementById('agentSearch').value = '';
+    plannerState.agentSearchTerm = '';
+    
+    // Clear the search input if it exists
+    const agentSearchInput = document.getElementById('agentSearch');
+    if (agentSearchInput) {
+        agentSearchInput.value = '';
+    }
+    
+    // CRITICAL: Clear the selection state and UI
+    clearSelection();
+    
     updateTeamDisplay();
-    renderPlannerTable();
+    
+    // Re-initialize to default state
+    const presetSelect = document.getElementById('presetRange');
+    if (presetSelect) {
+        presetSelect.value = 'current-month';
+    }
+    applyPresetRange(); // This will trigger a re-render
 }
 
-export function applyFilters() {
-    renderPlannerTable();
+export function applyFiltersAndRender() {
+    console.log("Applying filters and re-rendering...");
+    
+    // PREVENT GHOST SELECTIONS: Clear state before redrawing
+    clearSelection();
+    
+    // Get the main container where the table(s) will be rendered
+    const plannerContainer = document.querySelector('.table-container.enhanced-table');
+    if (!plannerContainer) {
+        console.error("Planner container not found!");
+        return;
+    }
+
+    if (plannerState.rangeType === 'multi-month') {
+        // Clear previous content
+        plannerContainer.innerHTML = '';
+        
+        if (plannerState.selectedMonths.length === 0) {
+            plannerContainer.innerHTML = '<div class="placeholder">Selectați una sau mai multe luni pentru a le vizualiza.</div>';
+            return;
+        }
+
+        // Sort months chronologically
+        plannerState.selectedMonths.sort();
+
+        // Render one table for each selected month
+        plannerState.selectedMonths.forEach(monthKey => {
+            const [year, month] = monthKey.split('-').map(Number);
+            const startOfMonth = new Date(year, month - 1, 1);
+            const endOfMonth = new Date(year, month, 0);
+            
+            // Add a title for each table
+            const monthTitle = document.createElement('h3');
+            monthTitle.textContent = startOfMonth.toLocaleDateString('ro-RO', { month: 'long', year: 'numeric' });
+            monthTitle.style.cssText = 'padding: 1.5rem 1rem 0.5rem 1rem; margin: 0; color: var(--text-primary);';
+            plannerContainer.appendChild(monthTitle);
+            
+            // Render the table for this specific month
+            renderPlannerTable(plannerContainer, startOfMonth, endOfMonth);
+        });
+
+    } else {
+        // For 'preset' and 'custom' ranges, use the unified table structure
+        const { start, end } = plannerState.dateRange;
+        if (!start || !end) {
+            plannerContainer.innerHTML = '<div class="placeholder">Perioadă invalidă.</div>';
+            return;
+        }
+        
+        // Use the new unified table rendering
+        renderPlannerTable(plannerContainer, start, end);
+    }
+}
+
+export function setAgentSearchTerm(term) {
+    plannerState.agentSearchTerm = term;
+}
+
+export function setViewOption(option, value) {
+    plannerState.viewOptions[option] = value;
+}
+
+export function renderPlannerIfActive() {
+    // Check if planner section is active before rendering
+    const plannerSection = document.getElementById('planner');
+    if (plannerSection && plannerSection.classList.contains('active')) {
+        renderPlannerTable();
+    }
 }
 
 export function exportToCSV() {

@@ -17,7 +17,9 @@ import {
     hideAgentSuggestions, 
     toggleCompactView, 
     resetFilters, 
-    applyFilters, 
+    applyFiltersAndRender, 
+    setAgentSearchTerm,
+    setViewOption,
     exportToCSV,
     renderPlannerTable,
     clearSelection // Import the clearSelection function
@@ -59,6 +61,15 @@ async function initializeApp() {
         // This now sets up the real-time listener but doesn't block.
         // The UI will render once data is received from Firestore.
         initializePlanner(); 
+        
+        // --- Set default date range for planner ---
+        // This ensures the planner starts with a default state that matches the UI
+        const presetSelect = document.getElementById('presetRange');
+        if (presetSelect) {
+            presetSelect.value = 'current-month'; // Set the dropdown to the default
+            applyPresetRange(); // Apply this default range to the state and re-render
+        }
+        // --- End of default date range setup ---
         
         setupEventListeners();
         initializeUI();
@@ -172,16 +183,37 @@ function setupEventListeners() {
     // Agent Search
     const agentSearch = document.getElementById('agentSearch');
     if (agentSearch) {
-        agentSearch.addEventListener('input', filterAgents);
+        agentSearch.addEventListener('input', (e) => {
+            // Update the search term in plannerState
+            setAgentSearchTerm(e.target.value);
+            filterAgents();
+            applyFiltersAndRender(); // Re-render automatically
+        });
         agentSearch.addEventListener('focus', showAgentSuggestions);
         agentSearch.addEventListener('blur', hideAgentSuggestions);
     }
     
     // View Options
-    const compactView = document.getElementById('compactView');
-    if (compactView) {
-        compactView.addEventListener('change', toggleCompactView);
-    }
+    document.querySelectorAll('.view-options input[type="checkbox"]').forEach(checkbox => {
+        checkbox.addEventListener('change', (e) => {
+            const option = e.target.id; // e.g., 'showWeekTotals'
+            const isChecked = e.target.checked;
+            
+            switch(option) {
+                case 'showWeekTotals':
+                    setViewOption('showWeekTotals', isChecked);
+                    break;
+                case 'highlightWeekends':
+                    setViewOption('highlightWeekends', isChecked);
+                    break;
+                case 'compactView':
+                    toggleCompactView();
+                    return; // toggleCompactView already calls applyFiltersAndRender
+            }
+            // Re-render the table with the new view options
+            applyFiltersAndRender();
+        });
+    });
     
     // Filter Actions
     const resetFiltersBtn = document.getElementById('resetFiltersBtn');
@@ -189,9 +221,43 @@ function setupEventListeners() {
         resetFiltersBtn.addEventListener('click', resetFilters);
     }
     
-    const applyFiltersBtn = document.getElementById('applyFiltersBtn');
-    if (applyFiltersBtn) {
-        applyFiltersBtn.addEventListener('click', applyFilters);
+    // Date inputs for custom range
+    const startDateInput = document.getElementById('startDate');
+    const endDateInput = document.getElementById('endDate');
+    
+    if (startDateInput) {
+        startDateInput.addEventListener('change', (e) => {
+            const startDate = new Date(e.target.value);
+            const endDate = endDateInput ? new Date(endDateInput.value) : null;
+            
+            if (endDate && startDate > endDate) {
+                // If start date is after end date, update end date to match start date
+                endDateInput.value = e.target.value;
+            }
+            
+            // Update planner state and re-render
+            applyFiltersAndRender();
+        });
+    }
+    
+    if (endDateInput) {
+        endDateInput.addEventListener('change', (e) => {
+            const endDate = new Date(e.target.value);
+            const startDate = startDateInput ? new Date(startDateInput.value) : null;
+            
+            if (startDate && endDate < startDate) {
+                // If end date is before start date, update start date to match end date
+                startDateInput.value = e.target.value;
+            }
+            
+            // Update planner state and re-render
+            applyFiltersAndRender();
+        });
+    }
+    
+    const applyMultiMonthBtn = document.getElementById('applyMultiMonthBtn');
+    if (applyMultiMonthBtn) {
+        applyMultiMonthBtn.addEventListener('click', applyFiltersAndRender);
     }
     
     // Modal Event Listeners
@@ -299,6 +365,9 @@ function setupGlobalEventListeners() {
             const activeModal = document.querySelector('.edit-modal.active');
             if (activeModal) {
                 closeEditModal();
+            } else {
+                // If no modal is open, let Escape clear the current selection
+                clearSelection(); // NEW: Add this for better UX
             }
         }
         
