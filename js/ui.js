@@ -170,7 +170,7 @@ export function toggleDay(selectedDay) {
 // --- Modal Functions (Refactored for Firestore) ---
 
 export function openEditModal() {
-    const selectedCells = document.querySelectorAll('.day-cell.selected');
+    const selectedCells = document.querySelectorAll('.planner-cell.selected');
     if (selectedCells.length === 0) {
         alert('Selectează cel puțin o celulă pentru editare.');
         return;
@@ -203,14 +203,36 @@ export function resetEditModal() {
 
 export function populateSelectionInfo() {
     const details = document.getElementById('selectionDetails');
-    const selectedCells = document.querySelectorAll('.day-cell.selected');
+    const selectedCells = document.querySelectorAll('.planner-cell.selected');
     
     if (details) {
+        // Calculate total hours from selected cells
+        const totalHours = calculateSelectedCellsTotal(selectedCells);
+        
         details.innerHTML = `
             <strong>Selecție:</strong> ${selectedCells.length} celule selectate<br>
+            <strong>Total ore:</strong> ${totalHours}h<br>
             <strong>Ready for editing</strong>
         `;
     }
+}
+
+// Helper function to calculate total hours from selected cells
+function calculateSelectedCellsTotal(selectedCells) {
+    let totalHours = 0;
+    
+    selectedCells.forEach(cell => {
+        const cellContent = cell.textContent || cell.innerText || '';
+        
+        // Extract numbers from cell content (handles formats like "8RO", "4DE+4IT", etc.)
+        const hoursMatches = cellContent.match(/\d+/g);
+        if (hoursMatches) {
+            const cellTotal = hoursMatches.reduce((sum, hours) => sum + parseInt(hours, 10), 0);
+            totalHours += cellTotal;
+        }
+    });
+    
+    return totalHours;
 }
 
 export function selectEditType(type) {
@@ -341,7 +363,7 @@ export function saveModalChanges() {
 
     // Get the keys of all selected cells
     const selectedCellKeys = new Set();
-    document.querySelectorAll('.day-cell.selected').forEach(cell => {
+    document.querySelectorAll('.planner-cell.selected').forEach(cell => {
         const cellKey = `${cell.dataset.agentId}-${cell.dataset.day}`;
         selectedCellKeys.add(cellKey);
     });

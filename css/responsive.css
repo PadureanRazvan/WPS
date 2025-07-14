@@ -5,6 +5,34 @@
     .unified-planner-table td {
         padding: 0.4rem 0.15rem;
         font-size: 0.6rem;
+        text-align: center;
+        vertical-align: middle;
+        word-break: keep-all; /* Prevents breaking within words/team codes */
+        overflow-wrap: normal; /* Prevents wrapping within words */
+        hyphens: none; /* No hyphenation */
+        text-overflow: clip; /* Prevent ellipsis truncation */
+        overflow: visible; /* Allow content to be visible */
+        font-feature-settings: "kern" 1;
+        text-rendering: optimizeLegibility;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+    
+    /* Comprehensive zoom-stable centering for all planner cells */
+    .planner-cell,
+    .planner-cell.tiny-text,
+    .planner-cell.small-text,
+    .planner-cell.medium-text,
+    .planner-cell.super-tiny,
+    .planner-cell.multi-team {
+        text-align: center !important;
+        font-variant-numeric: tabular-nums !important;
+        font-feature-settings: "tnum" 1, "kern" 1 !important;
+        transform: translateZ(0) !important;
+        letter-spacing: 0 !important;
+        word-spacing: 0 !important;
+        -webkit-font-smoothing: antialiased !important;
+        -moz-osx-font-smoothing: grayscale !important;
     }
     
     .unified-planner-table .agent-name {
@@ -14,37 +42,99 @@
     
     /* Adjust smart text sizing for smaller screens */
     .planner-cell.tiny-text {
-        font-size: 0.52rem;
-        padding: 0.15rem 0.08rem;
+        font-size: 0.58rem; /* Increased for better readability */
+        padding: 0.18rem 0.08rem;
+        text-align: center;
+        vertical-align: middle;
+        font-feature-settings: "kern" 1;
+        text-rendering: optimizeLegibility;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
     }
     
     .planner-cell.small-text {
-        font-size: 0.57rem;
+        font-size: 0.64rem; /* Increased for better readability */
         padding: 0.2rem 0.12rem;
+        text-align: center;
+        vertical-align: middle;
+        font-feature-settings: "kern" 1;
+        text-rendering: optimizeLegibility;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
     }
     
     .planner-cell.medium-text {
-        font-size: 0.62rem;
+        font-size: 0.68rem; /* Increased for better readability */
         padding: 0.3rem 0.15rem;
+        text-align: center;
+        vertical-align: middle;
+        font-feature-settings: "kern" 1;
+        text-rendering: optimizeLegibility;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+    
+    /* Super-tiny font size for overflowing content */
+    .planner-cell.super-tiny {
+        font-size: 0.48rem !important; /* Increased for better readability */
+        line-height: 0.85 !important;
+        letter-spacing: -0.8px !important;
+        padding: 0.15rem 0.05rem !important;
+        text-align: center !important;
+        vertical-align: middle !important;
+        font-feature-settings: "kern" 1 !important;
+        text-rendering: optimizeLegibility !important;
+        -webkit-font-smoothing: antialiased !important;
+        -moz-osx-font-smoothing: grayscale !important;
     }
     
     .planner-cell.multi-team {
         letter-spacing: -0.8px;
+        line-height: 1.1; /* Adjusted for smaller screens */
+        padding: 0.35rem 0.15rem; /* Adjusted padding for multi-line */
+        font-size: 0.72rem; /* Increased base font size for readability */
+        text-align: center;
+        vertical-align: middle;
+        font-feature-settings: "kern" 1;
+        text-rendering: optimizeLegibility;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
     }
     
     .planner-cell.multi-team.tiny-text {
-        font-size: 0.48rem;
-        padding: 0.15rem 0.05rem;
+        font-size: 0.62rem; /* Increased for better readability */
+        line-height: 1.0; /* Better line height for tiny text on small screens */
+        padding: 0.3rem 0.08rem; /* Increased padding for multi-line */
+        text-align: center;
+        vertical-align: middle;
+        font-feature-settings: "kern" 1;
+        text-rendering: optimizeLegibility;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
     }
     
     .planner-cell.multi-team.small-text {
-        font-size: 0.53rem;
-        padding: 0.2rem 0.08rem;
+        font-size: 0.66rem; /* Increased for better readability */
+        line-height: 1.1; /* Better line height for small text */
+        padding: 0.32rem 0.1rem; /* Increased padding for multi-line */
+        text-align: center;
+        vertical-align: middle;
+        font-feature-settings: "kern" 1;
+        text-rendering: optimizeLegibility;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
     }
     
     .planner-cell.multi-team.medium-text {
-        font-size: 0.58rem;
-        padding: 0.25rem 0.12rem;
+        font-size: 0.70rem; /* Increased for better readability */
+        line-height: 1.2; /* Better line height for medium text */
+        padding: 0.35rem 0.12rem; /* Increased padding for multi-line */
+        text-align: center;
+        vertical-align: middle;
+        font-feature-settings: "kern" 1;
+        text-rendering: optimizeLegibility;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
     }
     
     /* Legacy planner table - keeping for backwards compatibility */
@@ -118,6 +208,34 @@
     .unified-planner-table td {
         padding: 0.25rem 0.1rem;
         font-size: 0.55rem;
+        text-align: center;
+        vertical-align: middle;
+        word-break: keep-all; /* Prevents breaking within words/team codes */
+        overflow-wrap: normal; /* Prevents wrapping within words */
+        hyphens: none; /* No hyphenation */
+        text-overflow: clip; /* Prevent ellipsis truncation */
+        overflow: visible; /* Allow content to be visible */
+        font-feature-settings: "kern" 1;
+        text-rendering: optimizeLegibility;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+    
+    /* Comprehensive zoom-stable centering for all planner cells */
+    .planner-cell,
+    .planner-cell.tiny-text,
+    .planner-cell.small-text,
+    .planner-cell.medium-text,
+    .planner-cell.super-tiny,
+    .planner-cell.multi-team {
+        text-align: center !important;
+        font-variant-numeric: tabular-nums !important;
+        font-feature-settings: "tnum" 1, "kern" 1 !important;
+        transform: translateZ(0) !important;
+        letter-spacing: 0 !important;
+        word-spacing: 0 !important;
+        -webkit-font-smoothing: antialiased !important;
+        -moz-osx-font-smoothing: grayscale !important;
     }
     
     .unified-planner-table .agent-name {
@@ -126,39 +244,69 @@
         padding: 0.25rem 0.2rem;
     }
     
-    /* Further adjust smart text sizing for tablets */
+    /* Adjust smart text sizing for tablets */
     .planner-cell.tiny-text {
-        font-size: 0.48rem;
-        padding: 0.12rem 0.05rem;
+        font-size: 0.55rem; /* Increased for better readability */
+        padding: 0.15rem 0.08rem;
+        text-align: center;
+        vertical-align: middle;
     }
     
     .planner-cell.small-text {
-        font-size: 0.52rem;
-        padding: 0.15rem 0.08rem;
+        font-size: 0.60rem; /* Increased for better readability */
+        padding: 0.18rem 0.1rem;
+        text-align: center;
+        vertical-align: middle;
     }
     
     .planner-cell.medium-text {
-        font-size: 0.57rem;
-        padding: 0.2rem 0.12rem;
+        font-size: 0.65rem; /* Increased for better readability */
+        padding: 0.25rem 0.12rem;
+        text-align: center;
+        vertical-align: middle;
+    }
+    
+    /* Super-tiny font size for overflowing content */
+    .planner-cell.super-tiny {
+        font-size: 0.45rem !important; /* Increased for better readability */
+        line-height: 0.85 !important;
+        letter-spacing: -0.8px !important;
+        padding: 0.15rem 0.05rem !important;
+        text-align: center !important;
+        vertical-align: middle !important;
     }
     
     .planner-cell.multi-team {
         letter-spacing: -1px;
+        line-height: 1.0; /* Adjusted for tablet screens */
+        padding: 0.3rem 0.12rem; /* Adjusted padding for multi-line */
+        font-size: 0.68rem; /* Increased base font size for readability */
+        text-align: center;
+        vertical-align: middle;
     }
     
     .planner-cell.multi-team.tiny-text {
-        font-size: 0.43rem;
-        padding: 0.12rem 0.03rem;
+        font-size: 0.58rem; /* Increased for better readability */
+        line-height: 0.95; /* Better line height for tiny text on tablets */
+        padding: 0.25rem 0.05rem; /* Increased padding for multi-line */
+        text-align: center;
+        vertical-align: middle;
     }
     
     .planner-cell.multi-team.small-text {
-        font-size: 0.48rem;
-        padding: 0.15rem 0.05rem;
+        font-size: 0.62rem; /* Increased for better readability */
+        line-height: 1.0; /* Better line height for small text */
+        padding: 0.28rem 0.08rem; /* Increased padding for multi-line */
+        text-align: center;
+        vertical-align: middle;
     }
     
     .planner-cell.multi-team.medium-text {
-        font-size: 0.52rem;
-        padding: 0.18rem 0.08rem;
+        font-size: 0.66rem; /* Increased for better readability */
+        line-height: 1.1; /* Better line height for medium text */
+        padding: 0.3rem 0.1rem; /* Increased padding for multi-line */
+        text-align: center;
+        vertical-align: middle;
     }
     
     /* Legacy planner table - keeping for backwards compatibility */
@@ -250,6 +398,30 @@
     .unified-planner-table td {
         padding: 0.2rem 0.05rem;
         font-size: 0.5rem;
+        text-align: center;
+        vertical-align: middle;
+        word-break: keep-all; /* Prevents breaking within words/team codes */
+        overflow-wrap: normal; /* Prevents wrapping within words */
+        hyphens: none; /* No hyphenation */
+        text-overflow: clip; /* Prevent ellipsis truncation */
+        overflow: visible; /* Allow content to be visible */
+    }
+
+    /* Comprehensive zoom-stable centering for all planner cells */
+    .planner-cell,
+    .planner-cell.tiny-text,
+    .planner-cell.small-text,
+    .planner-cell.medium-text,
+    .planner-cell.super-tiny,
+    .planner-cell.multi-team {
+        text-align: center !important;
+        font-variant-numeric: tabular-nums !important;
+        font-feature-settings: "tnum" 1, "kern" 1 !important;
+        transform: translateZ(0) !important;
+        letter-spacing: 0 !important;
+        word-spacing: 0 !important;
+        -webkit-font-smoothing: antialiased !important;
+        -moz-osx-font-smoothing: grayscale !important;
     }
 
     .unified-planner-table .agent-name {
@@ -258,39 +430,69 @@
         padding: 0.2rem 0.2rem;
     }
     
-    /* Mobile text sizing */
+    /* Adjust smart text sizing for mobile */
     .planner-cell.tiny-text {
-        font-size: 0.42rem;
-        padding: 0.1rem 0.03rem;
+        font-size: 0.50rem; /* Increased for better readability */
+        padding: 0.12rem 0.05rem;
+        text-align: center;
+        vertical-align: middle;
     }
     
     .planner-cell.small-text {
-        font-size: 0.46rem;
-        padding: 0.12rem 0.05rem;
+        font-size: 0.55rem; /* Increased for better readability */
+        padding: 0.15rem 0.08rem;
+        text-align: center;
+        vertical-align: middle;
     }
     
     .planner-cell.medium-text {
-        font-size: 0.5rem;
-        padding: 0.15rem 0.08rem;
+        font-size: 0.60rem; /* Increased for better readability */
+        padding: 0.18rem 0.1rem;
+        text-align: center;
+        vertical-align: middle;
+    }
+    
+    /* Super-tiny font size for overflowing content */
+    .planner-cell.super-tiny {
+        font-size: 0.42rem !important; /* Increased for better readability */
+        line-height: 0.85 !important;
+        letter-spacing: -0.8px !important;
+        padding: 0.15rem 0.05rem !important;
+        text-align: center !important;
+        vertical-align: middle !important;
     }
     
     .planner-cell.multi-team {
         letter-spacing: -1.2px;
+        line-height: 0.95; /* Adjusted for mobile screens */
+        padding: 0.25rem 0.08rem; /* Adjusted padding for multi-line */
+        font-size: 0.62rem; /* Increased base font size for readability */
+        text-align: center;
+        vertical-align: middle;
     }
     
     .planner-cell.multi-team.tiny-text {
-        font-size: 0.38rem;
-        padding: 0.1rem 0.02rem;
+        font-size: 0.52rem; /* Increased for better readability */
+        line-height: 0.9; /* Better line height for tiny text on mobile */
+        padding: 0.2rem 0.03rem; /* Increased padding for multi-line */
+        text-align: center;
+        vertical-align: middle;
     }
     
     .planner-cell.multi-team.small-text {
-        font-size: 0.42rem;
-        padding: 0.12rem 0.03rem;
+        font-size: 0.56rem; /* Increased for better readability */
+        line-height: 0.95; /* Better line height for small text */
+        padding: 0.22rem 0.05rem; /* Increased padding for multi-line */
+        text-align: center;
+        vertical-align: middle;
     }
     
     .planner-cell.multi-team.medium-text {
-        font-size: 0.46rem;
-        padding: 0.15rem 0.05rem;
+        font-size: 0.60rem; /* Increased for better readability */
+        line-height: 1.0; /* Better line height for medium text */
+        padding: 0.25rem 0.08rem; /* Increased padding for multi-line */
+        text-align: center;
+        vertical-align: middle;
     }
     
     /* Legacy planner table - keeping for backwards compatibility */
@@ -343,6 +545,30 @@
     .unified-planner-table td {
         padding: 0.15rem 0.05rem;
         font-size: 0.45rem;
+        text-align: center;
+        vertical-align: middle;
+        word-break: keep-all; /* Prevents breaking within words/team codes */
+        overflow-wrap: normal; /* Prevents wrapping within words */
+        hyphens: none; /* No hyphenation */
+        text-overflow: clip; /* Prevent ellipsis truncation */
+        overflow: visible; /* Allow content to be visible */
+    }
+
+    /* Comprehensive zoom-stable centering for all planner cells */
+    .planner-cell,
+    .planner-cell.tiny-text,
+    .planner-cell.small-text,
+    .planner-cell.medium-text,
+    .planner-cell.super-tiny,
+    .planner-cell.multi-team {
+        text-align: center !important;
+        font-variant-numeric: tabular-nums !important;
+        font-feature-settings: "tnum" 1, "kern" 1 !important;
+        transform: translateZ(0) !important;
+        letter-spacing: 0 !important;
+        word-spacing: 0 !important;
+        -webkit-font-smoothing: antialiased !important;
+        -moz-osx-font-smoothing: grayscale !important;
     }
 
     .unified-planner-table .agent-name {
@@ -351,39 +577,69 @@
         padding: 0.2rem 0.2rem;
     }
     
-    /* Smallest screen text sizing */
+    /* Adjust smart text sizing for smallest screens */
     .planner-cell.tiny-text {
-        font-size: 0.38rem;
-        padding: 0.08rem 0.02rem;
+        font-size: 0.45rem; /* Increased for better readability */
+        padding: 0.1rem 0.02rem;
+        text-align: center;
+        vertical-align: middle;
     }
     
     .planner-cell.small-text {
-        font-size: 0.42rem;
-        padding: 0.1rem 0.03rem;
+        font-size: 0.50rem; /* Increased for better readability */
+        padding: 0.12rem 0.03rem;
+        text-align: center;
+        vertical-align: middle;
     }
     
     .planner-cell.medium-text {
-        font-size: 0.45rem;
-        padding: 0.12rem 0.05rem;
+        font-size: 0.55rem; /* Increased for better readability */
+        padding: 0.15rem 0.05rem;
+        text-align: center;
+        vertical-align: middle;
+    }
+    
+    /* Super-tiny font size for overflowing content */
+    .planner-cell.super-tiny {
+        font-size: 0.38rem !important; /* Increased for better readability */
+        line-height: 0.85 !important;
+        letter-spacing: -0.8px !important;
+        padding: 0.15rem 0.05rem !important;
+        text-align: center !important;
+        vertical-align: middle !important;
     }
     
     .planner-cell.multi-team {
         letter-spacing: -1.5px;
+        line-height: 0.85; /* Adjusted for smallest screens */
+        padding: 0.2rem 0.05rem; /* Adjusted padding for multi-line */
+        font-size: 0.58rem; /* Increased base font size for readability */
+        text-align: center;
+        vertical-align: middle;
     }
     
     .planner-cell.multi-team.tiny-text {
-        font-size: 0.35rem;
-        padding: 0.08rem 0.01rem;
+        font-size: 0.48rem; /* Increased for better readability */
+        line-height: 0.8; /* Better line height for tiny text on smallest screens */
+        padding: 0.15rem 0.02rem; /* Increased padding for multi-line */
+        text-align: center;
+        vertical-align: middle;
     }
     
     .planner-cell.multi-team.small-text {
-        font-size: 0.38rem;
-        padding: 0.1rem 0.02rem;
+        font-size: 0.52rem; /* Increased for better readability */
+        line-height: 0.85; /* Better line height for small text */
+        padding: 0.18rem 0.03rem; /* Increased padding for multi-line */
+        text-align: center;
+        vertical-align: middle;
     }
     
     .planner-cell.multi-team.medium-text {
-        font-size: 0.42rem;
-        padding: 0.12rem 0.03rem;
+        font-size: 0.55rem; /* Increased for better readability */
+        line-height: 0.9; /* Better line height for medium text */
+        padding: 0.2rem 0.05rem; /* Increased padding for multi-line */
+        text-align: center;
+        vertical-align: middle;
     }
     
     /* Legacy planner table - keeping for backwards compatibility */

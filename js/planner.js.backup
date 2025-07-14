@@ -618,18 +618,20 @@ function renderAgentRow(agent, dates) {
         const dayValue = agent.days && agent.days[dayIndex] ? agent.days[dayIndex] : '';
         const formattedContent = formatCellContent(dayValue);
         
-        // Wrap content in a div for flex-based centering
-        const contentWrapper = document.createElement('div');
-        contentWrapper.className = 'cell-content-wrapper';
-        // Set cell content using innerHTML to properly handle newlines
-        contentWrapper.innerHTML = formattedContent.replace(/\n/g, '<br>');
-
-        // Clear existing cell content and append the new wrapper
-        cell.innerHTML = '';
-        cell.appendChild(contentWrapper);
+        // FORCE CENTERING: Add inline styles to ensure proper centering
+        cell.style.textAlign = 'center';
+        cell.style.verticalAlign = 'middle';
+        cell.style.fontVariantNumeric = 'tabular-nums';
+        cell.style.fontFeatureSettings = '"tnum" 1, "kern" 1';
+        cell.style.letterSpacing = '0';
+        cell.style.wordSpacing = '0';
+        cell.style.textAlignLast = 'center';
         
-        // Apply dynamic font sizing to the wrapper, not the cell
-        applyDynamicFontSizing(contentWrapper, formattedContent);
+        // Set cell content using innerHTML to properly handle newlines
+        cell.innerHTML = formattedContent.replace(/\n/g, '<br>');
+        
+        // Apply dynamic font sizing to ensure content fits properly
+        applyDynamicFontSizing(cell, formattedContent);
         
         // Check if it's a multi-team day (contains + symbol or newline)
         if (formattedContent.includes('+') || formattedContent.includes('\n')) {
@@ -750,11 +752,11 @@ function formatCellContent(day) {
 }
 
 // Dynamic font sizing function to ensure content fits properly in cells
-function applyDynamicFontSizing(element, content) {
+function applyDynamicFontSizing(cell, content) {
     if (!content || content.trim() === '') return;
     
     // Remove any existing sizing classes
-    element.classList.remove('tiny-text', 'small-text', 'medium-text', 'super-tiny');
+    cell.classList.remove('tiny-text', 'small-text', 'medium-text', 'super-tiny');
     
     // Check if content has newlines (multi-line)
     const hasNewlines = content.includes('\n');
@@ -788,8 +790,53 @@ function applyDynamicFontSizing(element, content) {
     
     // Apply the calculated size class
     if (sizeClass) {
-        element.classList.add(sizeClass);
+        cell.classList.add(sizeClass);
     }
+    
+    // FORCE CENTERING: Re-apply centering styles after font size changes
+    cell.style.textAlign = 'center';
+    cell.style.verticalAlign = 'middle';
+    cell.style.fontVariantNumeric = 'tabular-nums';
+    cell.style.fontFeatureSettings = '"tnum" 1, "kern" 1';
+    cell.style.letterSpacing = '0';
+    cell.style.wordSpacing = '0';
+    cell.style.textAlignLast = 'center';
+    
+    // Simple overflow check - only reduce size if absolutely necessary
+    requestAnimationFrame(() => {
+        const cellRect = cell.getBoundingClientRect();
+        const cellWidth = cellRect.width;
+        const cellHeight = cellRect.height;
+        
+        // More lenient overflow detection
+        const isOverflowing = (cell.scrollWidth > cellWidth + 8) || (cell.scrollHeight > cellHeight + 4);
+        
+        if (isOverflowing) {
+            // Try one size smaller
+            if (!sizeClass) {
+                // Was using default, try medium
+                cell.classList.add('medium-text');
+            } else if (sizeClass === 'medium-text') {
+                cell.classList.remove('medium-text');
+                cell.classList.add('small-text');
+            } else if (sizeClass === 'small-text') {
+                cell.classList.remove('small-text');
+                cell.classList.add('tiny-text');
+            } else if (sizeClass === 'tiny-text') {
+                cell.classList.remove('tiny-text');
+                cell.classList.add('super-tiny');
+            }
+            
+            // FORCE CENTERING: Re-apply centering after overflow adjustment
+            cell.style.textAlign = 'center';
+            cell.style.verticalAlign = 'middle';
+            cell.style.fontVariantNumeric = 'tabular-nums';
+            cell.style.fontFeatureSettings = '"tnum" 1, "kern" 1';
+            cell.style.letterSpacing = '0';
+            cell.style.wordSpacing = '0';
+            cell.style.textAlignLast = 'center';
+        }
+    });
 }
 
 function calculateAgentTotalHours(agent) {

@@ -196,13 +196,10 @@ function setupEventListeners() {
     // View Options
     document.querySelectorAll('.view-options input[type="checkbox"]').forEach(checkbox => {
         checkbox.addEventListener('change', (e) => {
-            const option = e.target.id; // e.g., 'showWeekTotals'
+            const option = e.target.id; // e.g., 'highlightWeekends'
             const isChecked = e.target.checked;
             
             switch(option) {
-                case 'showWeekTotals':
-                    setViewOption('showWeekTotals', isChecked);
-                    break;
                 case 'highlightWeekends':
                     setViewOption('highlightWeekends', isChecked);
                     break;
