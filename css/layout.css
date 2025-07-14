@@ -280,9 +280,29 @@
     align-items: center;
     position: sticky;
     top: 0;
-    z-index: 50;
+    z-index: 40;
     height: 80px;
     box-sizing: border-box;
+    transition: all 0.3s ease;
+}
+
+.header.scrolled {
+    background: rgba(26, 35, 62, 0.95);
+    backdrop-filter: blur(10px);
+    height: 60px;
+    padding: 1rem 3rem;
+    z-index: 30;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.header.scrolled .header-title {
+    font-size: 1.2rem;
+    opacity: 0.8;
+}
+
+.header.scrolled .header-subtitle {
+    font-size: 0.8rem;
+    opacity: 0.6;
 }
 
 .header-title {

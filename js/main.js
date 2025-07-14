@@ -215,45 +215,7 @@ function setupEventListeners() {
         });
     });
     
-    // Filter Actions
-    const resetFiltersBtn = document.getElementById('resetFiltersBtn');
-    if (resetFiltersBtn) {
-        resetFiltersBtn.addEventListener('click', resetFilters);
-    }
-    
-    // Date inputs for custom range
-    const startDateInput = document.getElementById('startDate');
-    const endDateInput = document.getElementById('endDate');
-    
-    if (startDateInput) {
-        startDateInput.addEventListener('change', (e) => {
-            const startDate = new Date(e.target.value);
-            const endDate = endDateInput ? new Date(endDateInput.value) : null;
-            
-            if (endDate && startDate > endDate) {
-                // If start date is after end date, update end date to match start date
-                endDateInput.value = e.target.value;
-            }
-            
-            // Update planner state and re-render
-            applyFiltersAndRender();
-        });
-    }
-    
-    if (endDateInput) {
-        endDateInput.addEventListener('change', (e) => {
-            const endDate = new Date(e.target.value);
-            const startDate = startDateInput ? new Date(startDateInput.value) : null;
-            
-            if (startDate && endDate < startDate) {
-                // If end date is before start date, update start date to match end date
-                startDateInput.value = e.target.value;
-            }
-            
-            // Update planner state and re-render
-            applyFiltersAndRender();
-        });
-    }
+
     
     const applyMultiMonthBtn = document.getElementById('applyMultiMonthBtn');
     if (applyMultiMonthBtn) {
@@ -330,23 +292,16 @@ function setupEventListeners() {
         clearSelectionBtn.addEventListener('click', clearMonthSelection);
     }
     
-    // Agent Delete Button Listener (using event delegation)
-    const plannerBody = document.getElementById('plannerTableBody');
-    if (plannerBody) {
-        plannerBody.addEventListener('click', (e) => {
-            const deleteBtn = e.target.closest('.delete-agent-btn');
-            if (deleteBtn) {
-                const agentId = deleteBtn.dataset.agentId;
-                deleteAgent(agentId);
-            }
-        });
-    }
+    // Agent Delete Button Listener will be handled in addCellEventListeners after table render
 }
 
 // Global Event Listeners
 function setupGlobalEventListeners() {
     // Window resize handler
     window.addEventListener('resize', handleWindowResize);
+    
+    // Scroll handler for header behavior
+    window.addEventListener('scroll', handleScroll);
     
     // Online/offline detection
     window.addEventListener('online', handleOnlineStatus);
@@ -411,6 +366,14 @@ function handleWindowResize() {
         Object.values(Chart.instances).forEach(chart => {
             if (chart) chart.resize();
         });
+    }
+}
+
+function handleScroll() {
+    const header = document.querySelector('.header');
+    if (header) {
+        const scrolled = window.scrollY > 20;
+        header.classList.toggle('scrolled', scrolled);
     }
 }
 

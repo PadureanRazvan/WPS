@@ -4,9 +4,11 @@
 .table-container.enhanced-table {
     overflow-x: auto;
     overflow-y: visible; /* Let the main page handle vertical scroll */
-    max-height: calc(100vh - 250px); /* Adjust height to prevent double scrollbars */
+    max-height: none; /* Remove height constraint to allow sticky to work with viewport */
     border: 1px solid var(--border);
     border-radius: 12px;
+    position: relative; /* Ensure proper positioning context */
+    padding-top: 0; /* Ensure no extra padding causes overlap */
 }
 
 .unified-planner-table {
@@ -16,12 +18,74 @@
     table-layout: fixed; /* Crucial for performance with sticky columns */
 }
 
+.unified-planner-table tbody {
+    position: relative;
+    z-index: 1; /* Ensure tbody is below sticky header */
+}
+
 /* --- Sticky Header --- */
-.unified-planner-table thead th {
+/* Remove general sticky positioning - now handled by individual header rows */
+
+/* Ensure proper spacing between main header and table header */
+.enhanced-table {
+    margin-top: 0; /* Remove any margin that might cause overlap */
+}
+
+/* When main header is scrolled, prioritize planner table header */
+.header.scrolled + .main-content .date-header-row th {
+    z-index: 36; /* Higher than scrolled main header */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.header.scrolled + .main-content .day-header-row th {
+    z-index: 35; /* Higher than scrolled main header */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Date header row styling */
+.date-header-row th {
+    padding: 0.5rem 0.25rem;
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: var(--accent);
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+    white-space: normal; /* Allow line breaks */
+    text-align: center;
+    vertical-align: middle;
+    line-height: 1.2;
     position: sticky;
-    top: 0;
-    z-index: 20; /* Above scrolling content and body columns */
+    top: 0; /* First header row sticks to top */
+    z-index: 21; /* Above second header row */
     background: var(--primary-dark);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+/* Day number header row styling */
+.day-header-row th {
+    padding: 0.75rem 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    border-bottom: 2px solid var(--accent);
+    position: sticky;
+    top: 35px; /* Second header row sticks below first row */
+    z-index: 20; /* Below first header row but above content */
+    background: var(--primary-dark);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+/* Adjust header heights for better visual hierarchy */
+.date-header {
+    height: 35px;
+    line-height: 1.2;
+}
+
+.day-number-header {
+    height: 40px;
+    line-height: 1.4;
 }
 
 /* --- Sticky Columns --- */
@@ -57,11 +121,27 @@
 
 /* --- Z-Index & Visuals for Corners --- */
 /* Ensure the corner sticky headers are on top of everything */
-.unified-planner-table thead th:nth-child(1),
-.unified-planner-table thead th:nth-child(2),
-.unified-planner-table thead th:last-child {
-    z-index: 30;
+.date-header-row th:nth-child(1),
+.date-header-row th:nth-child(2),
+.date-header-row th:last-child {
+    z-index: 25; /* Above day header row */
     background: var(--primary-dark);
+}
+
+.day-header-row th:nth-child(1),
+.day-header-row th:nth-child(2),
+.day-header-row th:last-child {
+    z-index: 24; /* Above regular content but below date header */
+    background: var(--primary-dark);
+}
+
+/* Special styling for rowspan headers in date header row */
+.date-header-row th[rowspan="2"] {
+    vertical-align: middle;
+    text-align: center;
+    font-weight: 700;
+    padding: 1rem 0.5rem;
+    border-bottom: 2px solid var(--accent);
 }
 
 /* Add shadows for depth, indicating layers */
@@ -95,12 +175,20 @@
 
 /* Ensure Agent Name cell is optimized */
 .unified-planner-table .agent-name {
-    text-align: left;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
     font-weight: 600;
     color: var(--accent);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis; /* This handles long names gracefully */
+}
+
+.unified-planner-table .agent-name span {
+    flex-grow: 1;
+    text-align: center;
 }
 
 /* Highlight current day */
@@ -158,6 +246,14 @@
     background: rgba(255, 152, 0, 0.15);
     color: var(--text-primary);
     font-weight: 500;
+}
+
+/* Weekend styling for both header rows */
+.date-header-row .weekend,
+.day-header-row .weekend {
+    background: rgba(255, 152, 0, 0.2);
+    color: var(--warning);
+    font-weight: 600;
 }
 
 .unified-planner-table .week-total {
@@ -410,15 +506,48 @@
     fill: #d32f2f;
 }
 
-/* Multi-team display styling */
-.planner-cell br {
-    line-height: 1.1;
+/* Smart text sizing for planner cells */
+.planner-cell.tiny-text {
+    font-size: 0.55rem;
+    line-height: 1.0;
+    padding: 0.2rem 0.1rem;
 }
 
-.planner-cell.multi-team {
-    font-size: 0.6rem;
+.planner-cell.small-text {
+    font-size: 0.62rem;
     line-height: 1.1;
-    padding: 0.3rem 0.2rem;
+    padding: 0.3rem 0.15rem;
+}
+
+.planner-cell.medium-text {
+    font-size: 0.68rem;
+    line-height: 1.2;
+    padding: 0.4rem 0.2rem;
+}
+
+/* Multi-team display styling */
+.planner-cell.multi-team {
+    font-weight: 600;
+    letter-spacing: -0.5px;
+    text-align: center;
+}
+
+.planner-cell.multi-team.tiny-text {
+    font-size: 0.5rem;
+    line-height: 0.9;
+    padding: 0.2rem 0.05rem;
+}
+
+.planner-cell.multi-team.small-text {
+    font-size: 0.57rem;
+    line-height: 1.0;
+    padding: 0.25rem 0.1rem;
+}
+
+.planner-cell.multi-team.medium-text {
+    font-size: 0.63rem;
+    line-height: 1.1;
+    padding: 0.3rem 0.15rem;
 }
 
 .planner-cell.working {
@@ -433,96 +562,9 @@
 
 /* ===== NEW SIMPLIFIED PLANNER CONTROLS ===== */
 
-.planner-controls {
-    background: var(--primary-dark);
-    border-radius: 12px;
-    padding: 2rem;
-    margin-bottom: 2rem;
-    border: 1px solid var(--border);
-}
 
-.filter-section {
-    margin-bottom: 2rem;
-}
 
-.filter-label {
-    color: var(--text-secondary);
-    font-size: 0.875rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 1rem;
-}
 
-/* Period Tabs */
-.period-tabs {
-    display: flex;
-    background: var(--primary-light);
-    border-radius: 8px;
-    padding: 4px;
-    gap: 4px;
-}
-
-.period-tab {
-    flex: 1;
-    padding: 0.75rem 1rem;
-    border: none;
-    background: transparent;
-    color: var(--text-secondary);
-    font-size: 0.875rem;
-    font-weight: 500;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.period-tab:hover {
-    background: var(--hover);
-    color: var(--text-primary);
-}
-
-.period-tab.active {
-    background: var(--accent);
-    color: var(--primary-dark);
-    font-weight: 600;
-}
-
-/* Date Range Section */
-.date-range-section {
-    display: flex;
-    gap: 2rem;
-    margin-bottom: 2rem;
-}
-
-.date-group {
-    flex: 1;
-}
-
-.date-label {
-    color: var(--text-secondary);
-    font-size: 0.875rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 0.5rem;
-}
-
-.date-input {
-    width: 100%;
-    padding: 0.75rem;
-    background: var(--primary-light);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    color: var(--text-primary);
-    font-size: 0.875rem;
-    transition: all 0.2s ease;
-}
-
-.date-input:focus {
-    outline: none;
-    border-color: var(--accent);
-    box-shadow: 0 0 0 2px rgba(255, 215, 0, 0.2);
-}
 
 /* Team Chips */
 .team-chips {
@@ -612,52 +654,11 @@
 }
 
 /* Filter Actions */
-.filter-actions {
-    display: flex;
-    justify-content: center;
-    margin-top: 2rem;
-}
 
-.btn-reset {
-    padding: 0.875rem 2rem;
-    background: var(--primary-light);
-    border: 1px solid var(--border);
-    color: var(--text-primary);
-    font-size: 0.875rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.btn-reset:hover {
-    background: var(--hover);
-    border-color: var(--accent);
-    color: var(--accent);
-}
 
 /* Responsive Design */
 @media (max-width: 768px) {
-    .planner-controls {
-        padding: 1rem;
-    }
-    
-    .date-range-section {
-        flex-direction: column;
-        gap: 1rem;
-    }
-    
     .team-chips {
         justify-content: center;
-    }
-    
-    .period-tabs {
-        flex-direction: column;
-    }
-    
-    .period-tab {
-        text-align: center;
     }
 }

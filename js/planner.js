@@ -513,27 +513,56 @@ export function renderPlannerTable(container, startDate, endDate) {
     const tbody = document.createElement('tbody');
     tbody.id = 'plannerTableBody'; // Keep ID for event delegation
 
-    // Render header
-    const headerRow = document.createElement('tr');
-    headerRow.innerHTML = `
-        <th class="agent-name-header">Agent</th>
-        <th class="hours-header">Ore</th>
+    // Render date header row (full dates)
+    const dateHeaderRow = document.createElement('tr');
+    dateHeaderRow.className = 'date-header-row';
+    dateHeaderRow.innerHTML = `
+        <th class="agent-name-header" rowspan="2">Agent</th>
+        <th class="hours-header" rowspan="2">Ore</th>
+        ${days.map((date, index) => {
+            const dayOfWeek = date.getDay();
+            const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+            const weekendClass = plannerState.viewOptions.highlightWeekends && isWeekend ? 'weekend' : '';
+            
+            // Format date as "MAR 25 MAI" (day name + date + month)
+            const dayNames = ['DUM', 'LUN', 'MAR', 'MIE', 'JOI', 'VIN', 'SÂM'];
+            const monthNames = ['IAN', 'FEB', 'MAR', 'APR', 'MAI', 'IUN', 'IUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+            const dayName = dayNames[dayOfWeek];
+            const dayNum = date.getDate();
+            const monthName = monthNames[date.getMonth()];
+            const fullDate = `${dayName}<br/>${dayNum} ${monthName}`;
+            
+            // Weekly total column logic
+            let extraColumn = '';
+            if (plannerState.viewOptions.showWeekTotals && dayOfWeek === 0) { // After every Sunday
+                extraColumn = `<th class="week-total-header date-header" rowspan="2">Total Săpt.</th>`;
+            }
+            return `<th class="date-header ${weekendClass}">${fullDate}</th>${extraColumn}`;
+        }).join('')}
+        <th class="total-header" rowspan="2">Total</th>
+    `;
+    
+    // Render day number header row (simplified)
+    const dayHeaderRow = document.createElement('tr');
+    dayHeaderRow.className = 'day-header-row';
+    dayHeaderRow.innerHTML = `
         ${days.map((date, index) => {
             const dayNum = date.getDate();
             const dayOfWeek = date.getDay();
             const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
             const weekendClass = plannerState.viewOptions.highlightWeekends && isWeekend ? 'weekend' : '';
             
-            // Weekly total column logic
+            // Weekly total column logic - skip for this row as it's handled by rowspan
             let extraColumn = '';
             if (plannerState.viewOptions.showWeekTotals && dayOfWeek === 0) { // After every Sunday
-                extraColumn = `<th class="week-total-header">Total Săpt.</th>`;
+                extraColumn = ''; // Already handled by rowspan in date header
             }
-            return `<th class="day-header ${weekendClass}">${dayNum}</th>${extraColumn}`;
+            return `<th class="day-number-header ${weekendClass}">${dayNum}</th>${extraColumn}`;
         }).join('')}
-        <th class="total-header">Total</th>
     `;
-    thead.appendChild(headerRow);
+    
+    thead.appendChild(dateHeaderRow);
+    thead.appendChild(dayHeaderRow);
 
     // Render body
     const filteredAgents = getFilteredAgents();
@@ -589,12 +618,21 @@ function renderAgentRow(agent, dates) {
         const dayValue = agent.days && agent.days[dayIndex] ? agent.days[dayIndex] : '';
         const formattedContent = formatCellContent(dayValue);
         
-        // Use innerHTML for proper line break display
-        if (formattedContent.includes('\n')) {
-            cell.innerHTML = formattedContent.replace(/\n/g, '<br>');
+        // Set cell content and apply dynamic font sizing
+        cell.textContent = formattedContent;
+        
+        // Apply smart font sizing based on content length
+        if (formattedContent.length > 8) {
+            cell.classList.add('tiny-text');
+        } else if (formattedContent.length > 6) {
+            cell.classList.add('small-text');
+        } else if (formattedContent.length > 4) {
+            cell.classList.add('medium-text');
+        }
+        
+        // Check if it's a multi-team day (contains + symbol)
+        if (formattedContent.includes('+')) {
             cell.classList.add('multi-team');
-        } else {
-            cell.textContent = formattedContent;
         }
         
         cell.classList.add(...getCellClass(dayValue, date));
@@ -682,11 +720,11 @@ function formatCellContent(day) {
         return day;
     }
     
-    // Handle multiple teams (e.g., "4HU + 4IT" or "4HU+4IT" -> "4HU\n+\n4IT")
+    // Handle multiple teams - keep them horizontal and compact
     if (day.includes('+')) {
         const parts = day.split('+');
-        // Clean up each part and join with newlines and + symbols for better display
-        return parts.map(part => part.trim().replace(/\s+/g, '')).join('\n+\n');
+        // Clean up each part and join with + for horizontal compact display
+        return parts.map(part => part.trim().replace(/\s+/g, '')).join('+');
     }
     
     // Format single team working hours (e.g., "8 RO" -> "8RO")
@@ -737,6 +775,10 @@ function addCellEventListeners() {
         plannerBody.removeEventListener('contextmenu', handleScopedRightClick);
         // Add the new scoped listener
         plannerBody.addEventListener('contextmenu', handleScopedRightClick);
+        
+        // Add delete button event listener (using event delegation)
+        plannerBody.removeEventListener('click', handleDeleteButtonClick);
+        plannerBody.addEventListener('click', handleDeleteButtonClick);
     }
 }
 
@@ -793,6 +835,20 @@ function handleScopedRightClick(e) {
         clearSelection();
     }
     // If not on a cell, the event proceeds as normal, showing the native context menu.
+}
+
+function handleDeleteButtonClick(e) {
+    const deleteBtn = e.target.closest('.delete-agent-btn');
+    if (deleteBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        const agentId = deleteBtn.dataset.agentId;
+        if (agentId) {
+            deleteAgent(agentId);
+        } else {
+            console.error('No agent ID found on delete button');
+        }
+    }
 }
 
 export function clearSelection() {

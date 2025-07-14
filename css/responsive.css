@@ -1,5 +1,53 @@
 /* Responsive design improvements */
 @media (max-width: 1200px) {
+    /* Unified planner table responsive design */
+    .unified-planner-table th,
+    .unified-planner-table td {
+        padding: 0.4rem 0.15rem;
+        font-size: 0.6rem;
+    }
+    
+    .unified-planner-table .agent-name {
+        font-size: 0.55rem;
+        padding: 0.4rem 0.25rem;
+    }
+    
+    /* Adjust smart text sizing for smaller screens */
+    .planner-cell.tiny-text {
+        font-size: 0.52rem;
+        padding: 0.15rem 0.08rem;
+    }
+    
+    .planner-cell.small-text {
+        font-size: 0.57rem;
+        padding: 0.2rem 0.12rem;
+    }
+    
+    .planner-cell.medium-text {
+        font-size: 0.62rem;
+        padding: 0.3rem 0.15rem;
+    }
+    
+    .planner-cell.multi-team {
+        letter-spacing: -0.8px;
+    }
+    
+    .planner-cell.multi-team.tiny-text {
+        font-size: 0.48rem;
+        padding: 0.15rem 0.05rem;
+    }
+    
+    .planner-cell.multi-team.small-text {
+        font-size: 0.53rem;
+        padding: 0.2rem 0.08rem;
+    }
+    
+    .planner-cell.multi-team.medium-text {
+        font-size: 0.58rem;
+        padding: 0.25rem 0.12rem;
+    }
+    
+    /* Legacy planner table - keeping for backwards compatibility */
     .planner-table th,
     .planner-table td {
         padding: 0.4rem 0.15rem;
@@ -65,6 +113,55 @@
         grid-template-columns: repeat(2, 1fr);
     }
     
+    /* Unified planner table responsive design for tablets */
+    .unified-planner-table th,
+    .unified-planner-table td {
+        padding: 0.25rem 0.1rem;
+        font-size: 0.55rem;
+    }
+    
+    .unified-planner-table .agent-name {
+        font-size: 0.5rem;
+        width: 15%;
+        padding: 0.25rem 0.2rem;
+    }
+    
+    /* Further adjust smart text sizing for tablets */
+    .planner-cell.tiny-text {
+        font-size: 0.48rem;
+        padding: 0.12rem 0.05rem;
+    }
+    
+    .planner-cell.small-text {
+        font-size: 0.52rem;
+        padding: 0.15rem 0.08rem;
+    }
+    
+    .planner-cell.medium-text {
+        font-size: 0.57rem;
+        padding: 0.2rem 0.12rem;
+    }
+    
+    .planner-cell.multi-team {
+        letter-spacing: -1px;
+    }
+    
+    .planner-cell.multi-team.tiny-text {
+        font-size: 0.43rem;
+        padding: 0.12rem 0.03rem;
+    }
+    
+    .planner-cell.multi-team.small-text {
+        font-size: 0.48rem;
+        padding: 0.15rem 0.05rem;
+    }
+    
+    .planner-cell.multi-team.medium-text {
+        font-size: 0.52rem;
+        padding: 0.18rem 0.08rem;
+    }
+    
+    /* Legacy planner table - keeping for backwards compatibility */
     .planner-table th,
     .planner-table td {
         padding: 0.25rem 0.1rem;
@@ -148,6 +245,55 @@
         gap: 1rem;
     }
 
+    /* Unified planner table responsive design for phones */
+    .unified-planner-table th,
+    .unified-planner-table td {
+        padding: 0.2rem 0.05rem;
+        font-size: 0.5rem;
+    }
+
+    .unified-planner-table .agent-name {
+        font-size: 0.45rem;
+        width: 18%;
+        padding: 0.2rem 0.2rem;
+    }
+    
+    /* Mobile text sizing */
+    .planner-cell.tiny-text {
+        font-size: 0.42rem;
+        padding: 0.1rem 0.03rem;
+    }
+    
+    .planner-cell.small-text {
+        font-size: 0.46rem;
+        padding: 0.12rem 0.05rem;
+    }
+    
+    .planner-cell.medium-text {
+        font-size: 0.5rem;
+        padding: 0.15rem 0.08rem;
+    }
+    
+    .planner-cell.multi-team {
+        letter-spacing: -1.2px;
+    }
+    
+    .planner-cell.multi-team.tiny-text {
+        font-size: 0.38rem;
+        padding: 0.1rem 0.02rem;
+    }
+    
+    .planner-cell.multi-team.small-text {
+        font-size: 0.42rem;
+        padding: 0.12rem 0.03rem;
+    }
+    
+    .planner-cell.multi-team.medium-text {
+        font-size: 0.46rem;
+        padding: 0.15rem 0.05rem;
+    }
+    
+    /* Legacy planner table - keeping for backwards compatibility */
     .planner-table th,
     .planner-table td {
         padding: 0.2rem 0.05rem;
@@ -192,6 +338,55 @@
         grid-template-columns: 1fr;
     }
 
+    /* Unified planner table responsive design for smallest screens */
+    .unified-planner-table th,
+    .unified-planner-table td {
+        padding: 0.15rem 0.05rem;
+        font-size: 0.45rem;
+    }
+
+    .unified-planner-table .agent-name {
+        font-size: 0.4rem;
+        width: 20%;
+        padding: 0.2rem 0.2rem;
+    }
+    
+    /* Smallest screen text sizing */
+    .planner-cell.tiny-text {
+        font-size: 0.38rem;
+        padding: 0.08rem 0.02rem;
+    }
+    
+    .planner-cell.small-text {
+        font-size: 0.42rem;
+        padding: 0.1rem 0.03rem;
+    }
+    
+    .planner-cell.medium-text {
+        font-size: 0.45rem;
+        padding: 0.12rem 0.05rem;
+    }
+    
+    .planner-cell.multi-team {
+        letter-spacing: -1.5px;
+    }
+    
+    .planner-cell.multi-team.tiny-text {
+        font-size: 0.35rem;
+        padding: 0.08rem 0.01rem;
+    }
+    
+    .planner-cell.multi-team.small-text {
+        font-size: 0.38rem;
+        padding: 0.1rem 0.02rem;
+    }
+    
+    .planner-cell.multi-team.medium-text {
+        font-size: 0.42rem;
+        padding: 0.12rem 0.03rem;
+    }
+    
+    /* Legacy planner table - keeping for backwards compatibility */
     .planner-table th,
     .planner-table td {
         padding: 0.15rem 0.05rem;
