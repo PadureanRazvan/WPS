@@ -343,4 +343,8 @@
 .content {
     flex: 1;
     padding: 2rem 3rem;
+}
+
+.main-content .header.collapsed {
+    display: none;
 } 

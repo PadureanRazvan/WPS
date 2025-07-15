@@ -13,13 +13,12 @@ function generateTeamProductivityData(baseProductivity, variation) {
 
 // Initialize all charts
 export function initializeCharts() {
-    initializeDashboardChart();
     initializeProductivityChart();
     initializeHoursChart();
 }
 
 // Dashboard Productivity Chart
-function initializeDashboardChart() {
+export function initializeProductivityChart() {
     const ctx1 = document.getElementById('productivityChart');
     if (!ctx1) return;
 
@@ -145,7 +144,7 @@ function initializeDashboardChart() {
 // Productivity Evolution Chart
 let productivityChart;
 
-function initializeProductivityChart() {
+export function initializeProductivityEvolution() {
     const ctx2 = document.getElementById('productivityEvolution');
     if (!ctx2) return;
 

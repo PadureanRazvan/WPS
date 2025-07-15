@@ -13,8 +13,6 @@ import {
     clearMonthSelection, 
     toggleTeam, 
     filterAgents, 
-    showAgentSuggestions, 
-    hideAgentSuggestions, 
     toggleCompactView, 
     resetFilters, 
     applyFiltersAndRender, 
@@ -189,8 +187,6 @@ function setupEventListeners() {
             filterAgents();
             applyFiltersAndRender(); // Re-render automatically
         });
-        agentSearch.addEventListener('focus', showAgentSuggestions);
-        agentSearch.addEventListener('blur', hideAgentSuggestions);
     }
     
     // View Options
@@ -339,16 +335,13 @@ function setupGlobalEventListeners() {
     // Click outside to close dropdowns
     document.addEventListener('click', (e) => {
         // Close language menu
-        if (!e.target.closest('.language-selector')) {
-            const langMenu = document.getElementById('languageMenu');
-            if (langMenu) {
-                langMenu.classList.remove('open');
-            }
+        const languageMenu = document.getElementById('languageMenu');
+        if (languageMenu && !languageMenu.parentElement.contains(e.target)) {
+            languageMenu.classList.remove('visible');
         }
-        
+
         // Close agent suggestions
         if (!e.target.closest('.agent-search-container')) {
-            hideAgentSuggestions();
         }
     });
 }

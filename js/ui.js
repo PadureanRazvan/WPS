@@ -104,7 +104,29 @@ export function translatePage(langCode) {
 // Sidebar toggle functionality
 export function toggleSidebar() {
     const sidebar = document.getElementById('sidebar');
+    const headers = document.querySelectorAll('.main-content .header');
+
     sidebar.classList.toggle('collapsed');
+    
+    headers.forEach(header => {
+        if (header) {
+            header.classList.toggle('collapsed');
+        }
+    });
+
+    // FIX: Re-render the planner table to prevent cell misalignment
+    // when the sidebar width changes (e.g., collapse/expand).
+    // This only affects the active planner section, as the render
+    // function safely exits if the planner is not visible.
+    renderPlannerTable();
+}
+
+// Function to toggle the header visibility
+export function toggleHeader() {
+    const header = document.querySelector('.main-content .header');
+    if (header) {
+        header.classList.toggle('collapsed');
+    }
 }
 
 // Navigation

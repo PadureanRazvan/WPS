@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="css/components.css">
     <link rel="stylesheet" href="css/planner.css">
     <link rel="stylesheet" href="css/responsive.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/litepicker/dist/css/litepicker.css"/>
     <style>
         /* FIX: Styles for the selection counter visibility */
         .selection-counter {
@@ -284,6 +285,30 @@
                     <div class="header-title-group">
                         <h2 class="header-title">Planificare Ore</h2>
                         <h3 class="header-subtitle" id="plannerDateRange"></h3>
+                    </div>
+                    <div class="header-actions">
+                        <div class="date-range-picker">
+                            <input id="dateRangePickerInput" class="date-display" style="text-align: center;"/>
+                        </div>
+                        <div class="agent-filter">
+                            <button id="agentFilterButton" class="btn btn-secondary" data-translate="select-agents">Smart Select</button>
+                            <div id="agentFilterDropdown" class="agent-filter-dropdown">
+                                <div class="filter-controls">
+                                    <div class="filter-type-selector">
+                                        <button class="filter-type-btn active" data-filter-type="agent">Agent</button>
+                                        <button class="filter-type-btn" data-filter-type="team">Team</button>
+                                    </div>
+                                    <input type="text" id="agentSearchInput" placeholder="Caută agent..." data-translate="search-agent-placeholder">
+                                    <button id="clearSelectionBtn" class="btn-ghost" title="Clear Selections" style="display: none;"></button>
+                                </div>
+                                <div id="agentList" class="agent-list">
+                                    <!-- Populated by JS -->
+                                </div>
+                                <div class="filter-actions">
+                                    <button id="clearAgentFilter" class="btn btn-secondary">Clear Selections</button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </header>
                 <div class="content">
@@ -573,6 +598,7 @@
     </div>
 
     <!-- JavaScript Files -->
+    <script src="https://cdn.jsdelivr.net/npm/litepicker/dist/litepicker.js"></script>
     <script src="js/config.js" type="module"></script>
     <script src="js/ui.js" type="module"></script>
     <script src="js/charts.js" type="module"></script>

@@ -229,6 +229,228 @@ let plannerState = {
     }
 };
 
+document.addEventListener('DOMContentLoaded', () => {
+    initializeDatepicker();
+    initializeAgentFilter();
+    initializeFilterControls();
+});
+
+function initializeFilterControls() {
+    const filterTypeButtons = document.querySelectorAll('.filter-type-btn');
+    const searchInput = document.getElementById('agentSearchInput');
+
+    filterTypeButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            // Update state
+            plannerState.filterType = button.dataset.filterType;
+
+            // Update UI
+            filterTypeButtons.forEach(btn => btn.classList.remove('active'));
+            button.classList.add('active');
+
+            // Update placeholder
+            if (plannerState.filterType === 'team') {
+                searchInput.placeholder = 'Caută echipă...';
+            } else {
+                searchInput.placeholder = 'Caută agent...';
+            }
+
+            // Re-populate the list
+            populateAgentFilter();
+        });
+    });
+}
+
+function initializeDatepicker() {
+    const pickerInput = document.getElementById('dateRangePickerInput');
+    if (!pickerInput) return;
+
+    // Set initial dates to the current week (Monday to Sunday)
+    const today = new Date();
+    const dayOfWeek = today.getDay(); // 0 (Sun) - 6 (Sat)
+    const startOfWeek = new Date(today);
+    // Adjust to Monday (if Sunday, go back 6 days, otherwise go back dayOfWeek-1 days)
+    startOfWeek.setDate(today.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
+
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+
+    // Set initial state
+    plannerState.dateRange.start = startOfWeek;
+    plannerState.dateRange.end = endOfWeek;
+
+    const picker = new Litepicker({
+        element: pickerInput,
+        singleMode: false,
+        allowRepick: true,
+        lang: 'ro-RO',
+        startDate: plannerState.dateRange.start,
+        endDate: plannerState.dateRange.end,
+        format: 'DD MMM, YYYY',
+        setup: (picker) => {
+            picker.on('selected', (date1, date2) => {
+                plannerState.dateRange.start = date1.dateInstance;
+                plannerState.dateRange.end = date2.dateInstance;
+                renderPlannerIfActive();
+                updatePlannerHeader();
+            });
+        }
+    });
+
+    // Initial render
+    renderPlannerIfActive();
+    updatePlannerHeader();
+}
+
+function populateAgentFilter() {
+    const agentList = document.getElementById('agentList');
+    const searchInput = document.getElementById('agentSearchInput');
+    if (!agentList) return;
+
+    agentList.innerHTML = ''; // Clear existing items
+
+    if (plannerState.filterType === 'team') {
+        const teams = getAllTeams();
+        const searchTerm = searchInput.value.toLowerCase();
+
+        teams
+            .filter(team => team.toLowerCase().includes(searchTerm))
+            .forEach(team => {
+                const item = document.createElement('div');
+                item.className = 'agent-list-item';
+                item.innerHTML = `
+                    <input type="checkbox" id="team-${team}" value="${team}" ${plannerState.selectedTeams.includes(team) ? 'checked' : ''}>
+                    <label for="team-${team}">${team}</label>
+                `;
+                agentList.appendChild(item);
+            });
+
+    } else { // 'agent'
+        const searchTerm = searchInput.value.toLowerCase();
+        
+        plannerData
+            .filter(agent => agent.fullName.toLowerCase().includes(searchTerm))
+            .forEach(agent => {
+                const item = document.createElement('div');
+                item.className = 'agent-list-item';
+                item.innerHTML = `
+                    <input type="checkbox" id="agent-${agent.id}" value="${agent.id}" ${plannerState.selectedAgents.includes(agent.id) ? 'checked' : ''}>
+                    <label for="agent-${agent.id}">${agent.fullName}</label>
+                `;
+                agentList.appendChild(item);
+            });
+    }
+}
+
+function initializeAgentFilter() {
+    const agentFilterButton = document.getElementById('agentFilterButton');
+    const dropdown = document.getElementById('agentFilterDropdown');
+    const searchInput = document.getElementById('agentSearchInput');
+    const agentList = document.getElementById('agentList');
+
+    if (!agentFilterButton || !dropdown || !searchInput || !agentList) {
+        console.warn("Agent filter elements not found, skipping initialization.");
+        return;
+    }
+
+    // Toggle dropdown
+    agentFilterButton.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isVisible = dropdown.classList.toggle('visible');
+        if (isVisible) {
+            populateAgentFilter(); // Populate when opening
+            searchInput.focus();
+        }
+    });
+
+    // Stop propagation inside dropdown
+    dropdown.addEventListener('click', e => e.stopPropagation());
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!dropdown.contains(e.target) && e.target !== agentFilterButton) {
+            dropdown.classList.remove('visible');
+        }
+    });
+
+    // Handle search input
+    searchInput.addEventListener('input', () => {
+        populateAgentFilter();
+    });
+
+    // Handle checkbox changes via event delegation
+    agentList.addEventListener('change', (e) => {
+        if (e.target.type === 'checkbox') {
+            const value = e.target.value;
+            if (plannerState.filterType === 'team') {
+                if (e.target.checked) {
+                    plannerState.selectedTeams.push(value);
+                } else {
+                    plannerState.selectedTeams = plannerState.selectedTeams.filter(t => t !== value);
+                }
+            } else { // agent
+                if (e.target.checked) {
+                    plannerState.selectedAgents.push(value);
+                } else {
+                    plannerState.selectedAgents = plannerState.selectedAgents.filter(id => id !== value);
+                }
+            }
+            renderPlannerIfActive();
+        }
+    });
+    
+    // Allow clicking on the label to toggle the checkbox
+    agentList.addEventListener('click', (e) => {
+        if (e.target.tagName === 'LABEL' || e.target.tagName === 'SPAN') {
+            const label = e.target.closest('label');
+            if (label) {
+                const checkbox = label.querySelector('input[type="checkbox"]');
+                if (checkbox) {
+                    checkbox.checked = !checkbox.checked;
+                    // Manually trigger change event
+                    checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+            }
+        }
+    });
+
+    // Handle the new "Clear Selections" button
+    const clearButton = document.getElementById('clearAgentFilter');
+    if (clearButton) {
+        clearButton.addEventListener('click', () => {
+            clearAgentAndTeamSelections();
+        });
+    }
+}
+
+function clearAgentAndTeamSelections() {
+    // Reset selected agents and teams
+    plannerState.selectedAgents = [];
+    plannerState.selectedTeams = ['all']; // Default to 'all'
+
+    // Clear any active search term
+    const searchInput = document.getElementById('agentSearchInput');
+    if (searchInput) {
+        searchInput.value = '';
+    }
+
+    // Uncheck all checkboxes in the dropdown
+    const dropdown = document.getElementById('agentFilterDropdown');
+    if (dropdown) {
+        const checkboxes = dropdown.querySelectorAll('input[type="checkbox"]');
+        checkboxes.forEach(cb => cb.checked = false);
+    }
+    
+    // Repopulate the filter to reflect the cleared state
+    populateAgentFilter();
+    
+    // Re-render the planner
+    renderPlannerIfActive();
+
+    // Optionally, update the main team chips display
+    updateTeamDisplay();
+}
+
 // Selection state for cell editing
 const selectionState = {
     selectedCells: new Set(),
@@ -449,8 +671,14 @@ function getFilteredAgents() {
     // This function is now always using the most up-to-date data from Firestore
     let filteredAgents = [...plannerData]; // Use a copy
 
-    // Apply team filter
-    if (!plannerState.selectedTeams.includes('all')) {
+    // Agent selections take precedence over team selections.
+    if (plannerState.selectedAgents.length > 0) {
+        filteredAgents = filteredAgents.filter(agent => 
+            plannerState.selectedAgents.includes(agent.id)
+        );
+    } 
+    // If no agents are selected, use the team filter.
+    else if (!plannerState.selectedTeams.includes('all')) {
         filteredAgents = filteredAgents.filter(agent => 
             agent.teams && agent.teams.some(team => plannerState.selectedTeams.includes(team))
         );
@@ -497,6 +725,13 @@ export function renderPlannerTable(container, startDate, endDate) {
     if (!tableContainer) {
         console.log("Planner table container not found - section might not be active yet. Skipping render.");
         return;
+    }
+
+    // FIX: Add a class for custom styling when few days are shown
+    if (days.length > 0 && days.length < 10) {
+        tableContainer.classList.add('few-days-view');
+    } else {
+        tableContainer.classList.remove('few-days-view');
     }
 
     // Call the function to update the header with the date range
@@ -583,19 +818,17 @@ export function renderPlannerTable(container, startDate, endDate) {
 
 function renderAgentRow(agent, dates) {
     const row = document.createElement('tr');
-    row.className = 'agent-row agent-row-flex';
+    row.className = 'agent-row';
 
     // Agent name cell
     const nameCell = document.createElement('td');
     nameCell.className = 'agent-name';
     nameCell.title = agent.fullName || agent.name || 'Unknown Agent'; // Add tooltip
     nameCell.innerHTML = `
-        <div class="cell-content-wrapper">
-            <span>${agent.fullName || agent.name || 'Unknown Agent'}</span>
-            <button class="delete-agent-btn" data-agent-id="${agent.id}" title="Delete Agent">
-                <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
-            </button>
-        </div>
+        <span>${agent.fullName || agent.name || 'Unknown Agent'}</span>
+        <button class="delete-agent-btn" data-agent-id="${agent.id}" title="Delete Agent">
+            <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+        </button>
     `;
 
     // Hours cell
@@ -620,18 +853,20 @@ function renderAgentRow(agent, dates) {
         const dayValue = agent.days && agent.days[dayIndex] ? agent.days[dayIndex] : '';
         const formattedContent = formatCellContent(dayValue);
         
-        // Wrap content in a div for flex-based centering
-        const contentWrapper = document.createElement('div');
-        contentWrapper.className = 'cell-content-wrapper';
-        // Set cell content using innerHTML to properly handle newlines
-        contentWrapper.innerHTML = formattedContent.replace(/\n/g, '<br>');
-
-        // Clear existing cell content and append the new wrapper
-        cell.innerHTML = '';
-        cell.appendChild(contentWrapper);
+        // FORCE CENTERING: Add inline styles to ensure proper centering
+        cell.style.textAlign = 'center';
+        cell.style.verticalAlign = 'middle';
+        cell.style.fontVariantNumeric = 'tabular-nums';
+        cell.style.fontFeatureSettings = '"tnum" 1, "kern" 1';
+        cell.style.letterSpacing = '0';
+        cell.style.wordSpacing = '0';
+        cell.style.textAlignLast = 'center';
         
-        // Apply dynamic font sizing to the wrapper, not the cell
-        applyDynamicFontSizing(contentWrapper, formattedContent);
+        // Set cell content using innerHTML to properly handle newlines
+        cell.innerHTML = formattedContent.replace(/\n/g, '<br>');
+        
+        // Apply dynamic font sizing to ensure content fits properly
+        applyDynamicFontSizing(cell, formattedContent);
         
         // Check if it's a multi-team day (contains + symbol or newline)
         if (formattedContent.includes('+') || formattedContent.includes('\n')) {
@@ -752,11 +987,11 @@ function formatCellContent(day) {
 }
 
 // Dynamic font sizing function to ensure content fits properly in cells
-function applyDynamicFontSizing(element, content) {
+function applyDynamicFontSizing(cell, content) {
     if (!content || content.trim() === '') return;
     
     // Remove any existing sizing classes
-    element.classList.remove('tiny-text', 'small-text', 'medium-text', 'super-tiny');
+    cell.classList.remove('tiny-text', 'small-text', 'medium-text', 'super-tiny');
     
     // Check if content has newlines (multi-line)
     const hasNewlines = content.includes('\n');
@@ -790,8 +1025,53 @@ function applyDynamicFontSizing(element, content) {
     
     // Apply the calculated size class
     if (sizeClass) {
-        element.classList.add(sizeClass);
+        cell.classList.add(sizeClass);
     }
+    
+    // FORCE CENTERING: Re-apply centering styles after font size changes
+    cell.style.textAlign = 'center';
+    cell.style.verticalAlign = 'middle';
+    cell.style.fontVariantNumeric = 'tabular-nums';
+    cell.style.fontFeatureSettings = '"tnum" 1, "kern" 1';
+    cell.style.letterSpacing = '0';
+    cell.style.wordSpacing = '0';
+    cell.style.textAlignLast = 'center';
+    
+    // Simple overflow check - only reduce size if absolutely necessary
+    requestAnimationFrame(() => {
+        const cellRect = cell.getBoundingClientRect();
+        const cellWidth = cellRect.width;
+        const cellHeight = cellRect.height;
+        
+        // More lenient overflow detection
+        const isOverflowing = (cell.scrollWidth > cellWidth + 8) || (cell.scrollHeight > cellHeight + 4);
+        
+        if (isOverflowing) {
+            // Try one size smaller
+            if (!sizeClass) {
+                // Was using default, try medium
+                cell.classList.add('medium-text');
+            } else if (sizeClass === 'medium-text') {
+                cell.classList.remove('medium-text');
+                cell.classList.add('small-text');
+            } else if (sizeClass === 'small-text') {
+                cell.classList.remove('small-text');
+                cell.classList.add('tiny-text');
+            } else if (sizeClass === 'tiny-text') {
+                cell.classList.remove('tiny-text');
+                cell.classList.add('super-tiny');
+            }
+            
+            // FORCE CENTERING: Re-apply centering after overflow adjustment
+            cell.style.textAlign = 'center';
+            cell.style.verticalAlign = 'middle';
+            cell.style.fontVariantNumeric = 'tabular-nums';
+            cell.style.fontFeatureSettings = '"tnum" 1, "kern" 1';
+            cell.style.letterSpacing = '0';
+            cell.style.wordSpacing = '0';
+            cell.style.textAlignLast = 'center';
+        }
+    });
 }
 
 function calculateAgentTotalHours(agent) {
