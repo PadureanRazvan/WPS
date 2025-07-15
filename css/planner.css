@@ -195,20 +195,39 @@
 
 /* Ensure Agent Name cell is optimized */
 .unified-planner-table .agent-name {
+    padding: 0; /* The TD is now just a container */
+}
+
+/* NEW: The wrapper now handles the flex layout and alignment */
+.unified-planner-table .agent-name .cell-content-wrapper {
     display: flex;
-    align-items: center;
-    justify-content: center;
+    align-items: center; /* This is the key for vertical centering */
+    justify-content: space-between;
+    height: 100%; /* Make the wrapper fill the cell height */
+    padding: 0.75rem 0.5rem; /* Apply padding to the wrapper */
     gap: 0.5rem;
     font-weight: 600;
     color: var(--accent);
     white-space: nowrap;
     overflow: hidden;
-    text-overflow: ellipsis; /* This handles long names gracefully */
+    text-overflow: ellipsis;
 }
 
 .unified-planner-table .agent-name span {
     flex-grow: 1;
-    text-align: center;
+    text-align: left; /* Align agent name to the left for a cleaner look */
+}
+
+/* NEW: Make the agent row a flex container to enforce equal height on all cells */
+.agent-row-flex {
+    display: flex;
+    width: 100%;
+}
+
+.agent-row-flex td {
+    display: flex; /* Make each cell a flex container */
+    align-items: center; /* Vertically center content in all cells */
+    flex-shrink: 0; /* Prevent sticky columns from shrinking */
 }
 
 /* Highlight current day */
@@ -389,6 +408,8 @@
     cursor: pointer;
     transition: background-color 0.2s ease, box-shadow 0.2s ease;
     padding: 0; /* REMOVED PADDING */
+    width: 45px; /* Explicit width for data cells */
+    justify-content: center; /* Center content horizontally */
 }
 
 /* FIX: Ensure content within a planner cell is centered */
@@ -396,6 +417,16 @@
     min-height: inherit; /* Inherit the min-height from the cell */
 }
 
+.planner-cell.selected {
+    background-color: rgba(255, 215, 0, 0.3) !important;
+    box-shadow: inset 0 0 0 2px var(--accent);
+    z-index: 5; /* Ensure selection is visible */
+}
+
+.planner-cell.selecting {
+    background-color: rgba(255, 215, 0, 0.2) !important;
+    border: 1px dashed var(--accent);
+}
 
 /* Cell content - no longer needed */
 /*
@@ -706,6 +737,63 @@
     .team-chips {
         justify-content: center;
     }
+}
+
+/* === UI Adjustments: Center "Ore" / "Total" columns & remove unexpected highlights === */
+
+/* Center the sticky "Ore" (column 2) and "Total" (last column) cells */
+.agent-row-flex td:nth-child(2),
+.agent-row-flex td:last-child {
+    justify-content: center; /* horizontal centering inside flex cell */
+}
+
+/* Align content when wrapper is present */
+.unified-planner-table td:nth-child(2) .cell-content-wrapper,
+.unified-planner-table td:last-child .cell-content-wrapper {
+    justify-content: center;
+}
+
+/* Remove accent borders from the last sticky column */
+.unified-planner-table th:last-child,
+.unified-planner-table td:last-child {
+    border-left: 1px solid var(--border); /* match regular cell border */
+}
+
+/* Disable yellow (today) & orange (weekend) row/column highlights */
+.unified-planner-table .today,
+.unified-planner-table .weekend,
+.date-header-row .weekend {
+    background: transparent !important;
+    border-left: none !important;
+    border-right: none !important;
+}
+
+/* === Fix misalignment between header and body cells === */
+/* Ensure the day headers (both rows) use the same width as planner cells */
+.date-header-row .date-header,
+.day-header-row .day-number-header {
+    width: 45px;
+    padding-left: 0;
+    padding-right: 0;
+    box-sizing: border-box; /* keep calculation consistent */
+}
+
+/* --- Enforce exact column widths for flex rows --- */
+/* Standard day cells */
+.agent-row-flex td:not(:first-child):not(:nth-child(2)):not(:last-child) {
+    flex: 0 0 45px; /* no grow, no shrink, exact 45px */
+}
+/* First column (Agent) */
+.agent-row-flex td:first-child {
+    flex: 0 0 160px;
+}
+/* Second column (Ore) */
+.agent-row-flex td:nth-child(2) {
+    flex: 0 0 50px;
+}
+/* Last column (Total) */
+.agent-row-flex td:last-child {
+    flex: 0 0 60px;
 }
 
 
