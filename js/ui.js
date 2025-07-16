@@ -9,6 +9,61 @@ import { addAgent, applyChangesToSelectedCells, renderPlannerTable } from './pla
 let currentTheme = localStorage.getItem('theme') || 'dark';
 let currentLanguage = localStorage.getItem('language') || 'ro';
 
+export function setTheme(theme) {
+    currentTheme = theme;
+    document.documentElement.setAttribute('data-theme', currentTheme);
+    localStorage.setItem('theme', currentTheme);
+    updateThemeIcon();
+}
+
+// Language Management
+export function updateLanguageUI(langCode) {
+    currentLanguage = langCode;
+    localStorage.setItem('language', langCode);
+    updateLanguageDisplay(langCode);
+    translatePage(langCode);
+    
+    document.querySelectorAll('.language-option').forEach(option => {
+        option.classList.remove('active');
+    });
+    const activeOption = document.querySelector(`[data-lang="${langCode}"]`);
+    if (activeOption) {
+        activeOption.classList.add('active');
+    }
+}
+
+// Navigation
+export function showSection(sectionId, clickedElement) {
+    // Update active nav
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.classList.remove('active');
+    });
+    if (clickedElement) {
+        clickedElement.classList.add('active');
+    } else {
+        const correspondingNavItem = document.querySelector(`.nav-item[data-tooltip="${sectionId}"]`);
+        if(correspondingNavItem) correspondingNavItem.classList.add('active');
+    }
+    
+    // Show section
+    document.querySelectorAll('.section').forEach(section => {
+        section.classList.remove('active');
+    });
+    const targetSection = document.getElementById(sectionId);
+    if (targetSection) {
+        targetSection.classList.add('active');
+        
+        // If switching to planner section, trigger a render
+        if (sectionId === 'planner') {
+            // Use setTimeout to ensure the section is visible first
+            setTimeout(() => {
+                renderPlannerTable();
+            }, 10);
+        }
+    }
+}
+
+
 // Initialize theme and language from localStorage
 export function initializeThemeAndLanguage() {
     // Set theme
@@ -57,31 +112,6 @@ export function toggleLanguageMenu() {
     dropdown.classList.toggle('open');
 }
 
-export function changeLanguage(langCode, saveToStorage = true) {
-    currentLanguage = langCode;
-    
-    if (saveToStorage) {
-        localStorage.setItem('language', langCode);
-    }
-    
-    // Update UI elements
-    updateLanguageDisplay(langCode);
-    translatePage(langCode);
-    
-    // Close language menu
-    document.getElementById('languageMenu').classList.remove('open');
-    document.querySelector('.language-dropdown').classList.remove('open');
-    
-    // Update active language option
-    document.querySelectorAll('.language-option').forEach(option => {
-        option.classList.remove('active');
-    });
-    const activeOption = document.querySelector(`[data-lang="${langCode}"]`);
-    if (activeOption) {
-        activeOption.classList.add('active');
-    }
-}
-
 export function updateLanguageDisplay(langCode) {
     const config = languageConfig[langCode];
     const currentFlag = document.getElementById('currentFlag');
@@ -126,34 +156,6 @@ export function toggleHeader() {
     const header = document.querySelector('.main-content .header');
     if (header) {
         header.classList.toggle('collapsed');
-    }
-}
-
-// Navigation
-export function showSection(sectionId, clickedElement) {
-    // Update active nav
-    document.querySelectorAll('.nav-item').forEach(item => {
-        item.classList.remove('active');
-    });
-    if (clickedElement) {
-        clickedElement.classList.add('active');
-    }
-    
-    // Show section
-    document.querySelectorAll('.section').forEach(section => {
-        section.classList.remove('active');
-    });
-    const targetSection = document.getElementById(sectionId);
-    if (targetSection) {
-        targetSection.classList.add('active');
-        
-        // If switching to planner section, trigger a render
-        if (sectionId === 'planner') {
-            // Use setTimeout to ensure the section is visible first
-            setTimeout(() => {
-                renderPlannerTable();
-            }, 10);
-        }
     }
 }
 
@@ -310,6 +312,11 @@ export function showWorkingHoursSection() {
     
     // Update total hours display
     updateTotalHours();
+    // Add input listeners
+    const teamInputs = document.querySelectorAll('.team-input');
+    teamInputs.forEach(input => {
+        input.addEventListener('input', updateTotalHours);
+    });
 }
 
 export function updateTotalHours() {

@@ -10,7 +10,11 @@
     top: 0;
     left: 0;
     z-index: 100;
-    transition: width 0.3s ease;
+    transition: width 0.3s ease, box-shadow 0.3s ease;
+}
+
+.sidebar:hover {
+    box-shadow: var(--ai-glow);
 }
 
 .sidebar.collapsed {
@@ -171,12 +175,15 @@
 .nav-item:hover {
     background: var(--hover);
     color: var(--text-primary);
+    transform: translateX(5px);
+    box-shadow: var(--ai-glow);
 }
 
 .nav-item.active {
     background: var(--hover);
     color: var(--accent);
     font-weight: 600;
+    animation: pulse 1s ease-in-out;
 }
 
 .nav-item.active::before {
@@ -292,7 +299,7 @@
     height: 60px;
     padding: 1rem 3rem;
     z-index: 30;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--ai-glow);
 }
 
 .header.scrolled .header-title {

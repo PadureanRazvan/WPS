@@ -9,18 +9,41 @@
     transition: all 0.3s ease;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    opacity: 0;
+    transition: all 0.5s ease;
+}
+
+.btn:active::before {
+    width: 300px;
+    height: 300px;
+    opacity: 1;
 }
 
 .btn-primary {
     background: var(--accent);
     color: var(--primary-dark);
-    box-shadow: 0 2px 8px rgba(255, 215, 0, 0.3);
+    box-shadow: var(--ai-glow);
 }
 
 .btn-primary:hover {
     background: #ffed4a;
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(255, 215, 0, 0.4);
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: var(--ai-glow), 0 6px 16px rgba(255, 215, 0, 0.4);
+    animation: var(--pulse-animation);
 }
 
 .btn-secondary {
@@ -66,11 +89,12 @@
     border-radius: 12px;
     padding: 1.5rem;
     transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .stat-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: var(--ai-glow), 0 8px 24px rgba(0, 0, 0, 0.3);
     border-color: var(--accent);
 }
 
@@ -106,6 +130,11 @@
     border-radius: 12px;
     padding: 1.5rem;
     margin-bottom: 1.5rem;
+    transition: all 0.3s ease;
+}
+
+.chart-container:hover {
+    box-shadow: var(--ai-glow);
 }
 
 .chart-header {
@@ -218,6 +247,9 @@ td {
 
 tr:hover {
     background: var(--hover);
+    box-shadow: var(--ai-glow);
+    transform: scale(1.01);
+    transition: transform 0.2s ease;
 }
 
 /* Enhanced contrast for better readability */
@@ -1337,4 +1369,146 @@ input:focus, select:focus, textarea:focus {
 
 .language-option:hover .language-option-text {
     color: var(--accent);
+} 
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-start;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+
+/* --- Users Page Specific Styles --- */
+.users-controls {
+    margin-bottom: 1.5rem;
+}
+
+#usersTable td[contenteditable="true"] {
+    cursor: text;
+    transition: background-color 0.2s ease;
+    border-bottom: 1px dashed var(--border-light);
+}
+
+#usersTable td[contenteditable="true"]:hover,
+#usersTable td[contenteditable="true"]:focus {
+    background-color: var(--primary-light);
+    outline: 2px solid var(--accent);
+    border-radius: 4px;
+}
+
+#usersTable .inline-input,
+#usersTable .inline-select {
+    background: transparent;
+    border: none;
+    width: 100%;
+    padding: 0.5rem;
+    color: inherit;
+    font-size: inherit;
+    font-family: inherit;
+    border-radius: 4px;
+    transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+#usersTable .inline-input:focus,
+#usersTable .inline-select:focus {
+    background: var(--primary-dark);
+    outline: none;
+    box-shadow: 0 0 0 2px var(--accent);
+}
+
+#usersTable .inline-select {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    padding-right: 24px;
+    background-image: url('data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%238892b0"><path d="M7 10l5 5 5-5z"/></svg>');
+    background-repeat: no-repeat;
+    background-position: right 0.5rem center;
+    background-size: 16px;
+}
+
+#usersTable .inline-checkbox {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    position: relative;
+    width: 20px;
+    height: 20px;
+    margin: auto;
+}
+
+#usersTable .inline-checkbox input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+#usersTable .inline-checkbox .checkmark {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 20px;
+    width: 20px;
+    background-color: var(--primary-light);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+#usersTable .inline-checkbox input:checked ~ .checkmark {
+    background-color: var(--accent);
+    border-color: var(--accent);
+}
+
+#usersTable .inline-checkbox .checkmark:after {
+    content: "";
+    position: absolute;
+    display: none;
+    left: 6px;
+    top: 2px;
+    width: 5px;
+    height: 10px;
+    border: solid white;
+    border-width: 0 3px 3px 0;
+    transform: rotate(45deg);
+}
+
+#usersTable .inline-checkbox input:checked ~ .checkmark:after {
+    display: block;
+}
+
+
+#usersTable .delete-btn {
+    background: transparent;
+    border: 1px solid var(--error);
+    color: var(--error);
+    padding: 0.35rem 0.75rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s ease-in-out;
+}
+
+#usersTable .delete-btn:hover {
+    background: var(--error);
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(239, 68, 68, 0.2);
+}
+
+#usersTable tbody tr:hover {
+    background-color: var(--primary-light);
+}
+
+#usersTable td, #usersTable th {
+    text-align: left;
+    padding: 0.8rem 1rem;
 } 

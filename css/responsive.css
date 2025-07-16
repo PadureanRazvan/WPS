@@ -153,6 +153,10 @@
         font-size: 0.55rem;
         padding: 0.25rem 0.1rem;
     }
+
+    .planner-cell:hover {
+        transform: scale(1.02);
+    }
 }
 
 /* Responsive */
@@ -512,6 +516,15 @@
         font-size: 0.45rem;
         padding: 0.15rem 0.05rem;
         line-height: 0.95;
+    }
+
+    .planner-cell:hover {
+        transform: none;
+    }
+    // Disable heavy animations on mobile
+    .btn:hover, .stat-card:hover, .nav-item:hover {
+        transform: none;
+        animation: none;
     }
 }
 

@@ -67,11 +67,11 @@
                     </svg>
                     <span>Dashboard</span>
                 </div>
-                <div class="nav-item" data-tooltip="new-user">
+                <div class="nav-item" data-tooltip="users">
                     <svg class="nav-icon" viewBox="0 0 24 24">
-                        <path d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                        <path d="M16 21v-2c0-2.21-1.79-4-4-4H5c-2.21 0-4 1.79-4 4v2h2v-2c0-1.1.9-2 2-2h7c1.1 0 2 .9 2 2v2h2zm-4-6c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0-6c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zm8 8h4v2h-4v-2zm0-4h4v2h-4v-2zm0-4h4v2h-4v-2z"/>
                     </svg>
-                    <span>New User</span>
+                    <span>Users</span>
                 </div>
                 <div class="nav-item" data-tooltip="planner">
                     <svg class="nav-icon" viewBox="0 0 24 24">
@@ -105,7 +105,7 @@
             <!-- Dashboard Section -->
             <section id="dashboard" class="section active">
                 <header class="header">
-                    <h2 class="header-title" data-translate="dashboard-title">Dashboard - 25 Mai 2025</h2>
+                    <h2 class="header-title" id="dashboardTitle" data-translate="dashboard-title">Dashboard</h2>
                     <div style="display: flex; align-items: center; gap: 1rem;">
                         <!-- Theme and Language Controls -->
                         <div class="header-controls">
@@ -158,8 +158,8 @@
                     <div class="dashboard-grid">
                         <div class="stat-card">
                             <div class="stat-label" data-translate="total-active-agents">Total Agenți Activi</div>
-                            <div class="stat-value">42</div>
-                            <div class="stat-detail">+3 față de luna trecută</div>
+                            <div class="stat-value" id="totalActiveAgentsValue">...</div>
+                            <div class="stat-detail" id="totalActiveAgentsDetail">*</div>
                         </div>
                         <div class="stat-card">
                             <div class="stat-label">
@@ -171,20 +171,20 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="stat-value" id="plannedHoursValue">336</div>
-                            <div class="stat-detail" id="plannedHoursDetail" data-translate="for-agents">Pentru 42 agenți</div>
+                            <div class="stat-value" id="plannedHoursValue">...</div>
+                            <div class="stat-detail" id="plannedHoursDetail">...</div>
                         </div>
                         <div class="stat-card">
                             <div class="stat-label" data-translate="average-productivity">Productivitate Medie</div>
-                            <div class="stat-value">4.8</div>
-                            <div class="stat-detail" data-translate="last-7-days">Ultimele 7 zile</div>
+                            <div class="stat-value" id="averageProductivityValue">N/A*</div>
+                            <div class="stat-detail" id="averageProductivityDetail">Ultimele 7 zile*</div>
                         </div>
                     </div>
 
                     <!-- Daily Hours by Shop -->
                     <div class="chart-container">
                         <div class="chart-header">
-                            <h3 class="chart-title" data-translate="hours-by-team">Ore Alocate pe Echipe - Azi</h3>
+                            <h3 class="chart-title" id="hoursByTeamTitle" data-translate="hours-by-team">Ore Alocate pe Echipe - Azi</h3>
                         </div>
                         <table>
                             <thead>
@@ -194,27 +194,8 @@
                                     <th>Total Ore</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                <tr>
-                                    <td>RO zooplus</td>
-                                    <td>15</td>
-                                    <td>120</td>
-                                </tr>
-                                <tr>
-                                    <td>HU zooplus</td>
-                                    <td>8</td>
-                                    <td>64</td>
-                                </tr>
-                                <tr>
-                                    <td>IT zooplus</td>
-                                    <td>6</td>
-                                    <td>48</td>
-                                </tr>
-                                <tr>
-                                    <td>NL zooplus</td>
-                                    <td>5</td>
-                                    <td>40</td>
-                                </tr>
+                            <tbody id="teamHoursTableBody">
+                                <!-- Populated by JS -->
                             </tbody>
                         </table>
                     </div>
@@ -229,53 +210,88 @@
                 </div>
             </section>
 
-            <!-- New User Section -->
-            <section id="new-user" class="section">
+            <!-- Users Section -->
+            <section id="users" class="section">
                 <header class="header">
-                    <h2 class="header-title">Adaugă Agent Nou</h2>
+                    <h2 class="header-title" data-translate="users-title">Users Management</h2>
                 </header>
                 <div class="content">
-                    <form id="newUserForm" style="max-width: 600px;">
-                        <div class="form-group">
-                            <label>Nume Complet</label>
-                            <input type="text" id="newAgentFullName" placeholder="Prenume Nume">
-                        </div>
-                        <div class="form-group">
-                            <label>Username</label>
-                            <input type="text" id="newAgentUsername" placeholder="username.fsp">
-                        </div>
-                        <div class="form-group">
-                            <label>Ore Contract/Zi</label>
-                            <select id="newAgentContractHours">
-                                <option value="4">4 ore</option>
-                                <option value="6">6 ore</option>
-                                <option value="7">7 ore</option>
-                                <option value="8" selected>8 ore</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Tip Contract</label>
-                            <select id="newAgentContractType">
-                                <option>Full-time</option>
-                                <option>Part-time</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Echipa Primară</label>
-                            <select id="newAgentPrimaryTeam">
-                                <option>RO zooplus</option>
-                                <option>HU zooplus</option>
-                                <option>IT zooplus</option>
-                                <option>NL zooplus</option>
-                                <option>DE zooplus</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Data Angajare</label>
-                            <input type="date" id="newAgentHireDate">
-                        </div>
-                        <button type="button" id="createAgentBtn" class="btn btn-primary">Creează Agent</button>
-                    </form>
+                    <div class="users-controls">
+                        <button id="addNewUserBtn" class="btn btn-primary" data-translate="add-new-user">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style="margin-right: 8px;">
+                                <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                            </svg>
+                            Add New User
+                        </button>
+                    </div>
+                    <div id="newUserFormContainer" style="display: none; margin-top: 1.5rem; background: var(--primary-light); padding: 1.5rem; border-radius: 8px; border: 1px solid var(--border);">
+                        <h3 style="margin-top: 0; margin-bottom: 1.5rem; color: var(--text-primary);">Create a New User Profile</h3>
+                        <form id="newUserForm">
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="newAgentFullName">Full Name</label>
+                                    <input type="text" id="newAgentFullName" placeholder="e.g., John Doe" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="newAgentUsername">Username</label>
+                                    <input type="text" id="newAgentUsername" placeholder="e.g., john.doe.fsp" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="newAgentContractHours">Contract Hours</label>
+                                    <select id="newAgentContractHours">
+                                        <option value="4">4 hours</option>
+                                        <option value="6">6 hours</option>
+                                        <option value="7">7 hours</option>
+                                        <option value="8" selected>8 hours</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="newAgentContractType">Contract Type</label>
+                                    <select id="newAgentContractType">
+                                        <option>Full-time</option>
+                                        <option>Part-time</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="newAgentPrimaryTeam">Primary Team</label>
+                                    <select id="newAgentPrimaryTeam">
+                                        <option>RO zooplus</option>
+                                        <option>HU zooplus</option>
+                                        <option>IT zooplus</option>
+                                        <option>NL zooplus</option>
+                                        <option>DE zooplus</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="newAgentHireDate">Hire Date</label>
+                                    <input type="date" id="newAgentHireDate" required>
+                                </div>
+                            </div>
+                            <div class="form-actions" style="margin-top: 1.5rem; display: flex; gap: 1rem;">
+                                <button type="submit" class="btn btn-primary">Create User</button>
+                                <button type="button" id="cancelNewUserBtn" class="btn btn-secondary">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="table-container enhanced-table" style="margin-top: 2rem;">
+                        <table id="usersTable">
+                            <thead>
+                                <tr>
+                                    <th data-translate="full-name">Full Name</th>
+                                    <th data-translate="username">Username</th>
+                                    <th data-translate="contract-hours">Contract Hours</th>
+                                    <th data-translate="contract-type">Contract Type</th>
+                                    <th data-translate="primary-team">Primary Team</th>
+                                    <th data-translate="hire-date">Hire Date</th>
+                                    <th data-translate="active">Active</th>
+                                    <th data-translate="actions">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usersTableBody">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </section>
 
@@ -597,12 +613,80 @@
         </div>
     </div>
 
+    <!-- Smoke Effect Canvas -->
+    <canvas id="smokeCanvas" style="position: fixed; top: 0; left: 0; pointer-events: none; z-index: 9999;"></canvas>
+
     <!-- JavaScript Files -->
     <script src="https://cdn.jsdelivr.net/npm/litepicker/dist/litepicker.js"></script>
     <script src="js/config.js" type="module"></script>
     <script src="js/ui.js" type="module"></script>
     <script src="js/charts.js" type="module"></script>
     <script src="js/planner.js" type="module"></script>
+    <script src="js/dashboard.js" type="module"></script>
+    <script src="js/users.js" type="module"></script>
     <script src="js/main.js" type="module"></script>
+    <script>
+        // Smoke effect script
+        const canvas = document.getElementById('smokeCanvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        let particles = [];
+        let mouse = { x: 0, y: 0 };
+
+        window.addEventListener('mousemove', (e) => {
+            mouse.x = e.clientX;
+            mouse.y = e.clientY;
+        });
+
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+
+        class Particle {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.size = Math.random() * 5 + 1;
+                this.speedX = Math.random() * 3 - 1.5;
+                this.speedY = Math.random() * 3 - 1.5;
+                this.color = getComputedStyle(document.documentElement).getPropertyValue('--smoke-color').trim();
+            }
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+                if (this.size > 0.2) this.size -= 0.1;
+            }
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function handleParticles() {
+            for (let i = 0; i < particles.length; i++) {
+                particles[i].update();
+                particles[i].draw();
+                if (particles[i].size <= 0.3) {
+                    particles.splice(i, 1);
+                    i--;
+                }
+            }
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            if (Math.random() > 0.5) {
+                particles.push(new Particle(mouse.x, mouse.y));
+            }
+            handleParticles();
+            requestAnimationFrame(animate);
+        }
+        animate();
+    </script>
 </body>
 </html>

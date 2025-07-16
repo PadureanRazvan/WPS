@@ -4,6 +4,7 @@
 import { db } from './firebase-config.js';
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, Timestamp } from "https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore.js";
 import { showTemporaryMessage } from './ui.js';
+import { updateDashboard } from './dashboard.js';
 
 // --- Local State Management ---
 // This will hold the live data from Firestore. It's our local, in-memory copy.
@@ -47,6 +48,7 @@ export function initializePlanner() {
         initializeMonthGrid();
         initializeTeamChips();
         renderPlannerIfActive();
+        updateDashboard(plannerData); // <-- Add this call
         console.log("[Planner] UI re-rendered with fresh data.");
 
     }, (error) => {
@@ -263,21 +265,21 @@ function initializeFilterControls() {
 
 function initializeDatepicker() {
     const pickerInput = document.getElementById('dateRangePickerInput');
-    if (!pickerInput) return;
+    if (!pickerInput) {
+        console.warn("Date range picker input not found, skipping initialization.");
+        return;
+    }
 
-    // Set initial dates to the current week (Monday to Sunday)
     const today = new Date();
-    const dayOfWeek = today.getDay(); // 0 (Sun) - 6 (Sat)
-    const startOfWeek = new Date(today);
-    // Adjust to Monday (if Sunday, go back 6 days, otherwise go back dayOfWeek-1 days)
-    startOfWeek.setDate(today.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
-
-    const endOfWeek = new Date(startOfWeek);
-    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
 
     // Set initial state
-    plannerState.dateRange.start = startOfWeek;
-    plannerState.dateRange.end = endOfWeek;
+    plannerState.dateRange.start = startOfMonth;
+    plannerState.dateRange.end = endOfMonth;
+
+    const todayForHighlight = new Date();
+    todayForHighlight.setHours(0, 0, 0, 0);
 
     const picker = new Litepicker({
         element: pickerInput,
@@ -287,6 +289,7 @@ function initializeDatepicker() {
         startDate: plannerState.dateRange.start,
         endDate: plannerState.dateRange.end,
         format: 'DD MMM, YYYY',
+        highlightedDays: [todayForHighlight],
         setup: (picker) => {
             picker.on('selected', (date1, date2) => {
                 plannerState.dateRange.start = date1.dateInstance;
@@ -327,8 +330,9 @@ function populateAgentFilter() {
 
     } else { // 'agent'
         const searchTerm = searchInput.value.toLowerCase();
-        
-        plannerData
+        const filteredAgents = getFilteredAgents(); // Get agents based on selected teams
+
+        filteredAgents
             .filter(agent => agent.fullName.toLowerCase().includes(searchTerm))
             .forEach(agent => {
                 const item = document.createElement('div');
@@ -383,10 +387,16 @@ function initializeAgentFilter() {
         if (e.target.type === 'checkbox') {
             const value = e.target.value;
             if (plannerState.filterType === 'team') {
+                // When a team is selected, 'all' should be removed.
                 if (e.target.checked) {
+                    plannerState.selectedTeams = plannerState.selectedTeams.filter(t => t !== 'all');
                     plannerState.selectedTeams.push(value);
                 } else {
                     plannerState.selectedTeams = plannerState.selectedTeams.filter(t => t !== value);
+                    // If no teams are selected, default back to 'all'.
+                    if (plannerState.selectedTeams.length === 0) {
+                        plannerState.selectedTeams.push('all');
+                    }
                 }
             } else { // agent
                 if (e.target.checked) {
@@ -678,19 +688,21 @@ function getFilteredAgents() {
         );
     } 
     // If no agents are selected, use the team filter.
-    else if (!plannerState.selectedTeams.includes('all')) {
+    else if (plannerState.selectedTeams.length > 0 && !plannerState.selectedTeams.includes('all')) {
         filteredAgents = filteredAgents.filter(agent => 
             agent.teams && agent.teams.some(team => plannerState.selectedTeams.includes(team))
         );
     }
 
-    // Apply agent search filter using plannerState
-    const searchTerm = plannerState.agentSearchTerm?.toLowerCase();
-    if (searchTerm) {
-        filteredAgents = filteredAgents.filter(agent =>
-            (agent.fullName && agent.fullName.toLowerCase().includes(searchTerm)) ||
-            (agent.username && agent.username.toLowerCase().includes(searchTerm))
-        );
+    // Apply agent search filter ONLY when the filter type is 'agent'
+    if (plannerState.filterType === 'agent') {
+        const searchTerm = plannerState.agentSearchTerm?.toLowerCase();
+        if (searchTerm) {
+            filteredAgents = filteredAgents.filter(agent =>
+                (agent.fullName && agent.fullName.toLowerCase().includes(searchTerm)) ||
+                (agent.username && agent.username.toLowerCase().includes(searchTerm))
+            );
+        }
     }
 
     return filteredAgents;
@@ -721,9 +733,9 @@ export function renderPlannerTable(container, startDate, endDate) {
     }
 
     // Get the table container - use the enhanced table container by default
-    const tableContainer = container || document.querySelector('.table-container.enhanced-table');
+    const tableContainer = container || document.querySelector('#planner .table-container.enhanced-table');
     if (!tableContainer) {
-        console.log("Planner table container not found - section might not be active yet. Skipping render.");
+        // This is expected if the planner section is not active.
         return;
     }
 
@@ -758,7 +770,12 @@ export function renderPlannerTable(container, startDate, endDate) {
             const dayOfWeek = date.getDay();
             const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
             const weekendClass = plannerState.viewOptions.highlightWeekends && isWeekend ? 'weekend' : '';
-            
+            const today = new Date();
+            const isToday = date.getDate() === today.getDate() &&
+                           date.getMonth() === today.getMonth() &&
+                           date.getFullYear() === today.getFullYear();
+            const todayClass = isToday ? 'today' : '';
+
             // Format date as "MAR 25 MAI" (day name + date + month)
             const dayNames = ['DUM', 'LUN', 'MAR', 'MIE', 'JOI', 'VIN', 'SÂM'];
             const monthNames = ['IAN', 'FEB', 'MAR', 'APR', 'MAI', 'IUN', 'IUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
@@ -772,7 +789,7 @@ export function renderPlannerTable(container, startDate, endDate) {
             if (plannerState.viewOptions.showWeekTotals && dayOfWeek === 0) { // After every Sunday
                 extraColumn = `<th class="week-total-header date-header" rowspan="2">Total Săpt.</th>`;
             }
-            return `<th class="date-header ${weekendClass}">${fullDate}</th>${extraColumn}`;
+            return `<th class="date-header ${weekendClass} ${todayClass}">${fullDate}</th>${extraColumn}`;
         }).join('')}
         <th class="total-header" rowspan="2">Total</th>
     `;
@@ -786,13 +803,18 @@ export function renderPlannerTable(container, startDate, endDate) {
             const dayOfWeek = date.getDay();
             const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
             const weekendClass = plannerState.viewOptions.highlightWeekends && isWeekend ? 'weekend' : '';
-            
+            const today = new Date();
+            const isToday = date.getDate() === today.getDate() &&
+                           date.getMonth() === today.getMonth() &&
+                           date.getFullYear() === today.getFullYear();
+            const todayClass = isToday ? 'today' : '';
+
             // Weekly total column logic - skip for this row as it's handled by rowspan
             let extraColumn = '';
             if (plannerState.viewOptions.showWeekTotals && dayOfWeek === 0) { // After every Sunday
                 extraColumn = ''; // Already handled by rowspan in date header
             }
-            return `<th class="day-number-header ${weekendClass}">${dayNum}</th>${extraColumn}`;
+            return `<th class="day-number-header ${weekendClass} ${todayClass}">${dayNum}</th>${extraColumn}`;
         }).join('')}
     `;
     
@@ -1036,42 +1058,6 @@ function applyDynamicFontSizing(cell, content) {
     cell.style.letterSpacing = '0';
     cell.style.wordSpacing = '0';
     cell.style.textAlignLast = 'center';
-    
-    // Simple overflow check - only reduce size if absolutely necessary
-    requestAnimationFrame(() => {
-        const cellRect = cell.getBoundingClientRect();
-        const cellWidth = cellRect.width;
-        const cellHeight = cellRect.height;
-        
-        // More lenient overflow detection
-        const isOverflowing = (cell.scrollWidth > cellWidth + 8) || (cell.scrollHeight > cellHeight + 4);
-        
-        if (isOverflowing) {
-            // Try one size smaller
-            if (!sizeClass) {
-                // Was using default, try medium
-                cell.classList.add('medium-text');
-            } else if (sizeClass === 'medium-text') {
-                cell.classList.remove('medium-text');
-                cell.classList.add('small-text');
-            } else if (sizeClass === 'small-text') {
-                cell.classList.remove('small-text');
-                cell.classList.add('tiny-text');
-            } else if (sizeClass === 'tiny-text') {
-                cell.classList.remove('tiny-text');
-                cell.classList.add('super-tiny');
-            }
-            
-            // FORCE CENTERING: Re-apply centering after overflow adjustment
-            cell.style.textAlign = 'center';
-            cell.style.verticalAlign = 'middle';
-            cell.style.fontVariantNumeric = 'tabular-nums';
-            cell.style.fontFeatureSettings = '"tnum" 1, "kern" 1';
-            cell.style.letterSpacing = '0';
-            cell.style.wordSpacing = '0';
-            cell.style.textAlignLast = 'center';
-        }
-    });
 }
 
 function calculateAgentTotalHours(agent) {
@@ -1255,9 +1241,9 @@ export function applyFiltersAndRender() {
     clearSelection();
     
     // Get the main container where the table(s) will be rendered
-    const plannerContainer = document.querySelector('.table-container.enhanced-table');
+    const plannerContainer = document.querySelector('#planner .table-container.enhanced-table');
     if (!plannerContainer) {
-        console.error("Planner container not found!");
+        console.log("Planner container not found, likely because the planner tab is not active. Skipping render.");
         return;
     }
 

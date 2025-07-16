@@ -348,6 +348,7 @@
 /* Hover effects */
 .unified-planner-table tbody tr:hover td {
     background: var(--hover);
+    box-shadow: var(--ai-glow);
 }
 
 /* Ensure sticky columns also get the correct hover background */
@@ -355,6 +356,11 @@
 .unified-planner-table tbody tr:hover td:nth-child(2),
 .unified-planner-table tbody tr:hover td:last-child {
     background: var(--hover);
+}
+
+/* Preserve selected cell styling on row hover */
+.unified-planner-table tbody tr:hover td.selected {
+    background-color: rgba(255, 215, 0, 0.3) !important;
 }
 
 /* Legacy planner table styles - DEPRECATED - Use unified-planner-table instead */
@@ -410,21 +416,23 @@
     min-height: 40px; /* Ensure a consistent minimum height */
     position: relative;
     cursor: pointer;
-    transition: background-color 0.2s ease, box-shadow 0.2s ease;
+    transition: background-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
     padding: 0; /* REMOVED PADDING */
     width: 45px; /* Explicit width for data cells */
     justify-content: center; /* Center content horizontally */
 }
 
-/* FIX: Ensure content within a planner cell is centered */
-.planner-cell > .cell-content-wrapper {
-    min-height: inherit; /* Inherit the min-height from the cell */
+.planner-cell:hover {
+    transform: scale(1.05);
+    box-shadow: var(--ai-glow);
+    z-index: 10;
 }
 
 .planner-cell.selected {
     background-color: rgba(255, 215, 0, 0.3) !important;
-    box-shadow: inset 0 0 0 2px var(--accent);
-    z-index: 5; /* Ensure selection is visible */
+    box-shadow: inset 0 0 0 2px var(--accent), var(--ai-glow);
+    z-index: 5;
+    animation: var(--pulse-animation);
 }
 
 .planner-cell.selecting {
@@ -570,8 +578,8 @@
 
 /* Super-tiny font size for overflowing content */
 .planner-cell.super-tiny {
-    font-size: 0.5rem !important; /* Increased from 0.4rem for better readability */
-    line-height: 0.9 !important;
+    font-size: 0.6rem !important; /* Increased from 0.4rem for better readability */
+    line-height: 1 !important;
     letter-spacing: -0.5px !important;
     padding: 0.2rem 0.1rem !important;
     text-align: center !important;
@@ -990,6 +998,52 @@
     min-width: 50%;
     max-width: 95%;
 } 
+
+
+
+
+
+
+
+/* --- Dynamic Cell Sizing --- */
+.planner-cell.super-tiny { font-size: 0.6rem; line-height: 1; }
+.planner-cell.tiny-text { font-size: 0.65rem; line-height: 1.1; }
+.planner-cell.small-text { font-size: 0.7rem; line-height: 1.2; }
+.planner-cell.medium-text { font-size: 0.75rem; line-height: 1.2; }
+
+
+/* --- Highlighting for Weekends and Today --- */
+
+/* Highlight for weekend header cells */
+.unified-planner-table th.weekend {
+    background-color: var(--primary-darker);
+    color: var(--text-secondary);
+}
+
+/* Highlight for weekend data cells */
+.unified-planner-table td.weekend {
+    background-color: var(--primary-dark);
+}
+
+/* More prominent highlight for today's date column with a soft yellow */
+.unified-planner-table th.today,
+.unified-planner-table td.today {
+    background-color: var(--today-highlight-bg) !important;
+    border-left: 2px solid var(--today-highlight-border) !important;
+    border-right: 2px solid var(--today-highlight-border) !important;
+}
+
+/* Special styling for the today's header to stand out */
+.unified-planner-table th.today {
+    color: var(--today-highlight-text) !important;
+    font-weight: 700;
+}
+
+/* --- Cell States --- */
+.planner-cell {
+    position: relative;
+    cursor: cell;
+}
 
 
 
