@@ -1171,7 +1171,7 @@ function updateSelectionCounter() {
 
     if (selectionState.selectedCells.size > 0) {
         counter.classList.add('visible'); // FIX: Use a class to show the element
-        countElement.textContent = `${selectionState.selectedCells.size} celule selectate`;
+        countElement.textContent = `${selectionState.selectedCells.size} ${t('edit-cells-selected')}`;
     } else {
         counter.classList.remove('visible'); // FIX: Use a class to hide the element
     }

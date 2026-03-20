@@ -49,8 +49,33 @@ export function updateLanguageUI(langCode) {
     }
 }
 
+// --- Landscape overlay for Planner on mobile ---
+let currentSectionId = 'dashboard';
+
+function checkPlannerLandscape() {
+    const overlay = document.getElementById('rotateLandscapeOverlay');
+    if (!overlay) return;
+
+    const isMobilePortrait = window.innerWidth < 768 && window.innerHeight > window.innerWidth;
+    const isPlanner = currentSectionId === 'planner';
+
+    if (isPlanner && isMobilePortrait) {
+        overlay.classList.add('visible');
+    } else {
+        overlay.classList.remove('visible');
+    }
+}
+
+// Listen for orientation/resize changes
+window.addEventListener('resize', checkPlannerLandscape);
+window.addEventListener('orientationchange', () => {
+    setTimeout(checkPlannerLandscape, 100);
+});
+
 // Navigation
 export function showSection(sectionId, clickedElement) {
+    currentSectionId = sectionId;
+
     // Update active nav
     document.querySelectorAll('.nav-item').forEach(item => {
         item.classList.remove('active');
@@ -61,7 +86,7 @@ export function showSection(sectionId, clickedElement) {
         const correspondingNavItem = document.querySelector(`.nav-item[data-tooltip="${sectionId}"]`);
         if(correspondingNavItem) correspondingNavItem.classList.add('active');
     }
-    
+
     // Show section
     document.querySelectorAll('.section').forEach(section => {
         section.classList.remove('active');
@@ -69,7 +94,10 @@ export function showSection(sectionId, clickedElement) {
     const targetSection = document.getElementById(sectionId);
     if (targetSection) {
         targetSection.classList.add('active');
-        
+
+        // Check if planner needs landscape overlay
+        checkPlannerLandscape();
+
         // If switching to planner section, trigger a render
         if (sectionId === 'planner') {
             // Use setTimeout to ensure the section is visible first
@@ -243,11 +271,17 @@ export function openEditModal() {
     }
     populateSelectionInfo();
     document.getElementById('editModal').classList.add('active');
+    // Hide selection counter while modal is open
+    const counter = document.getElementById('selectionCounter');
+    if (counter) counter.classList.add('modal-open');
     resetEditModal();
 }
 
 export function closeEditModal() {
     document.getElementById('editModal').classList.remove('active');
+    // Show selection counter again
+    const counter = document.getElementById('selectionCounter');
+    if (counter) counter.classList.remove('modal-open');
     resetEditModal();
 }
 

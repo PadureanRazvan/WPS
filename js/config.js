@@ -102,6 +102,8 @@ export const translations = {
         'planner-search-agent': 'Caută agent...',
         'planner-select-months': 'Selectați una sau mai multe luni pentru a le vizualiza.',
         'planner-invalid-range': 'Perioadă invalidă.',
+        'planner-rotate': 'Rotește telefonul în mod landscape pentru a folosi Planificatorul',
+        'edit-btn': 'Editează',
 
         // Reports
         'reports-hours-per-shop': 'Ore Planificate per Shop',
@@ -281,6 +283,8 @@ export const translations = {
         'planner-search-agent': 'Search agent...',
         'planner-select-months': 'Select one or more months to view.',
         'planner-invalid-range': 'Invalid period.',
+        'planner-rotate': 'Rotate your phone to landscape to use the Planner',
+        'edit-btn': 'Edit',
 
         // Reports
         'reports-hours-per-shop': 'Planned Hours per Shop',
@@ -460,6 +464,8 @@ export const translations = {
         'planner-search-agent': 'Cerca agente...',
         'planner-select-months': 'Seleziona uno o più mesi da visualizzare.',
         'planner-invalid-range': 'Periodo non valido.',
+        'planner-rotate': 'Ruota il telefono in modalità landscape per usare il Pianificatore',
+        'edit-btn': 'Modifica',
 
         // Reports
         'reports-hours-per-shop': 'Ore Pianificate per Shop',

@@ -661,11 +661,21 @@
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="margin-right: 0.5rem;">
                     <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
                 </svg>
-                Anulează
+                <span data-translate="edit-cancel">Anulează</span>
             </button>
-            <button id="editSelectionBtn" class="btn-primary" style="margin-left: 0.5rem;">
+            <button id="editSelectionBtn" class="btn-primary" style="margin-left: 0.5rem;" data-translate="edit-btn">
                 Editează
             </button>
+        </div>
+    </div>
+
+    <!-- Rotate to Landscape Overlay (shown on mobile portrait in planner) -->
+    <div id="rotateLandscapeOverlay" class="rotate-landscape-overlay">
+        <div class="rotate-landscape-content">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="var(--accent)" style="animation: rotatePhone 2s ease-in-out infinite;">
+                <path d="M16.48 2.52c3.27 1.55 5.61 4.72 5.97 8.48h1.5C23.44 4.84 18.29 0 12 0l-.66.03 3.81 3.81 1.33-1.32zm-6.25-.77c-.59-.59-1.54-.59-2.12 0L1.75 8.11c-.59.59-.59 1.54 0 2.12l12.02 12.02c.59.59 1.54.59 2.12 0l6.36-6.36c.59-.59.59-1.54 0-2.12L10.23 1.75zm4.6 19.44L2.81 9.17l6.36-6.36 12.02 12.02-6.36 6.38zm-7.31.29C4.25 19.94 1.91 16.76 1.55 13H.05C.56 19.16 5.71 24 12 24l.66-.03-3.81-3.81-1.33 1.32z"/>
+            </svg>
+            <p id="rotateMessage">Rotește telefonul în mod landscape pentru a folosi Planificatorul</p>
         </div>
     </div>
 

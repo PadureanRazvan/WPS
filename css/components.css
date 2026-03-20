@@ -1585,6 +1585,53 @@ input:focus, select:focus, textarea:focus {
     transform: translateY(-1px);
 }
 
+/* Hide selection counter when edit modal is open */
+.selection-counter.modal-open {
+    transform: translateY(120%) !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+}
+
+/* Rotate to Landscape Overlay */
+.rotate-landscape-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.95);
+    z-index: 9999;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+
+.rotate-landscape-overlay.visible {
+    display: flex;
+}
+
+.rotate-landscape-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 2rem;
+}
+
+.rotate-landscape-content p {
+    color: var(--text-secondary);
+    font-size: 1.1rem;
+    max-width: 280px;
+    line-height: 1.5;
+}
+
+@keyframes rotatePhone {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(-90deg); }
+    50%, 75% { transform: rotate(-90deg); }
+}
+
 /* Theme Toggle and Language Selector Styles */
 .theme-toggle {
     display: flex;
