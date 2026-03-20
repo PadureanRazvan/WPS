@@ -528,12 +528,15 @@ async function callGeminiAPI(systemPrompt, messages, retryCount = 0) {
             contents.push({ role: 'model', parts: candidate.parts });
 
             // Execute each function call and build responses
-            const responseParts = functionCalls.map(fc => ({
-                functionResponse: {
-                    name: fc.functionCall.name,
-                    response: executeToolCall(fc.functionCall.name, fc.functionCall.args || {})
-                }
-            }));
+            const responseParts = functionCalls.map(fc => {
+                const result = executeToolCall(fc.functionCall.name, fc.functionCall.args || {});
+                return {
+                    functionResponse: {
+                        name: fc.functionCall.name,
+                        response: { result: JSON.stringify(result) }
+                    }
+                };
+            });
             contents.push({ role: 'user', parts: responseParts });
             continue; // Next round — AI will now process the data
         }
