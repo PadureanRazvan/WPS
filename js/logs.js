@@ -24,7 +24,7 @@ export async function logActivity(type, action, details = {}) {
             timestamp: Timestamp.now()
         });
     } catch (err) {
-        console.warn('[Logs] Could not write log:', err);
+        console.error('[Logs] Could not write log:', err.message || err);
     }
 }
 
@@ -53,7 +53,7 @@ export async function fetchLogs(filterType = 'all', limitCount = 100) {
         const snapshot = await getDocs(q);
         return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (err) {
-        console.warn('[Logs] Could not fetch logs:', err);
+        console.error('[Logs] Could not fetch logs:', err.message || err);
         return [];
     }
 }

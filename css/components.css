@@ -1521,7 +1521,7 @@ input:focus, select:focus, textarea:focus {
 .selection-counter {
     position: fixed;
     bottom: 2rem;
-    right: 6rem;
+    right: 7.5rem;
     background: var(--primary-dark);
     padding: 1rem;
     border-radius: 8px;
