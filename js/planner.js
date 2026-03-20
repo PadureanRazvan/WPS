@@ -6,6 +6,7 @@ import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, Timestamp } 
 import { showTemporaryMessage } from './ui.js';
 import { updateDashboard } from './dashboard.js';
 import { translations } from './config.js';
+import { logActivity } from './logs.js';
 function getLang() { return localStorage.getItem('language') || 'ro'; }
 function t(key) { const l = getLang(); return (translations[l] && translations[l][key]) || key; }
 
@@ -91,6 +92,7 @@ export async function addAgent(agentObject) {
         }
         const docRef = await addDoc(collection(db, "agents"), agentObject);
         console.log("✅ Agent added successfully with ID:", docRef.id);
+        logActivity('portal', 'add_agent', { name: agentObject.fullName, team: agentObject.primaryTeam });
         showTemporaryMessage("Agent created successfully!", "success");
     } catch (error) {
         console.error("❌ Error adding agent: ", error);
@@ -134,7 +136,9 @@ export async function deleteAgent(agentId) {
     console.log(`[Firestore] Attempting to delete agent ${agentId}...`);
     try {
         await deleteDoc(doc(db, "agents", agentId));
+        const deletedAgent = plannerData.find(a => a.id === agentId);
         console.log(`✅ Agent ${agentId} deleted successfully.`);
+        logActivity('portal', 'delete_agent', { name: deletedAgent?.fullName || agentId });
         showTemporaryMessage("Agent deleted.", "success");
     } catch (error) {
         console.error(`❌ Error deleting agent ${agentId}:`, error);
@@ -185,6 +189,12 @@ export async function applyChangesToSelectedCells(selectedCellKeys, newValue) {
         await updateAgent(agentId, { days: newDays });
     }
     
+    // Log the bulk edit
+    const agentNames = [...updates.keys()].map(id => {
+        const a = plannerData.find(x => x.id === id);
+        return a?.fullName || id;
+    });
+    logActivity('portal', 'edit_cells', { agents: agentNames.join(', '), cells: selectedCellKeys.size, value: newValue });
     showTemporaryMessage("Changes saved to database!", "success");
 }
 

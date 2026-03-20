@@ -3,6 +3,7 @@ import { db } from './firebase-config.js';
 import { collection, onSnapshot, Timestamp } from "https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore.js";
 import { addAgent, updateAgent, deleteAgent } from './planner.js';
 import { showTemporaryMessage } from './ui.js';
+import { logActivity } from './logs.js';
 
 let usersData = [];
 
@@ -333,6 +334,7 @@ function openContractChangeModal(userId, newContractType) {
             contractHours,
             days: mergedDays
         });
+        logActivity('portal', 'change_contract', { name: user.fullName, type: newContractType, hours: contractHours });
 
         modal.classList.remove('active');
         showTemporaryMessage(`Contract ${user.fullName} actualizat: ${newContractType} (${contractHours}h) din ${startDay}.${month + 1}.${year}`, "success");
@@ -377,6 +379,7 @@ function openDeactivateModal(userId) {
 
         newSaveBtn.addEventListener('click', async () => {
             await updateAgent(userId, { isActive: true });
+            logActivity('portal', 'reactivate_agent', { name: user.fullName });
             modal.classList.remove('active');
             showTemporaryMessage(`${user.fullName} a fost reactivat.`, "success");
         });
@@ -455,6 +458,7 @@ function openDeactivateModal(userId) {
             while (clearedDays.length < 31) clearedDays.push('');
 
             await updateAgent(userId, { isActive: false, days: clearedDays });
+            logActivity('portal', 'deactivate_agent', { name: user.fullName, mode: 'indefinite' });
             modal.classList.remove('active');
             showTemporaryMessage(`${user.fullName} dezactivat indefinit. Orele au fost șterse din ${startDay}.${month + 1}.`, "success");
 
@@ -494,6 +498,7 @@ function openDeactivateModal(userId) {
             while (clearedDays.length < 31) clearedDays.push('');
 
             await updateAgent(userId, { isActive: false, days: clearedDays });
+            logActivity('portal', 'deactivate_agent', { name: user.fullName, mode: 'period' });
             modal.classList.remove('active');
             showTemporaryMessage(`${user.fullName} dezactivat ${startDay}.${month + 1} — ${endDay}.${month + 1}. Orele au fost șterse.`, "success");
         }
@@ -544,6 +549,7 @@ async function handleInlineEdit(e) {
     } else if (field === 'primaryTeam') {
         const teamCode = value.split(' ')[0];
         await updateAgent(id, { primaryTeam: value, teams: [teamCode] });
+        logActivity('portal', 'edit_user', { field: 'primaryTeam', value, agentId: id });
         showTemporaryMessage("User updated.", "success", 1000);
         return;
     } else if (field === 'username') {
@@ -555,5 +561,6 @@ async function handleInlineEdit(e) {
     }
 
     await updateAgent(id, { [field]: value });
+    logActivity('portal', 'edit_user', { field, agentId: id });
     showTemporaryMessage("User updated.", "success", 1000);
 } 
