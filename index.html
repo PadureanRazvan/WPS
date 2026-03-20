@@ -641,7 +641,6 @@
     </div>
 
     <!-- Smoke Effect Canvas -->
-    <canvas id="smokeCanvas" style="position: fixed; top: 0; left: 0; pointer-events: none; z-index: 9999;"></canvas>
 
     <!-- JavaScript Files -->
     <script src="https://cdn.jsdelivr.net/npm/litepicker/dist/litepicker.js"></script>
@@ -652,71 +651,8 @@
     <script src="js/dashboard.js" type="module"></script>
     <script src="js/users.js" type="module"></script>
     <script src="js/productivity.js" type="module"></script>
-    <script src="js/logo-animation.js?v=2" type="module"></script>
-    <script src="js/main.js?v=2" type="module"></script>
-    <script>
-        // Smoke effect script
-        const canvas = document.getElementById('smokeCanvas');
-        const ctx = canvas.getContext('2d');
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-
-        let particles = [];
-        let mouse = { x: 0, y: 0 };
-
-        window.addEventListener('mousemove', (e) => {
-            mouse.x = e.clientX;
-            mouse.y = e.clientY;
-        });
-
-        window.addEventListener('resize', () => {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-        });
-
-        class Particle {
-            constructor(x, y) {
-                this.x = x;
-                this.y = y;
-                this.size = Math.random() * 5 + 1;
-                this.speedX = Math.random() * 3 - 1.5;
-                this.speedY = Math.random() * 3 - 1.5;
-                this.color = getComputedStyle(document.documentElement).getPropertyValue('--smoke-color').trim();
-            }
-            update() {
-                this.x += this.speedX;
-                this.y += this.speedY;
-                if (this.size > 0.2) this.size -= 0.1;
-            }
-            draw() {
-                ctx.fillStyle = this.color;
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-                ctx.fill();
-            }
-        }
-
-        function handleParticles() {
-            for (let i = 0; i < particles.length; i++) {
-                particles[i].update();
-                particles[i].draw();
-                if (particles[i].size <= 0.3) {
-                    particles.splice(i, 1);
-                    i--;
-                }
-            }
-        }
-
-        function animate() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            if (Math.random() > 0.5) {
-                particles.push(new Particle(mouse.x, mouse.y));
-            }
-            handleParticles();
-            requestAnimationFrame(animate);
-        }
-        animate();
-    </script>
+    <script src="js/logo-animation.js" type="module"></script>
+    <script src="js/main.js" type="module"></script>
 
     <!-- Deactivate User Modal -->
     <div id="deactivateModal" class="edit-modal">
