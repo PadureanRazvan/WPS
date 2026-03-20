@@ -498,7 +498,8 @@ async function callGeminiAPI(systemPrompt, messages, retryCount = 0) {
                     tools,
                     generationConfig: {
                         temperature: 0.7,
-                        maxOutputTokens: 2048
+                        maxOutputTokens: 2048,
+                        thinkingConfig: { thinkingBudget: 0 }
                     }
                 })
             }
@@ -511,6 +512,8 @@ async function callGeminiAPI(systemPrompt, messages, retryCount = 0) {
         }
 
         if (!response.ok) {
+            const errBody = await response.text().catch(() => '');
+            console.error(`[Chat] API ${response.status}:`, errBody);
             throw new Error(`API error: ${response.status}`);
         }
 
