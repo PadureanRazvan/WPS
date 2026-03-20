@@ -190,8 +190,8 @@ function renderUsersTable() {
         const hoursLabel = user.contractHours || 8;
         tr.innerHTML = `
             <td contenteditable="true" data-field="fullName">${user.fullName || ''}</td>
-            <td contenteditable="true" data-field="username">${user.username || ''}</td>
-            <td><input type="number" class="inline-input" min="4" max="8" value="${hoursLabel}" data-field="contractHours"></td>
+            <td class="hide-mobile" contenteditable="true" data-field="username">${user.username || ''}</td>
+            <td class="hide-mobile-sm"><input type="number" class="inline-input" min="4" max="8" value="${hoursLabel}" data-field="contractHours"></td>
             <td>
                 <select class="inline-select" data-field="contractType">
                     <option value="Full-time" ${contractLabel === 'Full-time' ? 'selected' : ''}>Full-time</option>
@@ -209,7 +209,7 @@ function renderUsersTable() {
                     <option value="SV-SE zooplus" ${user.primaryTeam === 'SV-SE zooplus' ? 'selected' : ''}>SV-SE zooplus</option>
                 </select>
             </td>
-            <td><input type="date" class="inline-input" value="${hireDateStr}" data-field="hireDate"></td>
+            <td class="hide-mobile"><input type="date" class="inline-input" value="${hireDateStr}" data-field="hireDate"></td>
             <td style="text-align: center;">
                 <button class="btn-status ${user.isActive ? 'active' : 'inactive'}" data-field="isActive" data-id="${user.id}">
                     ${user.isActive ? 'Activ' : 'Inactiv'}

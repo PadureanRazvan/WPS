@@ -122,6 +122,11 @@
 
 /* --- Phones landscape / small tablets (768px) --- */
 @media (max-width: 768px) {
+    /* Hide columns on mobile */
+    .hide-mobile {
+        display: none !important;
+    }
+
     /* Sidebar becomes overlay on mobile */
     .sidebar {
         position: fixed;
@@ -195,6 +200,45 @@
 
     .filter-grid {
         gap: 0.75rem;
+    }
+
+    /* Users table mobile styling */
+    #usersTable {
+        font-size: 0.75rem;
+    }
+
+    #usersTable th,
+    #usersTable td {
+        padding: 0.5rem 0.35rem;
+        white-space: nowrap;
+    }
+
+    #usersTable .inline-select,
+    #usersTable .inline-input {
+        font-size: 0.7rem;
+        padding: 0.3rem 0.2rem;
+        min-width: 60px;
+    }
+
+    #usersTable .btn-status {
+        font-size: 0.65rem;
+        padding: 0.25rem 0.5rem;
+    }
+
+    #usersTable .delete-btn {
+        font-size: 0.65rem;
+        padding: 0.25rem 0.5rem;
+    }
+
+    /* Users table container scrollable */
+    #users .table-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* New user form compact */
+    #newUserForm .form-group {
+        margin-bottom: 0.75rem;
     }
 
     .summary-grid {
@@ -295,6 +339,11 @@
 
 /* --- Phones portrait (480px) --- */
 @media (max-width: 480px) {
+    /* Hide extra columns on small phones */
+    .hide-mobile-sm {
+        display: none !important;
+    }
+
     .main-content {
         margin-left: 50px;
     }
@@ -445,6 +494,23 @@
         width: 28px;
         height: 28px;
         font-size: 0.7rem;
+    }
+
+    /* Users table ultra compact */
+    #usersTable {
+        font-size: 0.7rem;
+    }
+
+    #usersTable th,
+    #usersTable td {
+        padding: 0.4rem 0.25rem;
+    }
+
+    #usersTable .inline-select,
+    #usersTable .inline-input {
+        font-size: 0.65rem;
+        padding: 0.25rem 0.15rem;
+        min-width: 50px;
     }
 
     /* Sidebar user info */
