@@ -524,9 +524,12 @@
                     <div class="chart-container" style="margin-bottom: 1.5rem;">
                         <h3 class="chart-title" style="margin-bottom: 1rem; color: var(--error);" data-translate="roadmap-bugs-title">Bugs Cunoscute</h3>
                         <ul style="color: var(--text-secondary); line-height: 2; padding-left: 1.5rem;">
-                            <li data-translate="roadmap-bug-1">Gemini API returnează 404 pe unele browsere din cauza cache-ului — necesită Ctrl+Shift+R</li>
+                            <li data-translate="roadmap-bug-1"><s>Gemini API returnează 404 pe unele browsere din cauza cache-ului — necesită Ctrl+Shift+R</s> ✅ Rezolvat</li>
                             <li data-translate="roadmap-bug-2">Rata de cereri API limitată fără profil de facturare Google configurat</li>
                             <li data-translate="roadmap-bug-3">Cross-Origin-Opener-Policy blochează popup-ul de login pe unele browsere</li>
+                            <li data-translate="roadmap-bug-4"><s>Gemini 3.x „thinking mode" activ implicit provoacă eroare 400 cu function calling</s> ✅ Rezolvat</li>
+                            <li data-translate="roadmap-bug-5"><s>Function response trimis ca array în loc de obiect — eroare proto serialization</s> ✅ Rezolvat</li>
+                            <li data-translate="roadmap-bug-6">Acțiunile de editare din planner nu sunt înregistrate în jurnal</li>
                         </ul>
                     </div>
 
@@ -539,6 +542,9 @@
                             <li data-translate="roadmap-finding-4">Stări de încărcare — lipsesc spinners/skeletons la încărcarea datelor din Firestore</li>
                             <li data-translate="roadmap-finding-5">Validare date — lipsește validare de schemă la scrierea în Firestore</li>
                             <li data-translate="roadmap-finding-6">Istoric chat — se pierde la reîncărcarea paginii (doar în memorie)</li>
+                            <li data-translate="roadmap-finding-7"><s>AI primea toate datele în prompt (10KB+) — migrat la Gemini function calling</s> ✅ Implementat</li>
+                            <li data-translate="roadmap-finding-8"><s>Vulnerabilitate XSS în renderizarea mesajelor chat</s> ✅ Rezolvat</li>
+                            <li data-translate="roadmap-finding-9"><s>AI putea șterge agenți fără confirmare utilizator</s> ✅ Adăugat gate de confirmare</li>
                         </ul>
                     </div>
 
@@ -552,7 +558,9 @@
                             <li data-translate="roadmap-future-5">Dashboard cu grafice interactive (drag-and-drop pe planner)</li>
                             <li data-translate="roadmap-future-6">Integrare calendar (Google Calendar sync)</li>
                             <li data-translate="roadmap-future-7">Mod offline cu sincronizare la reconectare</li>
-                            <li data-translate="roadmap-future-8">Audit trail complet cu revert la versiuni anterioare</li>
+                            <li data-translate="roadmap-future-8"><s>Audit trail complet cu revert la versiuni anterioare</s> ✅ Jurnal activitate implementat</li>
+                            <li data-translate="roadmap-future-9">Logare acțiuni planner (editare celule, creare/ștergere agenți) în jurnal</li>
+                            <li data-translate="roadmap-future-10">Proxy API key prin Cloud Functions pentru securitate</li>
                         </ul>
                     </div>
 

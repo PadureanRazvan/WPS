@@ -116,6 +116,10 @@ export async function updateAgent(agentId, updatedData) {
     try {
         await updateDoc(agentRef, updatedData);
         console.log(`✅ Agent ${agentId} updated successfully.`);
+        // Log the update (summarize what changed)
+        const fields = Object.keys(updatedData).filter(k => k !== 'days').join(', ');
+        const detail = fields || 'schedule updated';
+        logActivity('portal', 'update_agent', `Agent ${agentId}: ${detail}`);
         // No success message here to avoid spamming on every cell change.
     } catch (error) {
         console.error(`❌ Error updating agent ${agentId}:`, error);
