@@ -172,6 +172,12 @@ export const translations = {
         'language-english': 'English',
         'language-italian': 'Italiano',
 
+        // Chat
+        'chat-welcome': 'Salut! Sunt Sherpa AI. Întreabă-mă orice despre planificarea echipei sau cere-mi să fac modificări.',
+        'chat-error': 'Eroare la comunicarea cu AI. Încearcă din nou.',
+        'chat-invalid-key': 'Cheia API este invalidă. Verifică setările.',
+        'chat-rate-limit': 'Prea multe cereri. Așteaptă câteva secunde.',
+
         // Nav items
         'nav-dashboard': 'Dashboard',
         'nav-users': 'Utilizatori',
@@ -353,6 +359,12 @@ export const translations = {
         'language-english': 'English',
         'language-italian': 'Italian',
 
+        // Chat
+        'chat-welcome': 'Hi! I\'m Sherpa AI. Ask me anything about team planning or request changes.',
+        'chat-error': 'Error communicating with AI. Please try again.',
+        'chat-invalid-key': 'Invalid API key. Check your settings.',
+        'chat-rate-limit': 'Too many requests. Wait a few seconds.',
+
         // Nav items
         'nav-dashboard': 'Dashboard',
         'nav-users': 'Users',
@@ -533,6 +545,12 @@ export const translations = {
         'language-romanian': 'Rumeno',
         'language-english': 'Inglese',
         'language-italian': 'Italiano',
+
+        // Chat
+        'chat-welcome': 'Ciao! Sono Sherpa AI. Chiedimi qualsiasi cosa sulla pianificazione del team o richiedi modifiche.',
+        'chat-error': 'Errore nella comunicazione con l\'AI. Riprova.',
+        'chat-invalid-key': 'Chiave API non valida. Controlla le impostazioni.',
+        'chat-rate-limit': 'Troppe richieste. Attendi qualche secondo.',
 
         // Nav items
         'nav-dashboard': 'Dashboard',

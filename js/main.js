@@ -9,6 +9,7 @@ import { initializeCharts } from './charts.js';
 import { updateAverageProductivityCard } from './dashboard.js';
 import { setTheme, updateLanguageUI, showSection, openEditModal, translatePage, selectEditType, saveModalChanges, closeEditModal, toggleSidebar } from './ui.js';
 import { initLogoAnimation } from './logo-animation.js';
+import { initializeChat, cleanupChat } from './chat.js';
 import { loginWithGoogle, logout, onAuthChange } from './auth.js';
 
 // --- Global State ---
@@ -41,6 +42,7 @@ async function initializeApp() {
     // Initialize core UI elements and event listeners
     initializeUI();
     initLogoAnimation();
+    initializeChat();
 
     console.log("✅ Sherpa App Initialized Successfully.");
 }
@@ -198,6 +200,7 @@ document.addEventListener('DOMContentLoaded', () => {
             cleanupUsers();
             cleanupProductivity();
             cleanupReports();
+            cleanupChat();
         }
     );
 });
