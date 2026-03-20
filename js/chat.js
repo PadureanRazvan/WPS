@@ -69,6 +69,7 @@ export async function initializeChat() {
     // Load API key from Firestore
     const loaded = await loadApiKey();
     if (loaded) {
+        chatHistory = [];
         addSystemMessage(t('chat-welcome'));
         // Hide the settings button since key is managed centrally
         if (settingsBtn) settingsBtn.style.display = 'none';
@@ -236,8 +237,10 @@ async function sendMessage() {
     }
 }
 
-// --- Gemini API Call ---
-async function callGeminiAPI(systemPrompt, messages) {
+// --- Gemini API Call (with retry on 429) ---
+const GEMINI_MODELS = ['gemini-3.1-flash-lite-preview', 'gemini-3-flash-preview'];
+
+async function callGeminiAPI(systemPrompt, messages, retryCount = 0) {
     const contents = messages
         .filter(m => m.role === 'user' || m.role === 'model')
         .map(m => ({
@@ -245,8 +248,10 @@ async function callGeminiAPI(systemPrompt, messages) {
             parts: [{ text: m.text }]
         }));
 
+    const model = GEMINI_MODELS[Math.min(retryCount, GEMINI_MODELS.length - 1)];
+
     const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${apiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
         {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -260,6 +265,13 @@ async function callGeminiAPI(systemPrompt, messages) {
             })
         }
     );
+
+    if (response.status === 429 && retryCount < 3) {
+        // Exponential backoff: 3s, 6s, 12s — then try fallback model
+        const delay = 3000 * Math.pow(2, retryCount);
+        await new Promise(r => setTimeout(r, delay));
+        return callGeminiAPI(systemPrompt, messages, retryCount + 1);
+    }
 
     if (!response.ok) {
         throw new Error(`API error: ${response.status}`);
