@@ -296,7 +296,7 @@ export function showWorkingHoursSection() {
     workingSection.style.display = 'block';
     
     // Create team input fields
-    const teams = ['RO', 'HU', 'IT', 'NL', 'DE']; // Common teams
+    const teams = ['RO', 'HU', 'IT', 'NL', 'CS', 'SK', 'SV-SE']; // Common teams
     teamAllocation.innerHTML = teams.map(team => `
         <div class="team-input-group">
             <label for="${team.toLowerCase()}Hours">${team} zooplus</label>

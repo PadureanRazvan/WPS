@@ -130,7 +130,9 @@ function renderUsersTable() {
                     <option value="HU zooplus" ${user.primaryTeam === 'HU zooplus' ? 'selected' : ''}>HU zooplus</option>
                     <option value="IT zooplus" ${user.primaryTeam === 'IT zooplus' ? 'selected' : ''}>IT zooplus</option>
                     <option value="NL zooplus" ${user.primaryTeam === 'NL zooplus' ? 'selected' : ''}>NL zooplus</option>
-                    <option value="DE zooplus" ${user.primaryTeam === 'DE zooplus' ? 'selected' : ''}>DE zooplus</option>
+                    <option value="CS zooplus" ${user.primaryTeam === 'CS zooplus' ? 'selected' : ''}>CS zooplus</option>
+                    <option value="SK zooplus" ${user.primaryTeam === 'SK zooplus' ? 'selected' : ''}>SK zooplus</option>
+                    <option value="SV-SE zooplus" ${user.primaryTeam === 'SV-SE zooplus' ? 'selected' : ''}>SV-SE zooplus</option>
                 </select>
             </td>
             <td><input type="date" class="inline-input" value="${hireDateStr}" data-field="hireDate"></td>

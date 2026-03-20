@@ -955,10 +955,10 @@ function getCellClass(day, date) { // <-- Changed to accept 'date' object
         classes.push('medical-leave');
     } else if (day === 'LB') {
         classes.push('day-off');
-    } else if (day.match(/\d+\s*(RO|HU|IT|NL|DE|BRO|BDE)/i)) {
+    } else if (day.match(/\d+\s*(RO|HU|IT|NL|CS|SK|SV-SE|BRO)/i)) {
         classes.push('working');
         // Check if it's a multi-team day (contains + or multiple teams)
-        if (day.includes('+') || day.match(/(\d+\s*(RO|HU|IT|NL|DE|BRO|BDE).*){2,}/i)) {
+        if (day.includes('+') || day.match(/(\d+\s*(RO|HU|IT|NL|CS|SK|SV-SE|BRO).*){2,}/i)) {
             classes.push('multi-team');
         }
     }
@@ -986,7 +986,7 @@ function formatCellContent(day) {
         const cleanedParts = parts.map(part => part.trim().replace(/\s+/g, ''));
         
         // Define valid team codes (including BRO and BDE)
-        const validTeamCodes = ['RO', 'HU', 'IT', 'NL', 'DE', 'BRO', 'BDE'];
+        const validTeamCodes = ['RO', 'HU', 'IT', 'NL', 'CS', 'SK', 'SV-SE', 'BRO'];
         const teamPattern = validTeamCodes.join('|');
         
         // Check if all parts are valid team allocations (any number + team code)

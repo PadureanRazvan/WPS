@@ -141,7 +141,9 @@ export const chartColors = {
         'HU zooplus': '#4caf50',  // Green
         'IT zooplus': '#2196f3',  // Blue
         'NL zooplus': '#ff9800',  // Orange
-        'DE zooplus': '#9c27b0'   // Purple
+        'CS zooplus': '#9c27b0',  // Purple
+        'SK zooplus': '#e91e63',  // Pink
+        'SV-SE zooplus': '#00bcd4' // Cyan
     }
 };
 

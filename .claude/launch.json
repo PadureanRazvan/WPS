@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "wps",
+      "runtimeExecutable": "C:\\Users\\USER\\AppData\\Local\\ms-playwright-go\\1.50.1\\node.exe",
+      "runtimeArgs": ["-e", "require('http').createServer((q,r)=>{const fs=require('fs'),p=require('path'),u=q.url==='/'?'/index.html':q.url,f=p.join(process.cwd(),u),m={'.html':'text/html','.css':'text/css','.js':'application/javascript','.json':'application/json','.svg':'image/svg+xml'};fs.readFile(f,(e,d)=>{if(e){r.writeHead(404);r.end('Not found')}else{r.writeHead(200,{'Content-Type':m[p.extname(f)]||'application/octet-stream'});r.end(d)}})}).listen(3000,()=>console.log('Server running on port 3000'))"],
+      "port": 3000
+    }
+  ]
+}

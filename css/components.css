@@ -338,6 +338,16 @@ input, select, textarea {
     line-height: 1.4;
 }
 
+select option {
+    background: #0a0e27;
+    color: #ffffff;
+}
+
+[data-theme="light"] select option {
+    background: #ffffff;
+    color: #2c3e50;
+}
+
 input:focus, select:focus, textarea:focus {
     outline: none;
     border-color: var(--accent);
@@ -1421,6 +1431,16 @@ input:focus, select:focus, textarea:focus {
     background: var(--primary-dark);
     outline: none;
     box-shadow: 0 0 0 2px var(--accent);
+}
+
+#usersTable .inline-select option {
+    background: #0a0e27;
+    color: #ffffff;
+}
+
+[data-theme="light"] select option {
+    background: #ffffff;
+    color: #2c3e50;
 }
 
 #usersTable .inline-select {
