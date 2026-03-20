@@ -231,11 +231,15 @@
     font-size: 0.9rem;
     font-weight: 700;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all var(--transition-normal);
     text-transform: uppercase;
     letter-spacing: 0.5px;
     position: relative;
     overflow: hidden;
+}
+
+.btn:active {
+    transform: translateY(1px);
 }
 
 .btn::before {
@@ -356,12 +360,12 @@
     border: 1px solid var(--border);
     border-radius: 12px;
     padding: 1.5rem;
-    transition: all 0.3s ease;
+    transition: all var(--transition-slow);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .stat-card:hover {
-    transform: translateY(-4px) scale(1.02);
+    transform: translateY(-3px);
     box-shadow: var(--ai-glow), 0 8px 24px rgba(0, 0, 0, 0.3);
     border-color: var(--accent);
 }
@@ -398,11 +402,13 @@
     border-radius: 12px;
     padding: 1.5rem;
     margin-bottom: 1.5rem;
-    transition: all 0.3s ease;
+    transition: all var(--transition-slow);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .chart-container:hover {
-    box-shadow: var(--ai-glow);
+    box-shadow: var(--ai-glow), 0 4px 16px rgba(0, 0, 0, 0.2);
+    border-color: rgba(255, 215, 0, 0.3);
 }
 
 .chart-header {
@@ -513,11 +519,12 @@ td {
     text-align: center !important;
 }
 
+tr {
+    transition: background-color var(--transition-fast);
+}
+
 tr:hover {
     background: var(--hover);
-    box-shadow: var(--ai-glow);
-    transform: scale(1.01);
-    transition: transform 0.2s ease;
 }
 
 /* Enhanced contrast for better readability */
@@ -614,6 +621,10 @@ select option {
 [data-theme="light"] select option {
     background: #ffffff;
     color: #2c3e50;
+}
+
+input, select, textarea {
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 input:focus, select:focus, textarea:focus {
@@ -1269,14 +1280,16 @@ input:focus, select:focus, textarea:focus {
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.8);
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 1000;
     opacity: 0;
     visibility: hidden;
-    transition: all 0.3s ease;
+    transition: all var(--transition-normal);
 }
 
 .edit-modal.active {
@@ -1287,18 +1300,21 @@ input:focus, select:focus, textarea:focus {
 .edit-modal-content {
     background: var(--primary-light);
     border: 1px solid var(--border);
-    border-radius: 12px;
+    border-radius: 16px;
     padding: 2rem;
     width: 90%;
     max-width: 600px;
     max-height: 80vh;
     overflow-y: auto;
-    transform: translateY(-20px);
-    transition: transform 0.3s ease;
+    transform: translateY(-20px) scale(0.97);
+    transition: transform var(--transition-slow), opacity var(--transition-slow);
+    opacity: 0;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
 }
 
 .edit-modal.active .edit-modal-content {
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
+    opacity: 1;
 }
 
 .edit-modal-header {

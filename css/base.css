@@ -23,6 +23,13 @@
     --ai-glow: 0 0 10px rgba(255, 215, 0, 0.3), 0 0 20px rgba(255, 215, 0, 0.2);
     --pulse-animation: pulse 2s infinite;
     --smoke-color: rgba(255, 255, 255, 0.5);
+    --row-alt-bg: #1d2440;
+    --scrollbar-track: rgba(255, 255, 255, 0.05);
+    --scrollbar-thumb: rgba(255, 215, 0, 0.25);
+    --scrollbar-thumb-hover: rgba(255, 215, 0, 0.45);
+    --transition-fast: 0.15s ease;
+    --transition-normal: 0.25s ease;
+    --transition-slow: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* Light Theme Variables */
@@ -45,6 +52,13 @@
     --ai-glow: 0 0 10px rgba(26, 35, 126, 0.3), 0 0 20px rgba(26, 35, 126, 0.2);
     --pulse-animation: pulse-light 2s infinite;
     --smoke-color: rgba(0, 0, 0, 0.3);
+    --row-alt-bg: #eef1f5;
+    --scrollbar-track: rgba(0, 0, 0, 0.05);
+    --scrollbar-thumb: rgba(26, 35, 126, 0.25);
+    --scrollbar-thumb-hover: rgba(26, 35, 126, 0.45);
+    --transition-fast: 0.15s ease;
+    --transition-normal: 0.25s ease;
+    --transition-slow: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 body {
@@ -54,6 +68,40 @@ body {
     margin: 0;
     padding: 0;
     animation: background-pan 10s linear infinite alternate;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+}
+
+/* Global Scrollbar Styling */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--scrollbar-track);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover);
+}
+
+::-webkit-scrollbar-corner {
+    background: transparent;
+}
+
+/* Firefox scrollbar */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
 }
 
 .app-container {

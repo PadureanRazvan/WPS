@@ -190,15 +190,13 @@
 .nav-item:hover {
     background: var(--hover);
     color: var(--text-primary);
-    transform: translateX(5px);
-    box-shadow: var(--ai-glow);
+    transform: translateX(4px);
 }
 
 .nav-item.active {
     background: var(--hover);
     color: var(--accent);
     font-weight: 600;
-    animation: pulse 1s ease-in-out;
 }
 
 .nav-item.active::before {
@@ -287,6 +285,7 @@
     margin-left: 280px;
     min-height: 100vh;
     transition: margin-left 0.3s ease;
+    overflow-x: hidden;
 }
 
 .sidebar.collapsed ~ .main-content {
