@@ -122,11 +122,38 @@ export function updateLanguageDisplay(langCode) {
 }
 
 export function translatePage(langCode) {
+    const dict = translations[langCode];
+    if (!dict) return;
+
     const elements = document.querySelectorAll('[data-translate]');
     elements.forEach(element => {
         const key = element.getAttribute('data-translate');
-        if (translations[langCode] && translations[langCode][key]) {
-            element.textContent = translations[langCode][key];
+        if (dict[key]) {
+            // Handle placeholder for input elements
+            if (element.tagName === 'INPUT' && element.hasAttribute('placeholder')) {
+                element.placeholder = dict[key];
+            } else {
+                element.textContent = dict[key];
+            }
+        }
+    });
+
+    // Translate nav item spans
+    const navTranslations = {
+        'dashboard': dict['nav-dashboard'],
+        'users': dict['nav-users'],
+        'planner': dict['nav-planner'],
+        'productivity': dict['nav-productivity'],
+        'upload': dict['nav-upload'],
+        'reports': dict['nav-reports'],
+        'info': dict['nav-info']
+    };
+
+    document.querySelectorAll('.nav-item').forEach(item => {
+        const tooltip = item.getAttribute('data-tooltip');
+        const span = item.querySelector('span');
+        if (span && navTranslations[tooltip]) {
+            span.textContent = navTranslations[tooltip];
         }
     });
 }

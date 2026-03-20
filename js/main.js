@@ -12,7 +12,7 @@ import { initLogoAnimation } from './logo-animation.js';
 import { loginWithGoogle, logout, onAuthChange } from './auth.js';
 
 // --- Global State ---
-let currentLanguage = 'ro';
+let currentLanguage = localStorage.getItem('language') || 'ro';
 let appInitialized = false;
 
 /**
@@ -104,8 +104,10 @@ function initializeUI() {
     const languageDropdown = document.querySelector('.language-dropdown');
     const languageMenu = document.getElementById('languageMenu');
     if (languageDropdown) {
-        languageDropdown.addEventListener('click', () => {
-            languageMenu.classList.toggle('visible');
+        languageDropdown.addEventListener('click', (e) => {
+            e.stopPropagation();
+            languageMenu.classList.toggle('open');
+            languageDropdown.classList.toggle('open');
         });
     }
     if (languageMenu) {
@@ -114,13 +116,14 @@ function initializeUI() {
             if (target) {
                 currentLanguage = target.dataset.lang;
                 updateLanguageUI(currentLanguage);
-                languageMenu.classList.remove('visible');
+                languageMenu.classList.remove('open');
+                languageDropdown.classList.remove('open');
             }
         });
     }
 
-    // Initial translation
-    translatePage(currentLanguage);
+    // Initial translation — full UI update (flag, active option, all text)
+    updateLanguageUI(currentLanguage);
     // Selection counter buttons
     const editBtn = document.getElementById('editSelectionBtn');
     if (editBtn) {
