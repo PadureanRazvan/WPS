@@ -3,6 +3,7 @@
 // Import the functions you need from the SDKs
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.7/firebase-app.js";
 import { getFirestore } from "https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.7/firebase-auth.js";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -18,7 +19,10 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// === THIS IS THE CORRECT CODE ===
-// Initialize Cloud Firestore, get a reference to the service,
-// and export it so other files can import and use it.
+// Initialize Cloud Firestore
 export const db = getFirestore(app);
+
+// Initialize Firebase Auth
+export const auth = getAuth(app);
+export const googleProvider = new GoogleAuthProvider();
+export { signInWithPopup, signOut, onAuthStateChanged };

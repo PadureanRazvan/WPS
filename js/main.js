@@ -9,9 +9,11 @@ import { initializeCharts } from './charts.js';
 import { updateAverageProductivityCard } from './dashboard.js';
 import { setTheme, updateLanguageUI, showSection, openEditModal, translatePage, selectEditType, saveModalChanges, closeEditModal, toggleSidebar } from './ui.js';
 import { initLogoAnimation } from './logo-animation.js';
+import { loginWithGoogle, logout, onAuthChange } from './auth.js';
 
 // --- Global State ---
 let currentLanguage = 'ro';
+let appInitialized = false;
 
 /**
  * Main application initialization function.
@@ -20,11 +22,14 @@ let currentLanguage = 'ro';
  * the core UI event listeners.
  */
 async function initializeApp() {
+    if (appInitialized) return; // Prevent double initialization
+    appInitialized = true;
+
     console.log("🚀 Sherpa App Initializing...");
-    
+
     // Set theme from local storage or default to 'dark'
     setTheme(localStorage.getItem('theme') || 'dark');
-    
+
     // Initialize modules that depend on Firestore data
     initializePlanner();
     initializeUsers();
@@ -36,12 +41,43 @@ async function initializeApp() {
     // Initialize core UI elements and event listeners
     initializeUI();
     initLogoAnimation();
-    
+
     console.log("✅ Sherpa App Initialized Successfully.");
 }
 
 /**
- * Sets up core UI event listeners for navigation, theme toggling, 
+ * Show login screen, hide app
+ */
+function showLoginScreen() {
+    const loginScreen = document.getElementById('loginScreen');
+    const appContainer = document.getElementById('appContainer');
+    if (loginScreen) loginScreen.style.display = 'flex';
+    if (appContainer) appContainer.style.display = 'none';
+}
+
+/**
+ * Show app, hide login screen, and populate user info
+ */
+function showApp(user) {
+    const loginScreen = document.getElementById('loginScreen');
+    const appContainer = document.getElementById('appContainer');
+    if (loginScreen) loginScreen.style.display = 'none';
+    if (appContainer) appContainer.style.display = '';
+
+    // Update sidebar user info
+    const avatar = document.getElementById('userAvatar');
+    const userName = document.getElementById('userName');
+    const userEmail = document.getElementById('userEmail');
+    if (avatar) {
+        avatar.src = user.photoURL || '';
+        avatar.style.display = user.photoURL ? 'block' : 'none';
+    }
+    if (userName) userName.textContent = user.displayName || 'User';
+    if (userEmail) userEmail.textContent = user.email || '';
+}
+
+/**
+ * Sets up core UI event listeners for navigation, theme toggling,
  * and language selection.
  */
 function initializeUI() {
@@ -117,12 +153,51 @@ function initializeUI() {
     if (sidebarToggle) {
         sidebarToggle.addEventListener('click', toggleSidebar);
     }
+
+    // Logout button
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', async () => {
+            await logout();
+            appInitialized = false;
+        });
+    }
 }
 
 // --- Lifecycle Event Listeners ---
 
-// Start the application once the DOM is fully loaded
-document.addEventListener('DOMContentLoaded', initializeApp);
+// Start the authentication flow once the DOM is fully loaded
+document.addEventListener('DOMContentLoaded', () => {
+    // Set theme immediately so login screen looks correct
+    setTheme(localStorage.getItem('theme') || 'dark');
+
+    // Init login screen logo animation
+    initLogoAnimation('loginLogo', 100);
+
+    // Set up Google login button
+    const googleLoginBtn = document.getElementById('googleLoginBtn');
+    if (googleLoginBtn) {
+        googleLoginBtn.addEventListener('click', loginWithGoogle);
+    }
+
+    // Listen for auth state changes
+    onAuthChange(
+        // On login
+        async (user) => {
+            showApp(user);
+            await initializeApp();
+        },
+        // On logout
+        () => {
+            showLoginScreen();
+            // Clean up listeners
+            cleanupPlanner();
+            cleanupUsers();
+            cleanupProductivity();
+            cleanupReports();
+        }
+    );
+});
 
 // Clean up Firestore listeners when the user leaves the page to prevent memory leaks
 window.addEventListener('beforeunload', () => {

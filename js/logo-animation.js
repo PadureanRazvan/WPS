@@ -1,11 +1,11 @@
 // Sherpa Logo — Morphing particle sphere animation
-export function initLogoAnimation() {
-    const canvas = document.getElementById('sherpaLogo');
+export function initLogoAnimation(canvasId = 'sherpaLogo', canvasSize = 120) {
+    const canvas = document.getElementById(canvasId);
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
 
     const dpr = window.devicePixelRatio || 1;
-    const size = 120;
+    const size = canvasSize;
     canvas.width = size * dpr;
     canvas.height = size * dpr;
     canvas.style.width = size + 'px';
