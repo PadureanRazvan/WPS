@@ -2,8 +2,13 @@
 
 // === THEME AND LANGUAGE FUNCTIONALITY ===
 import { languageConfig, translations } from './config.js';
+function getLang() { return localStorage.getItem('language') || 'ro'; }
+function t(key) { const l = getLang(); return (translations[l] && translations[l][key]) || key; }
 // Import the new Firestore functions from planner.js
 import { addAgent, applyChangesToSelectedCells, renderPlannerTable } from './planner.js';
+import { updateDashboard, updateAverageProductivityCard } from './dashboard.js';
+import { initializeCharts } from './charts.js';
+import { getPlannerData } from './planner.js';
 
 // Theme and language state
 let currentTheme = localStorage.getItem('theme') || 'dark';
@@ -22,13 +27,25 @@ export function updateLanguageUI(langCode) {
     localStorage.setItem('language', langCode);
     updateLanguageDisplay(langCode);
     translatePage(langCode);
-    
+
     document.querySelectorAll('.language-option').forEach(option => {
         option.classList.remove('active');
     });
     const activeOption = document.querySelector(`[data-lang="${langCode}"]`);
     if (activeOption) {
         activeOption.classList.add('active');
+    }
+
+    // Re-render dynamic content with new language
+    try {
+        const plannerData = getPlannerData();
+        if (plannerData && plannerData.length > 0) {
+            updateDashboard(plannerData);
+        }
+        initializeCharts();
+        renderPlannerTable();
+    } catch (e) {
+        // Modules may not be initialized yet on first load
     }
 }
 
@@ -129,8 +146,8 @@ export function translatePage(langCode) {
     elements.forEach(element => {
         const key = element.getAttribute('data-translate');
         if (dict[key]) {
-            // Handle placeholder for input elements
-            if (element.tagName === 'INPUT' && element.hasAttribute('placeholder')) {
+            // Handle placeholder for input/textarea elements
+            if ((element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') && element.hasAttribute('placeholder')) {
                 element.placeholder = dict[key];
             } else {
                 element.textContent = dict[key];
@@ -190,13 +207,11 @@ export function toggleHeader() {
 const plannedHoursData = {
     today: {
         hours: 336,
-        agents: 42,
-        detail: "Pentru 42 agenți"
+        agents: 42
     },
     tomorrow: {
         hours: 312,
-        agents: 39,
-        detail: "Pentru 39 agenți"
+        agents: 39
     }
 };
 
@@ -223,7 +238,7 @@ export function toggleDay(selectedDay) {
 export function openEditModal() {
     const selectedCells = document.querySelectorAll('.planner-cell.selected');
     if (selectedCells.length === 0) {
-        alert('Selectează cel puțin o celulă pentru editare.');
+        alert(t('edit-select-cells'));
         return;
     }
     populateSelectionInfo();
@@ -261,9 +276,8 @@ export function populateSelectionInfo() {
         const totalHours = calculateSelectedCellsTotal(selectedCells);
         
         details.innerHTML = `
-            <strong>Selecție:</strong> ${selectedCells.length} celule selectate<br>
-            <strong>Total ore:</strong> ${totalHours}h<br>
-            <strong>Ready for editing</strong>
+            <strong>${t('edit-selection')}</strong> ${selectedCells.length} ${t('edit-cells-selected')}<br>
+            <strong>${t('edit-total-hours')}</strong> ${totalHours}h
         `;
     }
 }
@@ -357,12 +371,12 @@ export function updateTotalHours() {
     
     const totalDisplay = document.getElementById('totalHoursDisplay');
     if (totalDisplay) {
-        totalDisplay.textContent = `Total: ${totalHours} ore`;
-        
+        totalDisplay.textContent = `${t('edit-total')} ${totalHours} ${t('edit-hours-unit')}`;
+
         // Add warning if over 12 hours
         if (totalHours > 12) {
             totalDisplay.style.color = 'var(--error)';
-            totalDisplay.textContent += ' (Depășește limita de 12 ore)';
+            totalDisplay.textContent += ` (${t('edit-over-limit')})`;
         } else {
             totalDisplay.style.color = 'var(--text-primary)';
         }
@@ -388,7 +402,7 @@ export function hideEditMessage() {
 export function saveModalChanges() {
     const selectedOption = document.querySelector('.edit-option.selected');
     if (!selectedOption) {
-        alert('Selectează un tip de modificare.');
+        alert(t('edit-select-type'));
         return;
     }
 
@@ -408,7 +422,7 @@ export function saveModalChanges() {
         });
 
         if (totalHours > 12) {
-            alert('Totalul orelor nu poate depăși 12 ore pe zi.');
+            alert(t('edit-over-12'));
             return;
         }
         newValue = allocations.join('+');

@@ -1,8 +1,27 @@
 // js/dashboard.js
 import { getAverageProductivity } from './productivity.js';
+import { translations } from './config.js';
 
 let cachedPlannerData = null;
 let currentSelectedDate = null; // null means "today"
+
+function getLang() {
+    return localStorage.getItem('language') || 'ro';
+}
+
+function t(key) {
+    const lang = getLang();
+    return (translations[lang] && translations[lang][key]) || key;
+}
+
+/**
+ * Returns the locale string for date formatting based on current language
+ */
+function getLocale() {
+    const lang = getLang();
+    const locales = { ro: 'ro-RO', en: 'en-US', it: 'it-IT' };
+    return locales[lang] || 'ro-RO';
+}
 
 /**
  * Updates all dashboard components with fresh data from the planner.
@@ -20,7 +39,7 @@ export function updateDashboard(plannerData) {
     // Show stats for currently selected date (today by default)
     const dateToShow = currentSelectedDate || today;
     const dailyStats = calculateDailyStats(plannerData, dateToShow);
-    const label = currentSelectedDate ? formatDateLabel(currentSelectedDate) : 'Azi';
+    const label = currentSelectedDate ? formatDateLabel(currentSelectedDate) : t('today');
     updatePlannedHoursCard(dailyStats);
     updateTeamHoursTable(dailyStats, label);
 
@@ -52,7 +71,7 @@ function setupDayToggle() {
             today.setHours(0, 0, 0, 0);
             const stats = calculateDailyStats(cachedPlannerData, today);
             updatePlannedHoursCard(stats);
-            updateTeamHoursTable(stats, 'Azi');
+            updateTeamHoursTable(stats, t('today'));
         }
     });
 
@@ -76,13 +95,13 @@ function setupDayToggle() {
 }
 
 function formatDateLabel(date) {
-    return date.toLocaleDateString('ro-RO', { day: 'numeric', month: 'short' });
+    return date.toLocaleDateString(getLocale(), { day: 'numeric', month: 'short' });
 }
 
 function updateDashboardTitle(date) {
     const titleEl = document.getElementById('dashboardTitle');
     if (titleEl) {
-        const dateString = date.toLocaleDateString('ro-RO', {
+        const dateString = date.toLocaleDateString(getLocale(), {
             day: 'numeric',
             month: 'long',
             year: 'numeric'
@@ -96,7 +115,7 @@ function updateActiveAgentsCard(plannerData) {
     const detailEl = document.getElementById('totalActiveAgentsDetail');
 
     if (valueEl) valueEl.textContent = plannerData.length;
-    if (detailEl) detailEl.textContent = "Agenți în baza de date*";
+    if (detailEl) detailEl.textContent = t('agents-in-db');
 }
 
 function calculateDailyStats(plannerData, date) {
@@ -151,7 +170,7 @@ function updatePlannedHoursCard(dailyStats) {
         setTimeout(() => { valueEl.style.transform = 'scale(1)'; }, 200);
     }
     if (detailEl) {
-        detailEl.textContent = `${dailyStats.scheduledAgents} agenți planificați`;
+        detailEl.textContent = `${dailyStats.scheduledAgents} ${t('agents-planned')}`;
     }
 }
 
@@ -160,7 +179,7 @@ function updateTeamHoursTable(dailyStats, dateLabel) {
     const titleEl = document.getElementById('hoursByTeamTitle');
 
     if (titleEl) {
-        titleEl.textContent = `Ore Alocate pe Echipe - ${dateLabel}`;
+        titleEl.textContent = `${t('hours-by-team')} - ${dateLabel}`;
     }
 
     if (!tableBody) return;
@@ -169,7 +188,13 @@ function updateTeamHoursTable(dailyStats, dateLabel) {
     const sortedTeams = Object.keys(dailyStats.teams).sort();
 
     if (sortedTeams.length === 0) {
-        tableBody.innerHTML = `<tr><td colspan="3">Nu sunt ore planificate pentru ${dateLabel.toLowerCase()}.</td></tr>`;
+        const lang = getLang();
+        const noDataMsg = {
+            ro: `Nu sunt ore planificate pentru ${dateLabel.toLowerCase()}.`,
+            en: `No hours planned for ${dateLabel.toLowerCase()}.`,
+            it: `Nessuna ora pianificata per ${dateLabel.toLowerCase()}.`
+        };
+        tableBody.innerHTML = `<tr><td colspan="3">${noDataMsg[lang] || noDataMsg.en}</td></tr>`;
         return;
     }
 
@@ -191,14 +216,29 @@ export function updateAverageProductivityCard() {
     if (!valueEl) return;
 
     const { average, days } = getAverageProductivity();
+    const lang = getLang();
 
     if (average !== null) {
         valueEl.textContent = average.toFixed(2) + ' t/h';
         valueEl.style.color = average >= 5 ? 'var(--success)' : average >= 3 ? 'var(--warning)' : 'var(--error)';
-        if (detailEl) detailEl.textContent = `Ultimele ${days} zile cu date`;
+        if (detailEl) {
+            const msgs = {
+                ro: `Ultimele ${days} zile cu date`,
+                en: `Last ${days} days with data`,
+                it: `Ultimi ${days} giorni con dati`
+            };
+            detailEl.textContent = msgs[lang] || msgs.en;
+        }
     } else {
         valueEl.textContent = 'N/A';
         valueEl.style.color = '';
-        if (detailEl) detailEl.textContent = 'Nu sunt date încărcate';
+        if (detailEl) {
+            const msgs = {
+                ro: 'Nu sunt date încărcate',
+                en: 'No data uploaded',
+                it: 'Nessun dato caricato'
+            };
+            detailEl.textContent = msgs[lang] || msgs.en;
+        }
     }
 }

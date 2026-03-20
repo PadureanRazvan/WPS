@@ -1,5 +1,5 @@
 // Charts Configuration and Management
-import { chartColors } from './config.js';
+import { chartColors, translations } from './config.js';
 import { getProductivityTrendData } from './productivity.js';
 
 let productivityChartInstance = null;
@@ -29,7 +29,8 @@ export function initializeProductivityChart() {
             emptyMsg = document.createElement('div');
             emptyMsg.className = 'chart-empty-msg';
             emptyMsg.style.cssText = 'text-align: center; padding: 3rem; color: var(--text-secondary);';
-            emptyMsg.textContent = 'Nu există date de productivitate încărcate. Încarcă fișiere din secțiunea Upload.';
+            const lang = localStorage.getItem('language') || 'ro';
+            emptyMsg.textContent = (translations[lang] && translations[lang]['charts-no-data']) || 'No productivity data uploaded.';
             parent.appendChild(emptyMsg);
         }
         ctx.style.display = 'none';
@@ -65,12 +66,18 @@ export function initializeProductivityChart() {
         });
     }
 
-    // Update title with month name
+    // Update title with month name (locale-aware)
     const titleEl = parent.querySelector('.chart-title');
     if (titleEl) {
-        const monthNames = ['Ianuarie', 'Februarie', 'Martie', 'Aprilie', 'Mai', 'Iunie', 'Iulie', 'August', 'Septembrie', 'Octombrie', 'Noiembrie', 'Decembrie'];
+        const lang = localStorage.getItem('language') || 'ro';
+        const locales = { ro: 'ro-RO', en: 'en-US', it: 'it-IT' };
+        const locale = locales[lang] || 'ro-RO';
+        const trendLabel = (translations[lang] && translations[lang]['productivity-trend']) || 'Productivity Trend';
         const first = trendData.dates[0].split('-');
-        titleEl.textContent = `Trend Productivitate — ${monthNames[parseInt(first[1]) - 1]} ${first[0]}`;
+        const monthDate = new Date(parseInt(first[0]), parseInt(first[1]) - 1, 1);
+        const monthName = monthDate.toLocaleDateString(locale, { month: 'long' });
+        const capitalMonth = monthName.charAt(0).toUpperCase() + monthName.slice(1);
+        titleEl.textContent = `${trendLabel} — ${capitalMonth} ${first[0]}`;
     }
 
     if (productivityChartInstance) {
@@ -189,7 +196,9 @@ function initializeHoursChart() {
                     cornerRadius: 8,
                     callbacks: {
                         label: function(context) {
-                            return context.label + ': ' + context.parsed + ' ore';
+                            const lang = localStorage.getItem('language') || 'ro';
+                            const hoursUnit = (translations[lang] && translations[lang]['charts-hours-unit']) || 'hours';
+                            return context.label + ': ' + context.parsed + ' ' + hoursUnit;
                         }
                     }
                 }

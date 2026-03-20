@@ -1,6 +1,10 @@
 // js/reports.js
 import { getPlannerData } from './planner.js';
 import { getUsersData } from './users.js';
+import { translations } from './config.js';
+
+function getLang() { return localStorage.getItem('language') || 'ro'; }
+function t(key) { const l = getLang(); return (translations[l] && translations[l][key]) || key; }
 
 let reportsPicker = null;
 let reportStart = null;
@@ -104,7 +108,7 @@ function renderReports() {
 
     if (!reportStart || !reportEnd) {
         container.innerHTML = `<div style="text-align: center; padding: 3rem; color: var(--text-secondary);">
-            Selectează un interval de date pentru a genera rapoartele.
+            ${t('reports-select-range')}
         </div>`;
         return;
     }
@@ -112,7 +116,7 @@ function renderReports() {
     const shopData = calculateReportData(reportStart, reportEnd);
     if (!shopData || Object.keys(shopData).length === 0) {
         container.innerHTML = `<div style="text-align: center; padding: 3rem; color: var(--text-secondary);">
-            Nu există date planificate pentru intervalul selectat.
+            ${t('reports-no-data')}
         </div>`;
         return;
     }
@@ -165,7 +169,7 @@ function renderReports() {
             <div class="stat-card">
                 <h4 style="color: var(--accent); margin-bottom: 0.5rem;">${shopName}</h4>
                 <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.75rem;">
-                    ${data.agents.size} agenți · ${data.totalHours} ore
+                    ${data.agents.size} ${t('reports-agents-hours')} · ${data.totalHours} ${t('reports-hours-unit')}
                 </div>
                 <div style="max-height: 250px; overflow-y: auto; padding-right: 0.75rem;">
                     ${agentRows}
@@ -175,13 +179,13 @@ function renderReports() {
 
     container.innerHTML = `
         <div class="chart-container">
-            <h3 class="chart-title">Ore Planificate per Shop — ${rangeLabel}</h3>
+            <h3 class="chart-title">${t('reports-hours-per-shop')} — ${rangeLabel}</h3>
             <table style="margin-top: 1rem;">
                 <thead>
                     <tr>
-                        <th>Shop</th>
-                        <th>Total Ore</th>
-                        <th>Nr. Agenți</th>
+                        <th>${t('reports-shop')}</th>
+                        <th>${t('reports-total-hours')}</th>
+                        <th>${t('reports-nr-agents')}</th>
                     </tr>
                 </thead>
                 <tbody>${hoursTableRows}</tbody>
@@ -189,7 +193,7 @@ function renderReports() {
         </div>
 
         <div class="chart-container" style="margin-top: 1.5rem;">
-            <h3 class="chart-title">Distribuție Agenți per Shop — ${rangeLabel}</h3>
+            <h3 class="chart-title">${t('reports-distribution')} — ${rangeLabel}</h3>
             <div class="dashboard-grid" style="margin-top: 1rem;">
                 ${agentCards}
             </div>

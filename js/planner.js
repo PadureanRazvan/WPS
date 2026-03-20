@@ -5,6 +5,9 @@ import { db } from './firebase-config.js';
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, Timestamp } from "https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore.js";
 import { showTemporaryMessage } from './ui.js';
 import { updateDashboard } from './dashboard.js';
+import { translations } from './config.js';
+function getLang() { return localStorage.getItem('language') || 'ro'; }
+function t(key) { const l = getLang(); return (translations[l] && translations[l][key]) || key; }
 
 // --- Local State Management ---
 // This will hold the live data from Firestore. It's our local, in-memory copy.
@@ -197,19 +200,21 @@ function updatePlannerHeader() {
 
     const { start, end } = plannerState.dateRange;
     if (!start || !end) {
-        dateRangeEl.textContent = 'Selectați o perioadă';
+        dateRangeEl.textContent = '';
         return;
     }
 
-    const startMonth = start.toLocaleDateString('ro-RO', { month: 'long' });
-    const endMonth = end.toLocaleDateString('ro-RO', { month: 'long' });
+    const locales = { ro: 'ro-RO', en: 'en-US', it: 'it-IT' };
+    const locale = locales[getLang()] || 'ro-RO';
+    const startMonth = start.toLocaleDateString(locale, { month: 'long' });
+    const endMonth = end.toLocaleDateString(locale, { month: 'long' });
     const startYear = start.getFullYear();
     const endYear = end.getFullYear();
 
     if (startMonth === endMonth && startYear === endYear) {
         dateRangeEl.textContent = `${startMonth.charAt(0).toUpperCase() + startMonth.slice(1)} ${startYear}`;
     } else {
-        dateRangeEl.textContent = `${start.toLocaleDateString('ro-RO')} - ${end.toLocaleDateString('ro-RO')}`;
+        dateRangeEl.textContent = `${start.toLocaleDateString(locale)} - ${end.toLocaleDateString(locale)}`;
     }
 }
 
@@ -250,9 +255,9 @@ function initializeFilterControls() {
 
             // Update placeholder
             if (plannerState.filterType === 'team') {
-                searchInput.placeholder = 'Caută echipă...';
+                searchInput.placeholder = t('planner-search-team');
             } else {
-                searchInput.placeholder = 'Caută agent...';
+                searchInput.placeholder = t('planner-search-agent');
             }
 
             // Re-populate the list
@@ -283,7 +288,7 @@ function initializeDatepicker() {
         element: pickerInput,
         singleMode: false,
         allowRepick: true,
-        lang: 'ro-RO',
+        lang: ({ ro: 'ro-RO', en: 'en-US', it: 'it-IT' })[getLang()] || 'ro-RO',
         startDate: plannerState.dateRange.start,
         endDate: plannerState.dateRange.end,
         format: 'DD MMM, YYYY',
@@ -481,8 +486,8 @@ function initializeMonthGrid() {
         months.push({
             year: date.getFullYear(),
             month: date.getMonth() + 1,
-            name: date.toLocaleDateString('ro-RO', { month: 'short' }),
-            fullName: date.toLocaleDateString('ro-RO', { month: 'long', year: 'numeric' }),
+            name: date.toLocaleDateString(({ ro: 'ro-RO', en: 'en-US', it: 'it-IT' })[getLang()] || 'ro-RO', { month: 'short' }),
+            fullName: date.toLocaleDateString(({ ro: 'ro-RO', en: 'en-US', it: 'it-IT' })[getLang()] || 'ro-RO', { month: 'long', year: 'numeric' }),
             key: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
         });
     }
@@ -761,9 +766,10 @@ export function renderPlannerTable(container, startDate, endDate) {
     // Render date header row (full dates)
     const dateHeaderRow = document.createElement('tr');
     dateHeaderRow.className = 'date-header-row';
+    const dayNamesArr = t('planner-day-names').split(',');
     dateHeaderRow.innerHTML = `
-        <th class="agent-name-header">Agent</th>
-        <th class="hours-header">Ore</th>
+        <th class="agent-name-header">${t('planner-agent')}</th>
+        <th class="hours-header">${t('planner-hours')}</th>
         ${days.map((date, index) => {
             const dayOfWeek = date.getDay();
             const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
@@ -774,19 +780,18 @@ export function renderPlannerTable(container, startDate, endDate) {
                            date.getFullYear() === today.getFullYear();
             const todayClass = isToday ? 'today' : '';
 
-            const dayNames = ['DUM', 'LUN', 'MAR', 'MIE', 'JOI', 'VIN', 'SÂM'];
-            const dayName = dayNames[dayOfWeek];
+            const dayName = dayNamesArr[dayOfWeek];
             const dayNum = date.getDate();
             const fullDate = `${dayName}<br/>${dayNum}`;
 
             // Weekly total column logic
             let extraColumn = '';
             if (plannerState.viewOptions.showWeekTotals && dayOfWeek === 0) {
-                extraColumn = `<th class="week-total-header date-header">Total Săpt.</th>`;
+                extraColumn = `<th class="week-total-header date-header">${t('planner-week-total')}</th>`;
             }
             return `<th class="date-header ${weekendClass} ${todayClass}">${fullDate}</th>${extraColumn}`;
         }).join('')}
-        <th class="total-header">Total</th>
+        <th class="total-header">${t('planner-total')}</th>
     `;
 
     thead.appendChild(dateHeaderRow);
@@ -1222,7 +1227,7 @@ export function applyFiltersAndRender() {
         plannerContainer.innerHTML = '';
         
         if (plannerState.selectedMonths.length === 0) {
-            plannerContainer.innerHTML = '<div class="placeholder">Selectați una sau mai multe luni pentru a le vizualiza.</div>';
+            plannerContainer.innerHTML = `<div class="placeholder">${t('planner-select-months')}</div>`;
             return;
         }
 
@@ -1237,7 +1242,9 @@ export function applyFiltersAndRender() {
             
             // Add a title for each table
             const monthTitle = document.createElement('h3');
-            monthTitle.textContent = startOfMonth.toLocaleDateString('ro-RO', { month: 'long', year: 'numeric' });
+            const locales = { ro: 'ro-RO', en: 'en-US', it: 'it-IT' };
+            const locale = locales[getLang()] || 'ro-RO';
+            monthTitle.textContent = startOfMonth.toLocaleDateString(locale, { month: 'long', year: 'numeric' });
             monthTitle.style.cssText = 'padding: 1.5rem 1rem 0.5rem 1rem; margin: 0; color: var(--text-primary);';
             plannerContainer.appendChild(monthTitle);
             
@@ -1249,7 +1256,7 @@ export function applyFiltersAndRender() {
         // For 'preset' and 'custom' ranges, use the unified table structure
         const { start, end } = plannerState.dateRange;
         if (!start || !end) {
-            plannerContainer.innerHTML = '<div class="placeholder">Perioadă invalidă.</div>';
+            plannerContainer.innerHTML = `<div class="placeholder">${t('planner-invalid-range')}</div>`;
             return;
         }
         

@@ -366,10 +366,10 @@
                     <h2 class="header-title" data-translate="productivity-title">Productivitate</h2>
                     <div class="header-actions" style="display: flex; align-items: center; gap: 0.75rem;">
                         <div class="date-range-picker">
-                            <input id="productivityDateRange" class="date-display" style="text-align: center; min-width: 200px;" readonly placeholder="Selectează perioada..."/>
+                            <input id="productivityDateRange" class="date-display" style="text-align: center; min-width: 200px;" readonly data-translate="prod-select-period" placeholder="Selectează perioada..."/>
                         </div>
                         <select id="productivityTeamFilter" style="padding: 0.6rem 0.75rem; background: var(--primary-dark); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary); font-size: 0.85rem;">
-                            <option value="all">Toate</option>
+                            <option value="all" data-translate="prod-all-teams">Toate</option>
                             <option value="RO">RO</option>
                             <option value="HU">HU</option>
                             <option value="IT">IT</option>
@@ -379,8 +379,8 @@
                             <option value="SV-SE">SV-SE</option>
                         </select>
                         <div id="prodViewToggle" style="display: inline-flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; flex-shrink: 0;">
-                            <button type="button" id="viewOverview" style="padding: 0.6rem 1rem; border: none; cursor: pointer; font-size: 0.85rem; background: var(--accent); color: #000; font-weight: 600; transition: all 0.2s; outline: none;">Sumar</button>
-                            <button type="button" id="viewDetail" style="padding: 0.6rem 1rem; border: none; cursor: pointer; font-size: 0.85rem; background: var(--primary-dark); color: var(--text-secondary); transition: all 0.2s; outline: none;">Per Agent</button>
+                            <button type="button" id="viewOverview" data-translate="prod-summary" style="padding: 0.6rem 1rem; border: none; cursor: pointer; font-size: 0.85rem; background: var(--accent); color: #000; font-weight: 600; transition: all 0.2s; outline: none;">Sumar</button>
+                            <button type="button" id="viewDetail" data-translate="prod-per-agent" style="padding: 0.6rem 1rem; border: none; cursor: pointer; font-size: 0.85rem; background: var(--primary-dark); color: var(--text-secondary); transition: all 0.2s; outline: none;">Per Agent</button>
                         </div>
                     </div>
                 </header>
@@ -391,9 +391,9 @@
                             <div style="display: flex; align-items: center; gap: 1rem;">
                                 <div style="position: relative; flex: 1;">
                                     <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;">
-                                        <input type="text" id="prodAgentSearch" placeholder="Caută agent..." style="flex: 1; padding: 0.5rem 0.75rem; background: var(--primary-dark); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary); font-size: 0.85rem;">
-                                        <button id="prodSelectAll" class="btn btn-secondary" style="padding: 0.4rem 0.75rem; font-size: 0.8rem; white-space: nowrap;">Toți</button>
-                                        <button id="prodDeselectAll" class="btn btn-secondary" style="padding: 0.4rem 0.75rem; font-size: 0.8rem; white-space: nowrap;">Niciunul</button>
+                                        <input type="text" id="prodAgentSearch" data-translate="prod-search-agent" placeholder="Caută agent..." style="flex: 1; padding: 0.5rem 0.75rem; background: var(--primary-dark); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary); font-size: 0.85rem;">
+                                        <button id="prodSelectAll" class="btn btn-secondary" data-translate="prod-all-btn" style="padding: 0.4rem 0.75rem; font-size: 0.8rem; white-space: nowrap;">Toți</button>
+                                        <button id="prodDeselectAll" class="btn btn-secondary" data-translate="prod-none-btn" style="padding: 0.4rem 0.75rem; font-size: 0.8rem; white-space: nowrap;">Niciunul</button>
                                         <span id="prodAgentCount" style="color: var(--text-secondary); font-size: 0.8rem; white-space: nowrap;"></span>
                                     </div>
                                     <div id="agentChipsContainer" style="display: flex; flex-wrap: wrap; gap: 0.35rem; max-height: 120px; overflow-y: auto; padding: 0.25rem 0;"></div>
@@ -409,7 +409,7 @@
 
                     <!-- Agent Productivity Table -->
                     <div class="table-container" id="productivityTableContainer" style="margin-top: 1.5rem;">
-                        <p style="color: var(--text-secondary); text-align: center; padding: 3rem;">Încarcă fișierele din secțiunea Upload pentru a vedea datele.</p>
+                        <p style="color: var(--text-secondary); text-align: center; padding: 3rem;" data-translate="prod-upload-to-see">Încarcă fișierele din secțiunea Upload pentru a vedea datele.</p>
                     </div>
                 </div>
             </section>
@@ -424,8 +424,8 @@
                     <div class="chart-container" style="margin-bottom: 1.5rem;">
                         <div style="display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;">
                             <div style="flex: 1; min-width: 200px;">
-                                <h3 class="chart-title" style="margin-bottom: 0.5rem;">1. Selectează data fișierelor</h3>
-                                <p style="color: var(--text-secondary); font-size: 0.85rem;">Pentru ce zi sunt datele de productivitate?</p>
+                                <h3 class="chart-title" style="margin-bottom: 0.5rem;" data-translate="select-date">1. Selectează data fișierelor</h3>
+                                <p style="color: var(--text-secondary); font-size: 0.85rem;" data-translate="date-question">Pentru ce zi sunt datele de productivitate?</p>
                             </div>
                             <input type="text" id="uploadDate" class="inline-input" readonly placeholder="Selectează data" style="padding: 0.7rem 1.2rem; background: var(--primary-dark); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary); font-size: 1rem; cursor: pointer; min-width: 200px;">
                         </div>
@@ -440,8 +440,8 @@
                                 <svg class="upload-icon" viewBox="0 0 24 24">
                                     <path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/>
                                 </svg>
-                                <h3>2. Tickete (XLSX)</h3>
-                                <p style="color: var(--text-secondary); margin-top: 0.5rem;">Trage fișierul Excel aici sau click pentru selectare</p>
+                                <h3 data-translate="tickets-xlsx">2. Tickete (XLSX)</h3>
+                                <p style="color: var(--text-secondary); margin-top: 0.5rem;" data-translate="drag-xlsx">Trage fișierul Excel aici sau click pentru selectare</p>
                                 <p id="ticketsFileName" style="margin-top: 0.5rem; font-size: 0.85rem;"></p>
                             </div>
                             <div class="upload-area" id="uploadCalls" style="cursor: pointer;">
@@ -449,8 +449,8 @@
                                 <svg class="upload-icon" viewBox="0 0 24 24">
                                     <path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/>
                                 </svg>
-                                <h3>3. Apeluri (CSV)</h3>
-                                <p style="color: var(--text-secondary); margin-top: 0.5rem;">Trage fișierul CSV aici sau click pentru selectare</p>
+                                <h3 data-translate="calls-csv">3. Apeluri (CSV)</h3>
+                                <p style="color: var(--text-secondary); margin-top: 0.5rem;" data-translate="drag-csv">Trage fișierul CSV aici sau click pentru selectare</p>
                                 <p id="callsFileName" style="margin-top: 0.5rem; font-size: 0.85rem;"></p>
                             </div>
                         </div>
@@ -458,7 +458,7 @@
 
                     <!-- Loaded dates summary -->
                     <div id="loadedDatesSummary" class="chart-container" style="margin-top: 1.5rem; display: none;">
-                        <h3 class="chart-title" style="margin-bottom: 0.75rem;">Date Încărcate</h3>
+                        <h3 class="chart-title" style="margin-bottom: 0.75rem;" data-translate="uploaded-data">Date Încărcate</h3>
                         <div id="loadedDatesList"></div>
                     </div>
                 </div>
@@ -474,7 +474,7 @@
                     </div>
                 </header>
                 <div class="content" id="reportsContent">
-                    <div style="text-align: center; padding: 3rem; color: var(--text-secondary);">
+                    <div style="text-align: center; padding: 3rem; color: var(--text-secondary);" data-translate="reports-select-range">
                         Selectează un interval de date pentru a genera rapoartele.
                     </div>
                 </div>
@@ -592,44 +592,44 @@
     <div id="editModal" class="edit-modal">
         <div class="edit-modal-content">
             <div class="edit-modal-header">
-                <h3 class="edit-modal-title">Editează Selecția</h3>
+                <h3 class="edit-modal-title" data-translate="edit-title">Editează Selecția</h3>
                 <button class="edit-modal-close">&times;</button>
             </div>
             
             <div class="selection-info" id="selectionInfo">
-                <div class="selection-info-title">Selecție Curentă</div>
+                <div class="selection-info-title" data-translate="edit-current-selection">Selecție Curentă</div>
                 <div class="selection-info-details" id="selectionDetails">
                     <!-- Selection details will be populated here -->
                 </div>
             </div>
 
             <div class="edit-section">
-                <div class="edit-section-title">Tipul de Editare</div>
-                
+                <div class="edit-section-title" data-translate="edit-type-title">Tipul de Editare</div>
+
                 <div class="edit-option" data-type="working">
-                    <div class="edit-option-title">Ore de Lucru</div>
-                    <div class="edit-option-description">Modifică alocarea orelor pe echipe (ex: 6 IT + 2 HU)</div>
+                    <div class="edit-option-title" data-translate="edit-working-hours">Ore de Lucru</div>
+                    <div class="edit-option-description" data-translate="edit-working-desc">Modifică alocarea orelor pe echipe (ex: 6 IT + 2 HU)</div>
                 </div>
 
                 <div class="edit-option" data-type="holiday">
-                    <div class="edit-option-title">Concediu (CO)</div>
-                    <div class="edit-option-description">Marchează zilele ca fiind concediu</div>
+                    <div class="edit-option-title" data-translate="edit-holiday">Concediu (CO)</div>
+                    <div class="edit-option-description" data-translate="edit-holiday-desc">Marchează zilele ca fiind concediu</div>
                 </div>
 
                 <div class="edit-option" data-type="sick">
-                    <div class="edit-option-title">Concediu Medical (CM)</div>
-                    <div class="edit-option-description">Marchează zilele ca fiind concediu medical</div>
+                    <div class="edit-option-title" data-translate="edit-sick">Concediu Medical (CM)</div>
+                    <div class="edit-option-description" data-translate="edit-sick-desc">Marchează zilele ca fiind concediu medical</div>
                 </div>
 
                 <div class="edit-option" data-type="dayoff">
-                    <div class="edit-option-title">Zi Liberă (LB)</div>
-                    <div class="edit-option-description">Marchează ca zi liberă cu justificare obligatorie</div>
+                    <div class="edit-option-title" data-translate="edit-dayoff">Zi Liberă (LB)</div>
+                    <div class="edit-option-description" data-translate="edit-dayoff-desc">Marchează ca zi liberă cu justificare obligatorie</div>
                 </div>
             </div>
 
             <!-- Working Hours Configuration -->
             <div id="workingHoursSection" class="edit-section" style="display: none;">
-                <div class="edit-section-title">Configurare Ore de Lucru</div>
+                <div class="edit-section-title" data-translate="edit-config-hours">Configurare Ore de Lucru</div>
                 <div class="team-allocation" id="teamAllocation">
                     <!-- Team inputs will be populated here -->
                 </div>
@@ -640,15 +640,15 @@
 
             <!-- Day Off Note Section -->
             <div id="dayOffSection" class="edit-section" style="display: none;">
-                <div class="edit-section-title">Justificare pentru Zi Liberă</div>
-                <textarea class="note-textarea" id="dayOffNote" placeholder="Introdu motivul pentru ziua liberă (obligatoriu)..."></textarea>
+                <div class="edit-section-title" data-translate="edit-dayoff-reason">Justificare pentru Zi Liberă</div>
+                <textarea class="note-textarea" id="dayOffNote" data-translate="edit-dayoff-placeholder" placeholder="Introdu motivul pentru ziua liberă (obligatoriu)..."></textarea>
             </div>
 
             <div id="editMessage" style="display: none;"></div>
 
             <div class="edit-actions">
-                <button class="btn btn-secondary">Anulează</button>
-                <button class="btn btn-primary" id="saveButton">Salvează Modificările</button>
+                <button class="btn btn-secondary" data-translate="edit-cancel">Anulează</button>
+                <button class="btn btn-primary" id="saveButton" data-translate="edit-save">Salvează Modificările</button>
             </div>
         </div>
     </div>

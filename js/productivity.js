@@ -4,6 +4,10 @@ import { collection, doc, setDoc, deleteDoc, getDocs } from "https://www.gstatic
 import { getPlannerData } from './planner.js';
 import { getUsersData } from './users.js';
 import { showTemporaryMessage } from './ui.js';
+import { translations } from './config.js';
+
+function getLang() { return localStorage.getItem('language') || 'ro'; }
+function t(key) { const l = getLang(); return (translations[l] && translations[l][key]) || key; }
 
 // --- State ---
 // Per-date storage: Map<dateKey, { ticketsData: Map, callsData: Map }>
@@ -382,7 +386,7 @@ async function saveToFirestore(dateKey) {
         console.log(`[Productivity] Saved data for ${dateKey} to Firestore.`);
     } catch (err) {
         console.error('[Productivity] Firestore save error:', err);
-        showTemporaryMessage('Eroare la salvarea datelor în baza de date.', 'error');
+        showTemporaryMessage(t('prod-save-error'), 'error');
     }
 }
 
@@ -579,7 +583,7 @@ function renderProductivity() {
     if (!container) return;
 
     if (!hasAnyData()) {
-        container.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 3rem;">Încarcă fișierele din secțiunea Upload pentru a vedea datele.</p>';
+        container.innerHTML = `<p style="color: var(--text-secondary); text-align: center; padding: 3rem;">${t('prod-upload-to-see')}</p>`;
         const statsContainer = document.getElementById('productivityStats');
         if (statsContainer) statsContainer.innerHTML = '';
         return;
@@ -598,34 +602,34 @@ function renderProductivity() {
         const avgProd = totalHours > 0 ? (totalAll / totalHours).toFixed(2) : 'N/A';
         const numDays = getDaysInRange(dateStart, dateEnd);
         const { datesWithData } = getMergedDataForRange(dateStart, dateEnd);
-        const rangeLabel = numDays === 1 ? '1 zi' : `${numDays} zile`;
+        const rangeLabel = numDays === 1 ? `1 ${t('prod-day')}` : `${numDays} ${t('prod-days')}`;
 
         statsContainer.innerHTML = `
             <div class="stat-card">
-                <div class="stat-label">Agenți Procesați</div>
+                <div class="stat-label">${t('prod-agents-processed')}</div>
                 <div class="stat-value">${totalAgents}</div>
-                <div class="stat-detail">${rangeLabel} (${datesWithData} cu date)</div>
+                <div class="stat-detail">${rangeLabel} (${datesWithData} ${t('prod-with-data')})</div>
             </div>
             <div class="stat-card">
-                <div class="stat-label">Tickete Rezolvate</div>
+                <div class="stat-label">${t('prod-tickets-resolved')}</div>
                 <div class="stat-value">${totalTickets}</div>
-                <div class="stat-detail">din fișiere XLSX</div>
+                <div class="stat-detail">${t('prod-from-xlsx')}</div>
             </div>
             <div class="stat-card">
-                <div class="stat-label">Apeluri Răspunse</div>
+                <div class="stat-label">${t('prod-calls-answered')}</div>
                 <div class="stat-value">${totalCalls}</div>
-                <div class="stat-detail">din fișiere CSV</div>
+                <div class="stat-detail">${t('prod-from-csv')}</div>
             </div>
             <div class="stat-card">
-                <div class="stat-label">Productivitate Medie</div>
+                <div class="stat-label">${t('prod-average')}</div>
                 <div class="stat-value" style="color: ${avgProd !== 'N/A' && avgProd >= 5 ? 'var(--success)' : avgProd !== 'N/A' && avgProd >= 3 ? 'var(--warning)' : 'var(--error)'}">${avgProd}</div>
-                <div class="stat-detail">(tickete+apeluri) / ore</div>
+                <div class="stat-detail">${t('prod-formula')}</div>
             </div>
         `;
     }
 
     if (filtered.length === 0) {
-        container.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 2rem;">Niciun agent găsit. Verifică dacă perioada selectată conține date încărcate și dacă agenții sunt înregistrați.</p>';
+        container.innerHTML = `<p style="color: var(--text-secondary); text-align: center; padding: 2rem;">${t('prod-no-agents')}</p>`;
         return;
     }
 
@@ -633,13 +637,13 @@ function renderProductivity() {
         <thead>
             <tr>
                 <th>#</th>
-                <th>Agent</th>
-                <th>Echipe</th>
-                <th>Tickete</th>
-                <th>Apeluri</th>
-                <th>Total</th>
-                <th>Ore Lucrate</th>
-                <th>Productivitate</th>
+                <th>${t('th-agent')}</th>
+                <th>${t('th-teams')}</th>
+                <th>${t('th-tickets')}</th>
+                <th>${t('th-calls')}</th>
+                <th>${t('th-total')}</th>
+                <th>${t('th-hours-worked')}</th>
+                <th>${t('th-productivity')}</th>
             </tr>
         </thead>
         <tbody>`;
@@ -698,13 +702,13 @@ function renderDetailView() {
     if (!container) return;
 
     if (!hasAnyData()) {
-        container.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 3rem;">Încarcă fișierele din secțiunea Upload pentru a vedea datele.</p>';
+        container.innerHTML = `<p style="color: var(--text-secondary); text-align: center; padding: 3rem;">${t('prod-upload-to-see')}</p>`;
         if (statsContainer) statsContainer.innerHTML = '';
         return;
     }
 
     if (selectedAgents.size === 0) {
-        container.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 3rem;">Selectează cel puțin un agent din lista de mai sus.</p>';
+        container.innerHTML = `<p style="color: var(--text-secondary); text-align: center; padding: 3rem;">${t('prod-select-agent')}</p>`;
         if (statsContainer) statsContainer.innerHTML = '';
         return;
     }
@@ -809,43 +813,43 @@ function renderDetailView() {
 
         statsContainer.innerHTML = `
             <div class="stat-card">
-                <div class="stat-label">Agenți Selectați</div>
+                <div class="stat-label">${t('prod-agents-selected')}</div>
                 <div class="stat-value">${selectedAgents.size}</div>
-                <div class="stat-detail">${daysWithData} zile cu date</div>
+                <div class="stat-detail">${daysWithData} ${t('prod-days-with-data')}</div>
             </div>
             <div class="stat-card">
-                <div class="stat-label">Total Tickete</div>
+                <div class="stat-label">${t('prod-total-tickets')}</div>
                 <div class="stat-value">${totalTickets}</div>
             </div>
             <div class="stat-card">
-                <div class="stat-label">Total Apeluri</div>
+                <div class="stat-label">${t('prod-total-calls')}</div>
                 <div class="stat-value">${totalCalls}</div>
             </div>
             <div class="stat-card">
-                <div class="stat-label">Productivitate Medie</div>
+                <div class="stat-label">${t('prod-average')}</div>
                 <div class="stat-value" style="color: ${avgProd !== 'N/A' && avgProd >= 5 ? 'var(--success)' : avgProd !== 'N/A' && avgProd >= 3 ? 'var(--warning)' : 'var(--error)'}">${avgProd}</div>
-                <div class="stat-detail">(tickete+apeluri) / ore</div>
+                <div class="stat-detail">${t('prod-formula')}</div>
             </div>
         `;
     }
 
     if (rows.length === 0) {
-        container.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 2rem;">Niciun rezultat pentru selecția curentă.</p>';
+        container.innerHTML = `<p style="color: var(--text-secondary); text-align: center; padding: 2rem;">${t('prod-no-results')}</p>`;
         return;
     }
 
     let html = `<table>
         <thead>
             <tr>
-                <th>Data</th>
-                <th>Agent</th>
-                <th>Echipe</th>
-                <th>Tickete</th>
-                <th>Apeluri</th>
-                <th>Total</th>
-                <th>Program</th>
-                <th>Ore</th>
-                <th>Productivitate</th>
+                <th>${t('th-date')}</th>
+                <th>${t('th-agent')}</th>
+                <th>${t('th-teams')}</th>
+                <th>${t('th-tickets')}</th>
+                <th>${t('th-calls')}</th>
+                <th>${t('th-total')}</th>
+                <th>${t('th-schedule')}</th>
+                <th>${t('th-hours')}</th>
+                <th>${t('th-productivity')}</th>
             </tr>
         </thead>
         <tbody>`;
@@ -939,7 +943,7 @@ function renderAgentChips(searchTerm = '') {
 
     container.innerHTML = html;
     if (countEl) {
-        countEl.textContent = selectedAgents.size > 0 ? `${selectedAgents.size} selectați` : '';
+        countEl.textContent = selectedAgents.size > 0 ? `${selectedAgents.size} ${t('prod-selected')}` : '';
     }
 }
 
@@ -1023,11 +1027,11 @@ function updateUploadDateStatus() {
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink: 0;">
                 <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
             </svg>
-            <span>Datele pentru <strong>${formatDateDisplay(uploadDate)}</strong> există deja. Încărcarea de fișiere noi va suprascrie datele existente pentru această zi.</span>
+            <span>${t('prod-data-for')} <strong>${formatDateDisplay(uploadDate)}</strong> ${t('prod-data-exists')}</span>
         </div>`;
     } else {
         statusEl.style.display = 'block';
-        statusEl.innerHTML = `<p style="color: var(--success); margin: 0; font-size: 0.9rem;">Data selectată: <strong>${formatDateDisplay(uploadDate)}</strong> — poți încărca fișierele.</p>`;
+        statusEl.innerHTML = `<p style="color: var(--success); margin: 0; font-size: 0.9rem;">${t('prod-date-selected')} <strong>${formatDateDisplay(uploadDate)}</strong> — ${t('prod-can-upload')}</p>`;
     }
 }
 
@@ -1038,10 +1042,10 @@ function showUploadSuccess() {
     const hasTickets = entry?.ticketsData && entry.ticketsData.size > 0;
     const hasCalls = entry?.callsData && entry.callsData.size > 0;
     const parts = [];
-    if (hasTickets) parts.push(`${entry.ticketsData.size} agenți din tickete`);
-    if (hasCalls) parts.push(`${entry.callsData.size} agenți din apeluri`);
+    if (hasTickets) parts.push(`${entry.ticketsData.size} ${t('prod-agents-from-tickets')}`);
+    if (hasCalls) parts.push(`${entry.callsData.size} ${t('prod-agents-from-calls')}`);
     statusEl.style.display = 'block';
-    statusEl.innerHTML = `<p style="color: var(--success); margin: 0; font-size: 0.9rem;">Date încărcate pentru <strong>${formatDateDisplay(uploadDate)}</strong>: ${parts.join(', ')}. Poți adăuga și celălalt fișier sau schimba data.</p>`;
+    statusEl.innerHTML = `<p style="color: var(--success); margin: 0; font-size: 0.9rem;">${t('prod-data-uploaded-for')} <strong>${formatDateDisplay(uploadDate)}</strong>: ${parts.join(', ')}. ${t('prod-can-add-file')}</p>`;
 }
 
 function renderLoadedDates() {
@@ -1063,9 +1067,9 @@ function renderLoadedDates() {
         const hasTickets = entry.ticketsData && entry.ticketsData.size > 0;
         const hasCalls = entry.callsData && entry.callsData.size > 0;
         const parts = [];
-        if (hasTickets) parts.push(`${entry.ticketsData.size} agenți tickete`);
-        if (hasCalls) parts.push(`${entry.callsData.size} agenți apeluri`);
-        const tooltip = parts.join(', ') || 'fără date';
+        if (hasTickets) parts.push(`${entry.ticketsData.size} ${t('prod-agents-tickets')}`);
+        if (hasCalls) parts.push(`${entry.callsData.size} ${t('prod-agents-calls')}`);
+        const tooltip = parts.join(', ') || t('prod-no-data-tooltip');
 
         html += `<div title="${tooltip}" style="
             display: inline-flex; align-items: center; gap: 0.5rem;
@@ -1079,7 +1083,7 @@ function renderLoadedDates() {
             <button onclick="window.__removeProductivityDate('${dateKey}')" style="
                 background: none; border: none; color: var(--text-secondary); cursor: pointer;
                 padding: 0 0.2rem; font-size: 1rem; line-height: 1;
-            " title="Șterge datele pentru această zi">&times;</button>
+            " title="${t('prod-delete-btn')}">&times;</button>
         </div>`;
     });
     html += '</div>';
@@ -1093,7 +1097,7 @@ window.__removeProductivityDate = async function(dateKey) {
     renderLoadedDates();
     updateUploadDateStatus();
     renderProductivity();
-    showTemporaryMessage(`Datele pentru ${formatDateDisplay(dateKey)} au fost șterse.`, 'success', 2000);
+    showTemporaryMessage(t('prod-deleted').replace('{date}', formatDateDisplay(dateKey)), 'success', 2000);
 };
 
 // --- Upload Handlers ---
@@ -1133,7 +1137,7 @@ function setupUploadArea(areaId, fileInputId, fileNameId, onParsed) {
 
 async function handleFile(file, fileNameEl, onParsed) {
     if (!uploadDate) {
-        showTemporaryMessage('Selectează mai întâi data fișierelor!', 'error');
+        showTemporaryMessage(t('prod-select-date-first'), 'error');
         return;
     }
 
