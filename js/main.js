@@ -8,6 +8,7 @@ import { initializeReports, cleanupReports } from './reports.js';
 import { initializeCharts } from './charts.js';
 import { updateAverageProductivityCard } from './dashboard.js';
 import { setTheme, updateLanguageUI, showSection, openEditModal, translatePage, selectEditType, saveModalChanges, closeEditModal, toggleSidebar } from './ui.js';
+import { initLogoAnimation } from './logo-animation.js';
 
 // --- Global State ---
 let currentLanguage = 'ro';
@@ -34,6 +35,7 @@ async function initializeApp() {
 
     // Initialize core UI elements and event listeners
     initializeUI();
+    initLogoAnimation();
     
     console.log("✅ Sherpa App Initialized Successfully.");
 }
