@@ -42,7 +42,7 @@ async function initializeApp() {
     // Initialize core UI elements and event listeners
     initializeUI();
     initLogoAnimation();
-    initializeChat();
+    await initializeChat();
 
     console.log("✅ Sherpa App Initialized Successfully.");
 }

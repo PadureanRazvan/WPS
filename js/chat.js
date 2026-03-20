@@ -5,19 +5,43 @@ import { getAverageProductivity } from './productivity.js';
 import { showSection } from './ui.js';
 import { showTemporaryMessage } from './ui.js';
 import { translations } from './config.js';
+import { db } from './firebase-config.js';
+import { doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore.js";
 
 function getLang() { return localStorage.getItem('language') || 'ro'; }
 function t(key) { const l = getLang(); return (translations[l] && translations[l][key]) || key; }
 
 // --- State ---
 let chatHistory = [];
-let apiKey = localStorage.getItem('sherpa_gemini_api_key') || '';
+let apiKey = '';
 let isOpen = false;
 let isLoading = false;
 let lastSendTime = 0;
 
+// --- Load API key from Firestore ---
+async function loadApiKey() {
+    try {
+        const snap = await getDoc(doc(db, 'config', 'gemini'));
+        if (snap.exists() && snap.data().apiKey) {
+            apiKey = snap.data().apiKey;
+            return true;
+        }
+    } catch (err) {
+        console.warn('[Chat] Could not load API key from Firestore:', err);
+    }
+    return false;
+}
+
+async function saveApiKeyToFirestore(key) {
+    try {
+        await setDoc(doc(db, 'config', 'gemini'), { apiKey: key });
+    } catch (err) {
+        console.warn('[Chat] Could not save API key to Firestore:', err);
+    }
+}
+
 // --- Initialization ---
-export function initializeChat() {
+export async function initializeChat() {
     const bubble = document.getElementById('chatBubble');
     const panel = document.getElementById('chatPanel');
     const closeBtn = document.getElementById('chatCloseBtn');
@@ -42,11 +66,14 @@ export function initializeChat() {
     settingsBtn?.addEventListener('click', showApiKeyPrompt);
     apiKeySaveBtn?.addEventListener('click', saveApiKey);
 
-    // Show welcome or API key prompt
-    if (!apiKey) {
-        showApiKeyPrompt();
-    } else {
+    // Load API key from Firestore
+    const loaded = await loadApiKey();
+    if (loaded) {
         addSystemMessage(t('chat-welcome'));
+        // Hide the settings button since key is managed centrally
+        if (settingsBtn) settingsBtn.style.display = 'none';
+    } else {
+        showApiKeyPrompt();
     }
 }
 
@@ -75,11 +102,11 @@ function showApiKeyPrompt() {
     if (prompt) prompt.style.display = 'flex';
 }
 
-function saveApiKey() {
+async function saveApiKey() {
     const input = document.getElementById('chatApiKeyInput');
     if (!input || !input.value.trim()) return;
     apiKey = input.value.trim();
-    localStorage.setItem('sherpa_gemini_api_key', apiKey);
+    await saveApiKeyToFirestore(apiKey);
     const prompt = document.getElementById('chatApiKeyPrompt');
     if (prompt) prompt.style.display = 'none';
     input.value = '';
