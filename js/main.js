@@ -3,7 +3,10 @@
 // --- Core Application Imports ---
 import { initializePlanner, cleanupPlanner, clearSelection } from './planner.js';
 import { initializeUsers, cleanupUsers } from './users.js';
+import { initializeProductivity, cleanupProductivity } from './productivity.js';
+import { initializeReports, cleanupReports } from './reports.js';
 import { initializeCharts } from './charts.js';
+import { updateAverageProductivityCard } from './dashboard.js';
 import { setTheme, updateLanguageUI, showSection, openEditModal, translatePage, selectEditType, saveModalChanges, closeEditModal, toggleSidebar } from './ui.js';
 
 // --- Global State ---
@@ -24,8 +27,11 @@ async function initializeApp() {
     // Initialize modules that depend on Firestore data
     initializePlanner();
     initializeUsers();
-    initializeCharts();
-    
+    await initializeProductivity();
+    updateAverageProductivityCard(); // Update after productivity data is loaded
+    initializeCharts(); // After productivity so chart has real data
+    initializeReports();
+
     // Initialize core UI elements and event listeners
     initializeUI();
     
@@ -120,4 +126,6 @@ document.addEventListener('DOMContentLoaded', initializeApp);
 window.addEventListener('beforeunload', () => {
     cleanupPlanner();
     cleanupUsers();
+    cleanupProductivity();
+    cleanupReports();
 }); 

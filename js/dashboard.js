@@ -1,32 +1,84 @@
 // js/dashboard.js
+import { getAverageProductivity } from './productivity.js';
+
+let cachedPlannerData = null;
+let currentSelectedDate = null; // null means "today"
 
 /**
  * Updates all dashboard components with fresh data from the planner.
- * @param {Array<object>} plannerData - The live array of agent objects from Firestore.
  */
 export function updateDashboard(plannerData) {
     if (!plannerData) return;
 
-    // Get today's date for filtering
+    cachedPlannerData = plannerData;
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-
-    // Update the main header title with today's date
     updateDashboardTitle(today);
-
-    // --- Card 1: Total Active Agents ---
     updateActiveAgentsCard(plannerData);
 
-    // --- Card 2 & Team Table: Planned Hours & Team Breakdown for Today ---
-    const dailyStats = calculateDailyStats(plannerData, today);
+    // Show stats for currently selected date (today by default)
+    const dateToShow = currentSelectedDate || today;
+    const dailyStats = calculateDailyStats(plannerData, dateToShow);
+    const label = currentSelectedDate ? formatDateLabel(currentSelectedDate) : 'Azi';
     updatePlannedHoursCard(dailyStats);
-    updateTeamHoursTable(dailyStats);
+    updateTeamHoursTable(dailyStats, label);
+
+    // Update average productivity card
+    updateAverageProductivityCard();
+
+    setupDayToggle();
 }
 
-/**
- * Updates the dashboard's main title with the current date.
- * @param {Date} date - The date to display.
- */
+let toggleSetup = false;
+function setupDayToggle() {
+    if (toggleSetup) return;
+    toggleSetup = true;
+
+    const todayBtn = document.getElementById('todayBtn');
+    const datePicker = document.getElementById('plannedDatePicker');
+    const wrapper = document.getElementById('datePickerWrapper');
+    const calendarLabel = document.getElementById('calendarLabel');
+    if (!todayBtn || !datePicker) return;
+
+    todayBtn.addEventListener('click', () => {
+        currentSelectedDate = null;
+        todayBtn.classList.add('active');
+        datePicker.value = '';
+        if (wrapper) wrapper.classList.remove('has-value');
+        if (calendarLabel) calendarLabel.textContent = '\u{1F4C5}';
+        if (cachedPlannerData) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const stats = calculateDailyStats(cachedPlannerData, today);
+            updatePlannedHoursCard(stats);
+            updateTeamHoursTable(stats, 'Azi');
+        }
+    });
+
+    datePicker.addEventListener('change', () => {
+        if (!datePicker.value) return;
+        const parts = datePicker.value.split('-');
+        const selectedDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+        selectedDate.setHours(0, 0, 0, 0);
+        currentSelectedDate = selectedDate;
+        todayBtn.classList.remove('active');
+        if (wrapper) wrapper.classList.add('has-value');
+        const label = formatDateLabel(selectedDate);
+        if (calendarLabel) calendarLabel.textContent = label;
+
+        if (cachedPlannerData) {
+            const stats = calculateDailyStats(cachedPlannerData, selectedDate);
+            updatePlannedHoursCard(stats);
+            updateTeamHoursTable(stats, label);
+        }
+    });
+}
+
+function formatDateLabel(date) {
+    return date.toLocaleDateString('ro-RO', { day: 'numeric', month: 'short' });
+}
+
 function updateDashboardTitle(date) {
     const titleEl = document.getElementById('dashboardTitle');
     if (titleEl) {
@@ -39,118 +91,85 @@ function updateDashboardTitle(date) {
     }
 }
 
-/**
- * Updates the 'Total Active Agents' card.
- * @param {Array<object>} plannerData - The live array of agent objects.
- */
 function updateActiveAgentsCard(plannerData) {
     const valueEl = document.getElementById('totalActiveAgentsValue');
     const detailEl = document.getElementById('totalActiveAgentsDetail');
 
-    if (valueEl) {
-        valueEl.textContent = plannerData.length;
-    }
-    if (detailEl) {
-        // This is a placeholder as we don't have historical data yet.
-        detailEl.textContent = "Agenți în baza de date*";
-    }
+    if (valueEl) valueEl.textContent = plannerData.length;
+    if (detailEl) detailEl.textContent = "Agenți în baza de date*";
 }
 
-/**
- * Calculates planned hours and a breakdown by team for a specific day.
- * @param {Array<object>} plannerData - The array of agent objects.
- * @param {Date} date - The date to calculate stats for.
- * @returns {object} An object containing total hours and team-specific stats.
- */
 function calculateDailyStats(plannerData, date) {
-    const dayIndex = date.getDate() - 1; // agent.days is 0-indexed for the month
-    const teamStats = {}; // { RO: { hours: 8, agents: Set('agentId1') }, ... }
-    let totalHoursToday = 0;
+    const dayIndex = date.getDate() - 1;
+    const teamStats = {};
+    let totalHours = 0;
+    let scheduledAgents = 0;
 
     plannerData.forEach(agent => {
         const dayValue = agent.days?.[dayIndex];
-        if (!dayValue || typeof dayValue !== 'string') {
-            return; // No schedule for this agent today
-        }
+        if (!dayValue || typeof dayValue !== 'string') return;
 
-        // Parse entries like "8 RO" or "4 RO + 4 HU"
-        const entries = dayValue.split('+');
+        const trimmed = dayValue.trim();
+        if (!trimmed || ['Co', 'CM', 'LB', 'SL'].includes(trimmed)) return;
+
+        let agentHours = 0;
+        const entries = trimmed.split('+');
         entries.forEach(entry => {
-            const trimmedEntry = entry.trim();
-            // Regex to capture hours (number) and team code (letters)
-            const match = trimmedEntry.match(/(\d+)\s*([a-zA-Z]+)/);
-
+            const match = entry.trim().match(/(\d+)\s*([a-zA-Z\-]+)/);
             if (match) {
                 const hours = parseInt(match[1], 10);
                 const teamCode = match[2].toUpperCase();
+                totalHours += hours;
+                agentHours += hours;
 
-                totalHoursToday += hours;
-
-                // Initialize team stats if not present
                 if (!teamStats[teamCode]) {
                     teamStats[teamCode] = { hours: 0, agentIds: new Set() };
                 }
-
-                // Aggregate stats
                 teamStats[teamCode].hours += hours;
                 teamStats[teamCode].agentIds.add(agent.id);
             }
         });
+
+        if (agentHours > 0) scheduledAgents++;
     });
-    
+
     return {
-        totalHours: totalHoursToday,
+        totalHours,
         teams: teamStats,
-        totalAgents: plannerData.length
+        totalAgents: plannerData.length,
+        scheduledAgents
     };
 }
 
-/**
- * Updates the 'Planned Hours' card with today's stats.
- * @param {object} dailyStats - The stats object from calculateDailyStats.
- */
 function updatePlannedHoursCard(dailyStats) {
     const valueEl = document.getElementById('plannedHoursValue');
     const detailEl = document.getElementById('plannedHoursDetail');
-    const toggleToday = document.getElementById('todayBtn');
-    const toggleTomorrow = document.getElementById('tomorrowBtn');
 
     if (valueEl) {
         valueEl.textContent = dailyStats.totalHours;
+        valueEl.style.transform = 'scale(1.05)';
+        setTimeout(() => { valueEl.style.transform = 'scale(1)'; }, 200);
     }
     if (detailEl) {
-        detailEl.textContent = `Pentru ${dailyStats.totalAgents} agenți`;
-    }
-    
-    // Logic for the today/tomorrow toggle (placeholder for now)
-    if (toggleToday && toggleTomorrow) {
-        toggleToday.classList.add('active');
-        toggleTomorrow.classList.remove('active');
-        // Note: Tomorrow's data functionality is not yet implemented.
-        toggleTomorrow.title = "Funcționalitate în curând*";
+        detailEl.textContent = `${dailyStats.scheduledAgents} agenți planificați`;
     }
 }
 
-/**
- * Renders the 'Hours by Team' table for today.
- * @param {object} dailyStats - The stats object from calculateDailyStats.
- */
-function updateTeamHoursTable(dailyStats) {
+function updateTeamHoursTable(dailyStats, dateLabel) {
     const tableBody = document.getElementById('teamHoursTableBody');
     const titleEl = document.getElementById('hoursByTeamTitle');
-    
+
     if (titleEl) {
-        titleEl.textContent = "Ore Alocate pe Echipe - Azi";
+        titleEl.textContent = `Ore Alocate pe Echipe - ${dateLabel}`;
     }
 
     if (!tableBody) return;
-
-    tableBody.innerHTML = ''; // Clear previous data
+    tableBody.innerHTML = '';
 
     const sortedTeams = Object.keys(dailyStats.teams).sort();
 
     if (sortedTeams.length === 0) {
-        tableBody.innerHTML = `<tr><td colspan="3">Nu sunt ore planificate pentru astăzi.</td></tr>`;
+        tableBody.innerHTML = `<tr><td colspan="3">Nu sunt ore planificate pentru ${dateLabel.toLowerCase()}.</td></tr>`;
         return;
     }
 
@@ -164,4 +183,22 @@ function updateTeamHoursTable(dailyStats) {
         `;
         tableBody.appendChild(row);
     });
-} 
+}
+
+export function updateAverageProductivityCard() {
+    const valueEl = document.getElementById('averageProductivityValue');
+    const detailEl = document.getElementById('averageProductivityDetail');
+    if (!valueEl) return;
+
+    const { average, days } = getAverageProductivity();
+
+    if (average !== null) {
+        valueEl.textContent = average.toFixed(2) + ' t/h';
+        valueEl.style.color = average >= 5 ? 'var(--success)' : average >= 3 ? 'var(--warning)' : 'var(--error)';
+        if (detailEl) detailEl.textContent = `Ultimele ${days} zile cu date`;
+    } else {
+        valueEl.textContent = 'N/A';
+        valueEl.style.color = '';
+        if (detailEl) detailEl.textContent = 'Nu sunt date încărcate';
+    }
+}

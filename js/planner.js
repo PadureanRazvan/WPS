@@ -8,7 +8,9 @@ import { updateDashboard } from './dashboard.js';
 
 // --- Local State Management ---
 // This will hold the live data from Firestore. It's our local, in-memory copy.
-let plannerData = []; 
+let plannerData = [];
+
+export function getPlannerData() { return plannerData; } 
 // This holds the unsubscribe function for our real-time listener.
 let unsubscribeFromAgents; 
 
@@ -124,10 +126,6 @@ export async function updateAgent(agentId, updatedData) {
 export async function deleteAgent(agentId) {
      if (!agentId) {
         console.error("❌ deleteAgent failed: agentId is missing.");
-        return;
-    }
-    // A simple confirmation dialog. In a real app, use a custom modal.
-    if (!confirm(`Are you sure you want to delete agent ${agentId}? This action cannot be undone.`)) {
         return;
     }
     console.log(`[Firestore] Attempting to delete agent ${agentId}...`);
@@ -764,8 +762,8 @@ export function renderPlannerTable(container, startDate, endDate) {
     const dateHeaderRow = document.createElement('tr');
     dateHeaderRow.className = 'date-header-row';
     dateHeaderRow.innerHTML = `
-        <th class="agent-name-header" rowspan="2">Agent</th>
-        <th class="hours-header" rowspan="2">Ore</th>
+        <th class="agent-name-header">Agent</th>
+        <th class="hours-header">Ore</th>
         ${days.map((date, index) => {
             const dayOfWeek = date.getDay();
             const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
@@ -776,50 +774,22 @@ export function renderPlannerTable(container, startDate, endDate) {
                            date.getFullYear() === today.getFullYear();
             const todayClass = isToday ? 'today' : '';
 
-            // Format date as "MAR 25 MAI" (day name + date + month)
             const dayNames = ['DUM', 'LUN', 'MAR', 'MIE', 'JOI', 'VIN', 'SÂM'];
-            const monthNames = ['IAN', 'FEB', 'MAR', 'APR', 'MAI', 'IUN', 'IUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
             const dayName = dayNames[dayOfWeek];
             const dayNum = date.getDate();
-            const monthName = monthNames[date.getMonth()];
-            const fullDate = `${dayName}<br/>${dayNum} ${monthName}`;
-            
+            const fullDate = `${dayName}<br/>${dayNum}`;
+
             // Weekly total column logic
             let extraColumn = '';
-            if (plannerState.viewOptions.showWeekTotals && dayOfWeek === 0) { // After every Sunday
-                extraColumn = `<th class="week-total-header date-header" rowspan="2">Total Săpt.</th>`;
+            if (plannerState.viewOptions.showWeekTotals && dayOfWeek === 0) {
+                extraColumn = `<th class="week-total-header date-header">Total Săpt.</th>`;
             }
             return `<th class="date-header ${weekendClass} ${todayClass}">${fullDate}</th>${extraColumn}`;
         }).join('')}
-        <th class="total-header" rowspan="2">Total</th>
+        <th class="total-header">Total</th>
     `;
-    
-    // Render day number header row (simplified)
-    const dayHeaderRow = document.createElement('tr');
-    dayHeaderRow.className = 'day-header-row';
-    dayHeaderRow.innerHTML = `
-        ${days.map((date, index) => {
-            const dayNum = date.getDate();
-            const dayOfWeek = date.getDay();
-            const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-            const weekendClass = plannerState.viewOptions.highlightWeekends && isWeekend ? 'weekend' : '';
-            const today = new Date();
-            const isToday = date.getDate() === today.getDate() &&
-                           date.getMonth() === today.getMonth() &&
-                           date.getFullYear() === today.getFullYear();
-            const todayClass = isToday ? 'today' : '';
 
-            // Weekly total column logic - skip for this row as it's handled by rowspan
-            let extraColumn = '';
-            if (plannerState.viewOptions.showWeekTotals && dayOfWeek === 0) { // After every Sunday
-                extraColumn = ''; // Already handled by rowspan in date header
-            }
-            return `<th class="day-number-header ${weekendClass} ${todayClass}">${dayNum}</th>${extraColumn}`;
-        }).join('')}
-    `;
-    
     thead.appendChild(dateHeaderRow);
-    thead.appendChild(dayHeaderRow);
 
     // Render body
     const filteredAgents = getFilteredAgents();
@@ -1172,7 +1142,7 @@ function handleDeleteButtonClick(e) {
         e.preventDefault();
         e.stopPropagation();
         const agentId = deleteBtn.dataset.agentId;
-        if (agentId) {
+        if (agentId && confirm('Are you sure you want to delete this agent?')) {
             deleteAgent(agentId);
         } else {
             console.error('No agent ID found on delete button');

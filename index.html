@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sherpa - Workforce Planning & Productivity System</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
     
     <!-- CSS Files -->
     <link rel="stylesheet" href="css/base.css">
@@ -97,6 +98,12 @@
                     </svg>
                     <span>Reports</span>
                 </div>
+                <div class="nav-item" data-tooltip="info" style="margin-top: auto;">
+                    <svg class="nav-icon" viewBox="0 0 24 24">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
+                    </svg>
+                    <span>Info</span>
+                </div>
             </nav>
         </aside>
 
@@ -146,11 +153,7 @@
                             </div>
                         </div>
 
-                        <!-- Existing Header Actions -->
-                        <div class="header-actions">
-                            <button class="btn btn-secondary" data-translate="refresh">Refresh</button>
-                            <button class="btn btn-primary" data-translate="quick-actions">Quick Actions</button>
-                        </div>
+                        <!-- Header Actions removed -->
                     </div>
                 </header>
                 <div class="content">
@@ -167,7 +170,10 @@
                                     <span data-translate="planned-hours">Ore Planificate</span>
                                     <div class="day-toggle">
                                         <button class="toggle-btn active" id="todayBtn" data-translate="today">Azi</button>
-                                        <button class="toggle-btn" id="tomorrowBtn" data-translate="tomorrow">Mâine</button>
+                                        <div class="date-picker-wrapper" id="datePickerWrapper">
+                                            <span class="calendar-icon" id="calendarLabel">&#128197;</span>
+                                            <input type="date" id="plannedDatePicker" class="toggle-date-picker">
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -237,12 +243,13 @@
                                     <input type="text" id="newAgentUsername" placeholder="e.g., john.doe" required>
                                 </div>
                                 <div class="form-group">
-                                    <label for="newAgentContractHours">Contract Hours</label>
+                                    <label for="newAgentContractHours">Part-time Hours</label>
                                     <select id="newAgentContractHours">
-                                        <option value="4">4 hours</option>
-                                        <option value="6">6 hours</option>
-                                        <option value="7">7 hours</option>
-                                        <option value="8" selected>8 hours</option>
+                                        <option value="4">4 hours/day</option>
+                                        <option value="5">5 hours/day</option>
+                                        <option value="6" selected>6 hours/day</option>
+                                        <option value="7">7 hours/day</option>
+                                        <option value="8">8 hours/day</option>
                                     </select>
                                 </div>
                                 <div class="form-group">
@@ -341,74 +348,52 @@
             <section id="productivity" class="section">
                 <header class="header">
                     <h2 class="header-title">Productivitate</h2>
-                    <div class="header-actions">
-                        <select style="padding: 0.75rem; background: var(--primary-dark); border: 1px solid var(--border); border-radius: 6px; color: white; margin-right: 1rem;">
-                            <option>Azi</option>
-                            <option>Ieri</option>
-                            <option>Ultimele 7 zile</option>
-                            <option>Luna curentă</option>
+                    <div class="header-actions" style="display: flex; align-items: center; gap: 0.75rem;">
+                        <div class="date-range-picker">
+                            <input id="productivityDateRange" class="date-display" style="text-align: center; min-width: 200px;" readonly placeholder="Selectează perioada..."/>
+                        </div>
+                        <select id="productivityTeamFilter" style="padding: 0.6rem 0.75rem; background: var(--primary-dark); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary); font-size: 0.85rem;">
+                            <option value="all">Toate</option>
+                            <option value="RO">RO</option>
+                            <option value="HU">HU</option>
+                            <option value="IT">IT</option>
+                            <option value="NL">NL</option>
+                            <option value="CS">CS</option>
+                            <option value="SK">SK</option>
+                            <option value="SV-SE">SV-SE</option>
                         </select>
-                        <button class="btn btn-primary">Import CSV</button>
+                        <div id="prodViewToggle" style="display: inline-flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; flex-shrink: 0;">
+                            <button type="button" id="viewOverview" style="padding: 0.6rem 1rem; border: none; cursor: pointer; font-size: 0.85rem; background: var(--accent); color: #000; font-weight: 600; transition: all 0.2s; outline: none;">Sumar</button>
+                            <button type="button" id="viewDetail" style="padding: 0.6rem 1rem; border: none; cursor: pointer; font-size: 0.85rem; background: var(--primary-dark); color: var(--text-secondary); transition: all 0.2s; outline: none;">Per Agent</button>
+                        </div>
                     </div>
                 </header>
                 <div class="content">
-                    <!-- Productivity Charts -->
-                    <div class="chart-container">
-                        <div class="chart-header">
-                            <h3 class="chart-title">Evoluție Productivitate</h3>
-                            <div class="chart-controls">
-                                <button class="filter-btn active">30 Zile</button>
-                                <button class="filter-btn">Săptămânal</button>
-                                <button class="filter-btn">Lunar</button>
+                    <!-- Agent Selector (visible in detail view) -->
+                    <div id="agentSelectorSection" style="display: none; margin-bottom: 1.5rem;">
+                        <div class="chart-container" style="padding: 1rem 1.5rem;">
+                            <div style="display: flex; align-items: center; gap: 1rem;">
+                                <div style="position: relative; flex: 1;">
+                                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;">
+                                        <input type="text" id="prodAgentSearch" placeholder="Caută agent..." style="flex: 1; padding: 0.5rem 0.75rem; background: var(--primary-dark); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary); font-size: 0.85rem;">
+                                        <button id="prodSelectAll" class="btn btn-secondary" style="padding: 0.4rem 0.75rem; font-size: 0.8rem; white-space: nowrap;">Toți</button>
+                                        <button id="prodDeselectAll" class="btn btn-secondary" style="padding: 0.4rem 0.75rem; font-size: 0.8rem; white-space: nowrap;">Niciunul</button>
+                                        <span id="prodAgentCount" style="color: var(--text-secondary); font-size: 0.8rem; white-space: nowrap;"></span>
+                                    </div>
+                                    <div id="agentChipsContainer" style="display: flex; flex-wrap: wrap; gap: 0.35rem; max-height: 120px; overflow-y: auto; padding: 0.25rem 0;"></div>
+                                </div>
                             </div>
                         </div>
-                        <canvas id="productivityEvolution" height="80"></canvas>
+                    </div>
+
+                    <!-- Stats Cards -->
+                    <div class="dashboard-grid" id="productivityStats">
+                        <!-- Populated dynamically -->
                     </div>
 
                     <!-- Agent Productivity Table -->
-                    <div class="table-container">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Agent</th>
-                                    <th>Echipă</th>
-                                    <th>Tickete</th>
-                                    <th>Apeluri</th>
-                                    <th>Total</th>
-                                    <th>Ore</th>
-                                    <th>Productivitate</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>Diana Balazs.fsp</td>
-                                    <td>RO zooplus</td>
-                                    <td>32</td>
-                                    <td>15</td>
-                                    <td>47</td>
-                                    <td>8</td>
-                                    <td style="color: var(--success); font-weight: bold;">5.88</td>
-                                </tr>
-                                <tr>
-                                    <td>Cristina Burian.fsp</td>
-                                    <td>RO zooplus</td>
-                                    <td>28</td>
-                                    <td>20</td>
-                                    <td>48</td>
-                                    <td>8</td>
-                                    <td style="color: var(--success); font-weight: bold;">6.00</td>
-                                </tr>
-                                <tr>
-                                    <td>Norbert Nyikora.fsp</td>
-                                    <td>HU zooplus</td>
-                                    <td>25</td>
-                                    <td>18</td>
-                                    <td>43</td>
-                                    <td>8</td>
-                                    <td style="color: var(--success); font-weight: bold;">5.38</td>
-                                </tr>
-                            </tbody>
-                        </table>
+                    <div class="table-container" id="productivityTableContainer" style="margin-top: 1.5rem;">
+                        <p style="color: var(--text-secondary); text-align: center; padding: 3rem;">Încarcă fișierele din secțiunea Upload pentru a vedea datele.</p>
                     </div>
                 </div>
             </section>
@@ -416,31 +401,49 @@
             <!-- Upload Section -->
             <section id="upload" class="section">
                 <header class="header">
-                    <h2 class="header-title">Încărcare Fișiere CSV</h2>
+                    <h2 class="header-title">Încărcare Fișiere</h2>
                 </header>
                 <div class="content">
-                    <div class="dashboard-grid">
-                        <div class="upload-area">
-                            <svg class="upload-icon" viewBox="0 0 24 24">
-                                <path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/>
-                            </svg>
-                            <h3>CSV Tickete</h3>
-                            <p style="color: var(--text-secondary); margin-top: 0.5rem;">Trage fișierul aici sau click pentru selectare</p>
+                    <!-- Step 1: Select date -->
+                    <div class="chart-container" style="margin-bottom: 1.5rem;">
+                        <div style="display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;">
+                            <div style="flex: 1; min-width: 200px;">
+                                <h3 class="chart-title" style="margin-bottom: 0.5rem;">1. Selectează data fișierelor</h3>
+                                <p style="color: var(--text-secondary); font-size: 0.85rem;">Pentru ce zi sunt datele de productivitate?</p>
+                            </div>
+                            <input type="text" id="uploadDate" class="inline-input" readonly placeholder="Selectează data" style="padding: 0.7rem 1.2rem; background: var(--primary-dark); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary); font-size: 1rem; cursor: pointer; min-width: 200px;">
                         </div>
-                        <div class="upload-area">
-                            <svg class="upload-icon" viewBox="0 0 24 24">
-                                <path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/>
-                            </svg>
-                            <h3>CSV Apeluri</h3>
-                            <p style="color: var(--text-secondary); margin-top: 0.5rem;">Trage fișierul aici sau click pentru selectare</p>
+                        <div id="uploadDateStatus" style="margin-top: 0.75rem; display: none;"></div>
+                    </div>
+
+                    <!-- Step 2: Upload files (disabled until date selected) -->
+                    <div id="uploadFilesSection" style="opacity: 0.4; pointer-events: none; transition: opacity 0.3s;">
+                        <div class="dashboard-grid">
+                            <div class="upload-area" id="uploadTickets" style="cursor: pointer;">
+                                <input type="file" id="ticketsFileInput" accept=".xlsx,.xls" style="display: none;">
+                                <svg class="upload-icon" viewBox="0 0 24 24">
+                                    <path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/>
+                                </svg>
+                                <h3>2. Tickete (XLSX)</h3>
+                                <p style="color: var(--text-secondary); margin-top: 0.5rem;">Trage fișierul Excel aici sau click pentru selectare</p>
+                                <p id="ticketsFileName" style="margin-top: 0.5rem; font-size: 0.85rem;"></p>
+                            </div>
+                            <div class="upload-area" id="uploadCalls" style="cursor: pointer;">
+                                <input type="file" id="callsFileInput" accept=".csv" style="display: none;">
+                                <svg class="upload-icon" viewBox="0 0 24 24">
+                                    <path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/>
+                                </svg>
+                                <h3>3. Apeluri (CSV)</h3>
+                                <p style="color: var(--text-secondary); margin-top: 0.5rem;">Trage fișierul CSV aici sau click pentru selectare</p>
+                                <p id="callsFileName" style="margin-top: 0.5rem; font-size: 0.85rem;"></p>
+                            </div>
                         </div>
                     </div>
-                    
-                    <div class="alert alert-warning" style="margin-top: 2rem;">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
-                        </svg>
-                        <span>Notă: Importă fișierele CSV pentru a actualiza datele de productivitate.</span>
+
+                    <!-- Loaded dates summary -->
+                    <div id="loadedDatesSummary" class="chart-container" style="margin-top: 1.5rem; display: none;">
+                        <h3 class="chart-title" style="margin-bottom: 0.75rem;">Date Încărcate</h3>
+                        <div id="loadedDatesList"></div>
                     </div>
                 </div>
             </section>
@@ -450,85 +453,120 @@
                 <header class="header">
                     <h2 class="header-title">Rapoarte</h2>
                     <div class="header-actions">
-                        <select style="padding: 0.75rem; background: var(--primary-dark); border: 1px solid var(--border); border-radius: 6px; color: white;">
-                            <option>Mai 2025</option>
-                            <option>Aprilie 2025</option>
-                            <option>Martie 2025</option>
-                        </select>
+                        <input type="text" id="reportsDateRange" placeholder="Selectează interval..."
+                            style="padding: 0.6rem 1rem; background: var(--primary-dark); border: 1px solid var(--border); border-radius: 6px; color: white; cursor: pointer; min-width: 240px; font-size: 0.9rem;">
                     </div>
                 </header>
-                <div class="content">
-                    <!-- Hours by Shop Report -->
-                    <div class="chart-container">
-                        <h3 class="chart-title">Ore Planificate per Shop - Mai 2025</h3>
-                        <table style="margin-top: 1rem;">
-                            <thead>
-                                <tr>
-                                    <th>Shop</th>
-                                    <th>Total Ore Lună</th>
-                                    <th>Nr. Agenți</th>
-                                    <th>Medie Ore/Agent</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>RO zooplus</td>
-                                    <td style="color: var(--accent); font-weight: bold;">2,640</td>
-                                    <td>15</td>
-                                    <td>176</td>
-                                </tr>
-                                <tr>
-                                    <td>HU zooplus</td>
-                                    <td style="color: var(--accent); font-weight: bold;">1,408</td>
-                                    <td>8</td>
-                                    <td>176</td>
-                                </tr>
-                                <tr>
-                                    <td>IT zooplus</td>
-                                    <td style="color: var(--accent); font-weight: bold;">1,056</td>
-                                    <td>6</td>
-                                    <td>176</td>
-                                </tr>
-                            </tbody>
-                        </table>
+                <div class="content" id="reportsContent">
+                    <div style="text-align: center; padding: 3rem; color: var(--text-secondary);">
+                        Selectează un interval de date pentru a genera rapoartele.
+                    </div>
+                </div>
+            </section>
+
+            <!-- Info Section -->
+            <section id="info" class="section">
+                <header class="header">
+                    <h2 class="header-title">Ghid Utilizare Sherpa</h2>
+                </header>
+                <div class="content" style="max-width: 1000px; margin: 0 auto; width: 100%;">
+
+                    <div class="chart-container" style="margin-bottom: 1.5rem;">
+                        <h3 class="chart-title" style="margin-bottom: 1rem;">1. Dashboard</h3>
+                        <p style="color: var(--text-secondary); line-height: 1.7;">
+                            Pagina principală oferă o vedere de ansamblu a echipei:
+                        </p>
+                        <ul style="color: var(--text-secondary); line-height: 2; margin-top: 0.5rem; padding-left: 1.5rem;">
+                            <li><strong style="color: var(--text-primary);">Total Agenți Activi</strong> — numărul de agenți înregistrați și activi în sistem</li>
+                            <li><strong style="color: var(--text-primary);">Ore Planificate</strong> — totalul orelor planificate pentru ziua curentă (Azi) sau orice dată selectată din calendar</li>
+                            <li><strong style="color: var(--text-primary);">Ore Alocate pe Echipe</strong> — tabelul arată distribuția orelor pe echipe pentru data selectată</li>
+                            <li><strong style="color: var(--text-primary);">Productivitate Medie</strong> — media productivității (tickete+apeluri / oră) pe ultimele zile cu date încărcate</li>
+                            <li><strong style="color: var(--text-primary);">Trend Productivitate</strong> — graficul arată productivitatea per echipă (tickete+apeluri / oră) pe toată luna curentă, bazat pe datele încărcate</li>
+                        </ul>
                     </div>
 
-                    <!-- Agent Distribution by Shop -->
+                    <div class="chart-container" style="margin-bottom: 1.5rem;">
+                        <h3 class="chart-title" style="margin-bottom: 1rem;">2. Users (Utilizatori)</h3>
+                        <p style="color: var(--text-secondary); line-height: 1.7;">
+                            Gestionarea agenților din echipă:
+                        </p>
+                        <ul style="color: var(--text-secondary); line-height: 2; margin-top: 0.5rem; padding-left: 1.5rem;">
+                            <li><strong style="color: var(--text-primary);">Adaugă agent nou</strong> — completează numele, username-ul, orele de contract, tipul contractului, echipa primară și data angajării</li>
+                            <li><strong style="color: var(--text-primary);">Editare inline</strong> — click direct pe orice câmp din tabel pentru a-l modifica (numele, orele, echipa etc.)</li>
+                            <li><strong style="color: var(--text-primary);">Echipa primară</strong> — echipa principală a agentului (ex: RO zooplus). Agentul poate lucra și pentru alte echipe conform plannerului</li>
+                            <li><strong style="color: var(--text-primary);">Tip Contract</strong> — Full-time (8h automat) sau Part-time (ore configurabile). Schimbarea tipului de contract deschide un modal pentru a selecta data de start și noile ore</li>
+                            <li><strong style="color: var(--text-primary);">Activ/Inactiv</strong> — buton care deschide un modal cu opțiuni: Indefinit (dezactivare permanentă) sau Perioadă (interval de date). Plannerul se actualizează automat</li>
+                        </ul>
+                    </div>
+
+                    <div class="chart-container" style="margin-bottom: 1.5rem;">
+                        <h3 class="chart-title" style="margin-bottom: 1rem;">3. Planner</h3>
+                        <p style="color: var(--text-secondary); line-height: 1.7;">
+                            Planificarea lunară a orelor de lucru per agent:
+                        </p>
+                        <ul style="color: var(--text-secondary); line-height: 2; margin-top: 0.5rem; padding-left: 1.5rem;">
+                            <li><strong style="color: var(--text-primary);">Format ore</strong> — introdu orele cu codul echipei: <code style="background: var(--primary-dark); padding: 0.2rem 0.5rem; border-radius: 4px;">8RO</code> = 8 ore pe RO, <code style="background: var(--primary-dark); padding: 0.2rem 0.5rem; border-radius: 4px;">4RO+4IT</code> = 4 ore RO + 4 ore IT</li>
+                            <li><strong style="color: var(--text-primary);">Coduri speciale</strong> — <code style="background: var(--primary-dark); padding: 0.2rem 0.5rem; border-radius: 4px;">Co</code> = Concediu, <code style="background: var(--primary-dark); padding: 0.2rem 0.5rem; border-radius: 4px;">CM</code> = Concediu Medical, <code style="background: var(--primary-dark); padding: 0.2rem 0.5rem; border-radius: 4px;">SL</code> = Sărbătoare Legală, <code style="background: var(--primary-dark); padding: 0.2rem 0.5rem; border-radius: 4px;">LB</code> = Liber</li>
+                            <li><strong style="color: var(--text-primary);">Selecție multiplă</strong> — selectează mai multe celule și editează-le simultan cu modalul de editare</li>
+                            <li><strong style="color: var(--text-primary);">Salvare automată</strong> — toate modificările se salvează automat în baza de date</li>
+                        </ul>
+                    </div>
+
+                    <div class="chart-container" style="margin-bottom: 1.5rem;">
+                        <h3 class="chart-title" style="margin-bottom: 1rem;">4. Productivitate</h3>
+                        <p style="color: var(--text-secondary); line-height: 1.7;">
+                            Analiza productivității bazată pe datele încărcate (tickete + apeluri) și orele din planner:
+                        </p>
+                        <ul style="color: var(--text-secondary); line-height: 2; margin-top: 0.5rem; padding-left: 1.5rem;">
+                            <li><strong style="color: var(--text-primary);">Selectare perioadă</strong> — alege un interval de date cu calendarul din colțul dreapta-sus</li>
+                            <li><strong style="color: var(--text-primary);">Filtru echipă</strong> — selectează o echipă specifică (ex: RO, IT) pentru a vedea doar ticketele și apelurile rezolvate pentru acea echipă. Orele afișate vor fi cele alocate echipei respective conform plannerului</li>
+                            <li><strong style="color: var(--text-primary);">Sumar</strong> — vedere agregată per agent pe întreaga perioadă selectată</li>
+                            <li><strong style="color: var(--text-primary);">Per Agent</strong> — vedere detaliată zi cu zi, per agent. Selectează agenții folosind chipurile sau căutarea</li>
+                            <li><strong style="color: var(--text-primary);">Echipe (coloana)</strong> — arată echipele pentru care agentul a lucrat efectiv, bazat pe fișierele încărcate. Dacă nu există date încărcate, se folosesc echipele din planner ca fallback</li>
+                            <li><strong style="color: var(--text-primary);">Formula</strong> — Productivitate = (Tickete + Apeluri) / Ore Lucrate</li>
+                        </ul>
+                    </div>
+
+                    <div class="chart-container" style="margin-bottom: 1.5rem;">
+                        <h3 class="chart-title" style="margin-bottom: 1rem;">5. Upload File</h3>
+                        <p style="color: var(--text-secondary); line-height: 1.7;">
+                            Încărcarea fișierelor de productivitate zilnică:
+                        </p>
+                        <ul style="color: var(--text-secondary); line-height: 2; margin-top: 0.5rem; padding-left: 1.5rem;">
+                            <li><strong style="color: var(--text-primary);">Pasul 1: Selectează data</strong> — alege data din calendar pentru care încarci datele. Sistemul avertizează dacă data are deja date încărcate (override)</li>
+                            <li><strong style="color: var(--text-primary);">Pasul 2: Fișier XLSX (Tickete)</strong> — încarcă fișierul Excel cu ticketele rezolvate. Sistemul extrage automat agentul, numărul de tickete și limba/echipa</li>
+                            <li><strong style="color: var(--text-primary);">Pasul 3: Fișier CSV (Apeluri)</strong> — încarcă fișierul CSV cu apelurile. Sistemul extrage agentul, numărul de apeluri și coada/echipa</li>
+                            <li><strong style="color: var(--text-primary);">Potrivire automată</strong> — numele din fișiere sunt normalizate și potrivite automat cu agenții din sistem (ex: "andreea.hoka.fsp" → "Andreea Hoka")</li>
+                            <li><strong style="color: var(--text-primary);">Persistență</strong> — datele sunt salvate în Firebase și se păstrează între sesiuni</li>
+                        </ul>
+                    </div>
+
+                    <div class="chart-container" style="margin-bottom: 1.5rem;">
+                        <h3 class="chart-title" style="margin-bottom: 1rem;">6. Rapoarte</h3>
+                        <p style="color: var(--text-secondary); line-height: 1.7;">
+                            Rapoarte agregate bazate pe datele din planner:
+                        </p>
+                        <ul style="color: var(--text-secondary); line-height: 2; margin-top: 0.5rem; padding-left: 1.5rem;">
+                            <li><strong style="color: var(--text-primary);">Selectare interval</strong> — alege perioada dorită cu calendarul (default: luna curentă)</li>
+                            <li><strong style="color: var(--text-primary);">Ore Planificate per Shop</strong> — tabel cu totalul orelor planificate pe fiecare echipă și numărul de agenți</li>
+                            <li><strong style="color: var(--text-primary);">Distribuție Agenți per Shop</strong> — carduri per echipă cu fiecare agent și orele lui, ordonate descrescător</li>
+                        </ul>
+                    </div>
+
                     <div class="chart-container">
-                        <h3 class="chart-title">Distribuție Agenți pe Shop</h3>
-                        <div class="dashboard-grid" style="margin-top: 1rem;">
-                            <div class="stat-card">
-                                <h4 style="color: var(--accent); margin-bottom: 1rem;">RO zooplus</h4>
-                                <div style="max-height: 200px; overflow-y: auto;">
-                                    <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid var(--border);">
-                                        <span>Diana Balazs.fsp</span>
-                                        <span style="color: var(--text-secondary)">176h</span>
-                                    </div>
-                                    <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid var(--border);">
-                                        <span>Cristina Burian.fsp</span>
-                                        <span style="color: var(--text-secondary)">176h</span>
-                                    </div>
-                                    <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid var(--border);">
-                                        <span>Andreea Hoka.fsp</span>
-                                        <span style="color: var(--text-secondary)">132h</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="stat-card">
-                                <h4 style="color: var(--accent); margin-bottom: 1rem;">HU zooplus</h4>
-                                <div style="max-height: 200px; overflow-y: auto;">
-                                    <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid var(--border);">
-                                        <span>Norbert Nyikora.fsp</span>
-                                        <span style="color: var(--text-secondary)">176h</span>
-                                    </div>
-                                    <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid var(--border);">
-                                        <span>Eniko Gabor.fsp</span>
-                                        <span style="color: var(--text-secondary)">176h</span>
-                                    </div>
-                                </div>
-                            </div>
+                        <h3 class="chart-title" style="margin-bottom: 1rem;">Coduri Echipe</h3>
+                        <div class="dashboard-grid" style="grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 0.75rem;">
+                            <div class="stat-card" style="padding: 0.75rem; text-align: center;"><strong style="color: var(--accent);">RO</strong><br><span style="color: var(--text-secondary); font-size: 0.85rem;">România</span></div>
+                            <div class="stat-card" style="padding: 0.75rem; text-align: center;"><strong style="color: var(--accent);">HU</strong><br><span style="color: var(--text-secondary); font-size: 0.85rem;">Ungaria</span></div>
+                            <div class="stat-card" style="padding: 0.75rem; text-align: center;"><strong style="color: var(--accent);">IT</strong><br><span style="color: var(--text-secondary); font-size: 0.85rem;">Italia</span></div>
+                            <div class="stat-card" style="padding: 0.75rem; text-align: center;"><strong style="color: var(--accent);">NL</strong><br><span style="color: var(--text-secondary); font-size: 0.85rem;">Olanda</span></div>
+                            <div class="stat-card" style="padding: 0.75rem; text-align: center;"><strong style="color: var(--accent);">CS</strong><br><span style="color: var(--text-secondary); font-size: 0.85rem;">Cehia</span></div>
+                            <div class="stat-card" style="padding: 0.75rem; text-align: center;"><strong style="color: var(--accent);">SK</strong><br><span style="color: var(--text-secondary); font-size: 0.85rem;">Slovacia</span></div>
+                            <div class="stat-card" style="padding: 0.75rem; text-align: center;"><strong style="color: var(--accent);">SV-SE</strong><br><span style="color: var(--text-secondary); font-size: 0.85rem;">Suedia</span></div>
+                            <div class="stat-card" style="padding: 0.75rem; text-align: center;"><strong style="color: var(--accent);">DE</strong><br><span style="color: var(--text-secondary); font-size: 0.85rem;">Germania</span></div>
                         </div>
                     </div>
+
                 </div>
             </section>
         </main>
@@ -626,6 +664,7 @@
     <script src="js/planner.js" type="module"></script>
     <script src="js/dashboard.js" type="module"></script>
     <script src="js/users.js" type="module"></script>
+    <script src="js/productivity.js" type="module"></script>
     <script src="js/main.js" type="module"></script>
     <script>
         // Smoke effect script
@@ -690,5 +729,72 @@
         }
         animate();
     </script>
+
+    <!-- Deactivate User Modal -->
+    <div id="deactivateModal" class="edit-modal">
+        <div class="edit-modal-content" style="max-width: 440px;">
+            <div class="edit-modal-header">
+                <h3 class="edit-modal-title" id="deactivateTitle">Dezactivare</h3>
+                <button class="edit-modal-close" id="deactivateClose">&times;</button>
+            </div>
+            <div style="padding: 1.5rem; display: flex; flex-direction: column; gap: 1.25rem;">
+                <div id="deactivateOptions" style="display: flex; gap: 1rem; justify-content: center;">
+                    <button class="deactivate-option" data-mode="indefinite" style="flex: 1; padding: 1rem; background: var(--primary-dark); border: 2px solid var(--border); border-radius: 8px; color: var(--text-primary); cursor: pointer; font-size: 0.95rem; font-weight: 600; transition: all 0.3s ease;">
+                        Indefinit
+                        <span style="display: block; font-size: 0.8rem; font-weight: 400; color: var(--text-secondary); margin-top: 0.25rem;">Din ziua curentă</span>
+                    </button>
+                    <button class="deactivate-option" data-mode="period" style="flex: 1; padding: 1rem; background: var(--primary-dark); border: 2px solid var(--border); border-radius: 8px; color: var(--text-primary); cursor: pointer; font-size: 0.95rem; font-weight: 600; transition: all 0.3s ease;">
+                        Perioadă
+                        <span style="display: block; font-size: 0.8rem; font-weight: 400; color: var(--text-secondary); margin-top: 0.25rem;">Alege intervalul</span>
+                    </button>
+                </div>
+                <div id="deactivateDateGroup" style="display: none;">
+                    <div style="display: flex; gap: 1rem;">
+                        <div class="form-group" style="flex: 1;">
+                            <label for="deactivateDateFrom">Din data</label>
+                            <input type="date" id="deactivateDateFrom" class="inline-input" style="width: 100%; padding: 0.75rem;">
+                        </div>
+                        <div class="form-group" style="flex: 1;">
+                            <label for="deactivateDateTo">Până la data</label>
+                            <input type="date" id="deactivateDateTo" class="inline-input" style="width: 100%; padding: 0.75rem;">
+                        </div>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 0.5rem;">
+                    <button class="btn btn-secondary" id="deactivateCancelBtn">Anulează</button>
+                    <button class="btn btn-primary" id="deactivateSaveBtn">Aplică</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contract Change Modal -->
+    <div id="contractChangeModal" class="edit-modal">
+        <div class="edit-modal-content" style="max-width: 420px;">
+            <div class="edit-modal-header">
+                <h3 class="edit-modal-title" id="contractChangeTitle">Schimbare Contract</h3>
+                <button class="edit-modal-close" id="contractChangeClose">&times;</button>
+            </div>
+            <div style="padding: 1.5rem; display: flex; flex-direction: column; gap: 1.25rem;">
+                <div class="form-group" id="contractChangeHoursGroup">
+                    <label for="contractChangeHours">Ore pe zi</label>
+                    <select id="contractChangeHours" class="inline-select" style="width: 100%; padding: 0.75rem;">
+                        <option value="4">4 ore/zi</option>
+                        <option value="5">5 ore/zi</option>
+                        <option value="6" selected>6 ore/zi</option>
+                        <option value="7">7 ore/zi</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="contractChangeDate">Din data de</label>
+                    <input type="date" id="contractChangeDate" class="inline-input" style="width: 100%; padding: 0.75rem;">
+                </div>
+                <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 0.5rem;">
+                    <button class="btn btn-secondary" id="contractChangeCancelBtn">Anulează</button>
+                    <button class="btn btn-primary" id="contractChangeSaveBtn">Aplică</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

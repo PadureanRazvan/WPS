@@ -1,21 +1,43 @@
 /* Planner Specific Styles - Unified Table with Sticky Columns */
 
 /* The container MUST have explicit overflow control for sticky positioning to work. */
+/* Make the planner section fill viewport and contain all overflow */
+#planner.section.active {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+}
+
+#planner .content {
+    flex: 1;
+    overflow: hidden;
+    padding: 0.5rem 0;
+    display: flex;
+    flex-direction: column;
+    min-width: 0; /* Prevent flex child from overflowing */
+}
+
+/* Prevent page-level horizontal overflow from planner */
+.main-content {
+    overflow-x: hidden;
+}
+
 .table-container.enhanced-table {
-    overflow-x: auto;
-    overflow-y: visible; /* Let the main page handle vertical scroll */
-    max-height: none; /* Remove height constraint to allow sticky to work with viewport */
+    flex: 1;
+    overflow: auto;
     border: 1px solid var(--border);
-    border-radius: 12px;
-    position: relative; /* Ensure proper positioning context */
-    padding-top: 0; /* Ensure no extra padding causes overlap */
+    border-radius: 0;
+    position: relative;
+    padding-top: 0;
 }
 
 .unified-planner-table {
-    width: 100%;
+    width: max-content; /* Let table expand beyond container for horizontal scroll */
+    min-width: 100%;
     border-collapse: separate; /* Required for sticky borders */
     border-spacing: 0;
-    table-layout: fixed; /* Crucial for performance with sticky columns */
+    table-layout: auto; /* Override global fixed layout — allow natural column sizing */
 }
 
 .unified-planner-table tbody {
@@ -33,59 +55,26 @@
 
 /* When main header is scrolled, prioritize planner table header */
 .header.scrolled + .main-content .date-header-row th {
-    z-index: 36; /* Higher than scrolled main header */
+    z-index: 36;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
-.header.scrolled + .main-content .day-header-row th {
-    z-index: 35; /* Higher than scrolled main header */
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-}
-
-/* Date header row styling */
+/* Date header row styling — single header row */
 .date-header-row th {
     padding: 0.5rem 0.25rem;
-    font-size: 0.65rem;
+    font-size: 0.7rem;
     font-weight: 600;
     color: var(--accent);
     text-transform: uppercase;
-    border-bottom: 1px solid var(--border);
-    white-space: normal; /* Allow line breaks */
+    border-bottom: 2px solid var(--accent);
+    white-space: normal;
     text-align: center;
     vertical-align: middle;
-    line-height: 1.2;
+    line-height: 1.3;
     position: sticky;
-    top: 0; /* First header row sticks to top */
-    z-index: 21; /* Above second header row */
-    background: var(--primary-dark);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    transition: all 0.3s ease;
-}
-
-/* Day number header row styling */
-.day-header-row th {
-    padding: 0.75rem 0.25rem;
-    font-size: 0.75rem;
-    font-weight: 700;
-    color: var(--text-primary);
-    border-bottom: 2px solid var(--accent);
-    position: sticky;
-    top: 35px; /* Second header row sticks below first row */
-    z-index: 20; /* Below first header row but above content */
-    background: var(--primary-dark);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    transition: all 0.3s ease;
-}
-
-/* Adjust header heights for better visual hierarchy */
-.date-header {
-    height: 35px;
-    line-height: 1.2;
-}
-
-.day-number-header {
-    height: 40px;
-    line-height: 1.4;
+    top: 0;
+    z-index: 25;
+    background: var(--primary-dark) !important; /* Solid opaque — must cover content underneath */
 }
 
 /* --- Sticky Columns --- */
@@ -94,7 +83,7 @@
 .unified-planner-table th:nth-child(2), .unified-planner-table td:nth-child(2),
 .unified-planner-table th:last-child,  .unified-planner-table td:last-child {
     position: sticky;
-    background: var(--primary-light); /* Ensure it covers content scrolling underneath */
+    background: var(--primary-light) !important; /* Solid opaque — must cover content underneath */
 }
 
 /* Define the position and width for each sticky column */
@@ -120,28 +109,22 @@
 }
 
 /* --- Z-Index & Visuals for Corners --- */
-/* Ensure the corner sticky headers are on top of everything */
+/* Corner cells: sticky both horizontally AND vertically — need highest z-index */
 .date-header-row th:nth-child(1),
 .date-header-row th:nth-child(2),
 .date-header-row th:last-child {
-    z-index: 25; /* Above day header row */
+    z-index: 30; /* Highest: sticky row + sticky column */
     background: var(--primary-dark);
 }
 
-.day-header-row th:nth-child(1),
-.day-header-row th:nth-child(2),
-.day-header-row th:last-child {
-    z-index: 24; /* Above regular content but below date header */
-    background: var(--primary-dark);
-}
-
-/* Special styling for rowspan headers in date header row */
-.date-header-row th[rowspan="2"] {
+/* Special styling for agent/ore/total headers */
+.date-header-row .agent-name-header,
+.date-header-row .hours-header,
+.date-header-row .total-header {
     vertical-align: middle;
     text-align: center;
     font-weight: 700;
     padding: 1rem 0.5rem;
-    border-bottom: 2px solid var(--accent);
 }
 
 /* Add shadows for depth, indicating layers */
@@ -234,9 +217,9 @@
     vertical-align: middle; /* Preserve vertical centering for cell content */
 }
 
-/* Highlight current day */
+/* Highlight current day — use solid color, overridden by more specific rules below */
 .unified-planner-table .today {
-    background-color: rgba(255, 215, 0, 0.15) !important;
+    background-color: #1a1e10 !important;
     border-left: 2px solid var(--accent);
     border-right: 2px solid var(--accent);
 }
@@ -285,16 +268,15 @@
 */
 
 /* Enhanced styles for unified-planner-table */
+/* Weekend styling — inherits row background (solid) */
 .unified-planner-table .weekend {
-    background: rgba(255, 152, 0, 0.15);
     color: var(--text-primary);
     font-weight: 500;
 }
 
-/* Weekend styling for both header rows */
+/* Weekend styling for header rows */
 .date-header-row .weekend,
 .day-header-row .weekend {
-    background: rgba(255, 152, 0, 0.2);
     color: var(--warning);
     font-weight: 600;
 }
@@ -342,7 +324,18 @@
 
 /* Alternating row colors for better readability with many agents */
 .unified-planner-table tbody tr:nth-child(even) {
-    background: rgba(255, 255, 255, 0.02);
+    background: #1d2440; /* Solid slightly lighter shade */
+}
+
+.unified-planner-table tbody tr:nth-child(odd) {
+    background: var(--primary-light);
+}
+
+/* Ensure sticky cells on even rows also get the solid alternating bg */
+.unified-planner-table tbody tr:nth-child(even) td:nth-child(1),
+.unified-planner-table tbody tr:nth-child(even) td:nth-child(2),
+.unified-planner-table tbody tr:nth-child(even) td:last-child {
+    background: #1d2440 !important;
 }
 
 /* Hover effects */
@@ -388,12 +381,7 @@
     display: table-header-group;
 }
 
-/* Current Day Highlighting */
-.unified-planner-table .today {
-    background-color: rgba(255, 215, 0, 0.1) !important;
-    border-left: 1px solid var(--accent);
-    border-right: 1px solid var(--accent);
-}
+/* Current Day Highlighting — duplicate removed, handled above */
 
 /* Cell Selection and Editing Styles */
 .planner-cell {
@@ -611,7 +599,7 @@
 }
 
 .planner-cell.working {
-    background: rgba(76, 175, 80, 0.1);
+    background: #1a2a1c; /* Solid dark green tint — replaces rgba(76, 175, 80, 0.1) */
     color: var(--success);
     font-weight: 600;
     text-align: center;
@@ -623,7 +611,7 @@
 }
 
 .planner-cell.working.multi-team {
-    background: rgba(76, 175, 80, 0.15);
+    background: #1d2e1f; /* Solid slightly brighter green tint — replaces rgba(76, 175, 80, 0.15) */
     text-align: center;
     vertical-align: middle;
     font-feature-settings: "kern" 1;
@@ -755,10 +743,12 @@
     border-left: 1px solid var(--border); /* match regular cell border */
 }
 
-/* Disable orange weekend row/column highlights (keep today) */
-.unified-planner-table .weekend,
+/* Weekend cells — no orange highlight, use row-matching solid backgrounds */
+.unified-planner-table .weekend {
+    border-left: none !important;
+    border-right: none !important;
+}
 .date-header-row .weekend {
-    background: transparent !important;
     border-left: none !important;
     border-right: none !important;
 }
@@ -999,27 +989,31 @@
 
 /* Highlight for weekend header cells */
 .unified-planner-table th.weekend {
-    background-color: var(--primary-darker);
+    background-color: var(--primary-dark) !important;
     color: var(--text-secondary);
 }
 
-/* Highlight for weekend data cells */
+/* Highlight for weekend data cells — solid colors matching row parity */
 .unified-planner-table td.weekend {
-    background-color: var(--primary-dark);
+    background-color: var(--primary-light) !important;
+}
+.unified-planner-table tbody tr:nth-child(even) td.weekend {
+    background-color: #1d2440 !important;
 }
 
 /* More prominent highlight for today's date column with a soft yellow */
-.unified-planner-table th.today,
-.unified-planner-table td.today {
-    background-color: var(--today-highlight-bg) !important;
+.unified-planner-table th.today {
+    background-color: #1a1e10 !important; /* Solid dark yellow-tinted bg for header */
     border-left: 2px solid var(--today-highlight-border) !important;
     border-right: 2px solid var(--today-highlight-border) !important;
-}
-
-/* Special styling for the today's header to stand out */
-.unified-planner-table th.today {
     color: var(--today-highlight-text) !important;
     font-weight: 700;
+}
+
+.unified-planner-table td.today {
+    background-color: #1a1e10 !important; /* Solid dark yellow-tinted bg for cells */
+    border-left: 2px solid var(--today-highlight-border) !important;
+    border-right: 2px solid var(--today-highlight-border) !important;
 }
 
 /* --- Cell States --- */
