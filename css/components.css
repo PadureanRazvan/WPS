@@ -43,7 +43,7 @@
     align-items: center;
     gap: 2rem;
     padding: 3rem 4rem;
-    background: rgba(28, 35, 58, 0.85);
+    background: rgba(30, 30, 30, 0.9);
     border: 1px solid var(--border);
     border-radius: 20px;
     backdrop-filter: blur(20px);
@@ -361,7 +361,7 @@
     border-radius: 12px;
     padding: 1.5rem;
     transition: all var(--transition-slow);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--card-shadow);
 }
 
 .stat-card:hover {
@@ -403,7 +403,7 @@
     padding: 1.5rem;
     margin-bottom: 1.5rem;
     transition: all var(--transition-slow);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--card-shadow);
 }
 
 .chart-container:hover {
@@ -614,13 +614,13 @@ input, select, textarea {
 }
 
 select option {
-    background: #0a0e27;
+    background: var(--primary-dark);
     color: #ffffff;
 }
 
 [data-theme="light"] select option {
-    background: #ffffff;
-    color: #2c3e50;
+    background: var(--primary-light);
+    color: var(--text-primary);
 }
 
 input, select, textarea {
@@ -1765,13 +1765,13 @@ input:focus, select:focus, textarea:focus {
 }
 
 #usersTable .inline-select option {
-    background: #0a0e27;
+    background: var(--primary-dark);
     color: #ffffff;
 }
 
 [data-theme="light"] select option {
-    background: #ffffff;
-    color: #2c3e50;
+    background: var(--primary-light);
+    color: var(--text-primary);
 }
 
 #usersTable .inline-select {

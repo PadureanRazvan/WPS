@@ -14,7 +14,7 @@
 }
 
 .sidebar:hover {
-    box-shadow: var(--ai-glow);
+    box-shadow: 1px 0 10px rgba(0, 0, 0, 0.15);
 }
 
 .sidebar.collapsed {

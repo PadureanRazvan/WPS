@@ -219,7 +219,7 @@
 
 /* Highlight current day — use solid color, overridden by more specific rules below */
 .unified-planner-table .today {
-    background-color: #1a1e10 !important;
+    background-color: var(--today-solid-bg) !important;
     border-left: 2px solid var(--accent);
     border-right: 2px solid var(--accent);
 }
@@ -324,7 +324,7 @@
 
 /* Alternating row colors for better readability with many agents */
 .unified-planner-table tbody tr:nth-child(even) {
-    background: #1d2440; /* Solid slightly lighter shade */
+    background: var(--row-alt-bg); /* Solid slightly lighter shade */
 }
 
 .unified-planner-table tbody tr:nth-child(odd) {
@@ -335,7 +335,7 @@
 .unified-planner-table tbody tr:nth-child(even) td:nth-child(1),
 .unified-planner-table tbody tr:nth-child(even) td:nth-child(2),
 .unified-planner-table tbody tr:nth-child(even) td:last-child {
-    background: #1d2440 !important;
+    background: var(--row-alt-bg) !important;
 }
 
 /* Hover effects */
@@ -599,7 +599,7 @@
 }
 
 .planner-cell.working {
-    background: #1a2a1c; /* Solid dark green tint — replaces rgba(76, 175, 80, 0.1) */
+    background: var(--working-bg); /* Solid dark green tint — replaces rgba(76, 175, 80, 0.1) */
     color: var(--success);
     font-weight: 600;
     text-align: center;
@@ -611,7 +611,7 @@
 }
 
 .planner-cell.working.multi-team {
-    background: #1d2e1f; /* Solid slightly brighter green tint — replaces rgba(76, 175, 80, 0.15) */
+    background: var(--working-multi-bg); /* Solid slightly brighter green tint — replaces rgba(76, 175, 80, 0.15) */
     text-align: center;
     vertical-align: middle;
     font-feature-settings: "kern" 1;
@@ -998,12 +998,12 @@
     background-color: var(--primary-light) !important;
 }
 .unified-planner-table tbody tr:nth-child(even) td.weekend {
-    background-color: #1d2440 !important;
+    background-color: var(--row-alt-bg) !important;
 }
 
 /* More prominent highlight for today's date column with a soft yellow */
 .unified-planner-table th.today {
-    background-color: #1a1e10 !important; /* Solid dark yellow-tinted bg for header */
+    background-color: var(--today-solid-bg) !important; /* Solid dark yellow-tinted bg for header */
     border-left: 2px solid var(--today-highlight-border) !important;
     border-right: 2px solid var(--today-highlight-border) !important;
     color: var(--today-highlight-text) !important;
@@ -1011,7 +1011,7 @@
 }
 
 .unified-planner-table td.today {
-    background-color: #1a1e10 !important; /* Solid dark yellow-tinted bg for cells */
+    background-color: var(--today-solid-bg) !important; /* Solid dark yellow-tinted bg for cells */
     border-left: 2px solid var(--today-highlight-border) !important;
     border-right: 2px solid var(--today-highlight-border) !important;
 }

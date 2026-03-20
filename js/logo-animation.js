@@ -195,7 +195,7 @@ export function initLogoAnimation(canvasId = 'sherpaLogo', canvasSize = 120) {
                 const dist = Math.sqrt(dx * dx + dy * dy);
                 if (dist < 18) {
                     const lineAlpha = (1 - dist / 18) * 0.15 * Math.min(a.alpha, b.alpha);
-                    ctx.strokeStyle = `rgba(255, 215, 0, ${lineAlpha})`;
+                    ctx.strokeStyle = `rgba(232, 168, 73, ${lineAlpha})`;
                     ctx.beginPath();
                     ctx.moveTo(a.x, a.y);
                     ctx.lineTo(b.x, b.y);
@@ -207,9 +207,9 @@ export function initLogoAnimation(canvasId = 'sherpaLogo', canvasSize = 120) {
         // Draw particles
         for (const p of projected) {
             const depth = (p.z + 35) / 70; // normalize depth 0-1
-            const r = Math.round(255 - depth * 50);
-            const g = Math.round(215 - depth * 80);
-            const b = Math.round(0 + depth * 60);
+            const r = Math.round(232 - depth * 30);
+            const g = Math.round(168 - depth * 50);
+            const b = Math.round(73 + depth * 40);
 
             // Glow
             const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 3);
