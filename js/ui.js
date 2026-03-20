@@ -9,6 +9,7 @@ import { addAgent, applyChangesToSelectedCells, renderPlannerTable } from './pla
 import { updateDashboard, updateAverageProductivityCard } from './dashboard.js';
 import { initializeCharts } from './charts.js';
 import { getPlannerData } from './planner.js';
+import { renderLogsSection } from './logs.js';
 
 // Theme and language state
 let currentTheme = localStorage.getItem('theme') || 'dark';
@@ -104,6 +105,10 @@ export function showSection(sectionId, clickedElement) {
             setTimeout(() => {
                 renderPlannerTable();
             }, 10);
+        }
+        // If switching to logs section, fetch and render logs
+        if (sectionId === 'logs') {
+            renderLogsSection();
         }
     }
 }

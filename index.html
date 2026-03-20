@@ -107,6 +107,18 @@
                     </svg>
                     <span>Reports</span>
                 </div>
+                <div class="nav-item" data-tooltip="logs">
+                    <svg class="nav-icon" viewBox="0 0 24 24">
+                        <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
+                    </svg>
+                    <span data-translate="nav-logs">Jurnal</span>
+                </div>
+                <div class="nav-item" data-tooltip="roadmap">
+                    <svg class="nav-icon" viewBox="0 0 24 24">
+                        <path d="M11 17h2v-1h1c.55 0 1-.45 1-1v-3c0-.55-.45-1-1-1h-3v-1h4V8h-2V7h-2v1h-1c-.55 0-1 .45-1 1v3c0 .55.45 1 1 1h3v1H9v2h2v1zm9-12H4c-1.11 0-2 .89-2 2v10c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V7c0-1.11-.89-2-2-2z"/>
+                    </svg>
+                    <span data-translate="nav-roadmap">Roadmap</span>
+                </div>
                 <div class="nav-item" data-tooltip="info" style="margin-top: auto;">
                     <svg class="nav-icon" viewBox="0 0 24 24">
                         <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
@@ -478,6 +490,72 @@
                     <div style="text-align: center; padding: 3rem; color: var(--text-secondary);" data-translate="reports-select-range">
                         Selectează un interval de date pentru a genera rapoartele.
                     </div>
+                </div>
+            </section>
+
+            <!-- Logs Section -->
+            <section id="logs" class="section">
+                <header class="header">
+                    <h2 class="header-title" data-translate="logs-title">Jurnal Activitate</h2>
+                    <div class="header-actions" style="display: flex; gap: 0.5rem; align-items: center;">
+                        <select id="logsFilter" style="padding: 0.5rem 0.75rem; background: var(--primary-dark); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary); font-size: 0.85rem;">
+                            <option value="all" data-translate="logs-filter-all">Toate</option>
+                            <option value="auth">Auth</option>
+                            <option value="ai">AI</option>
+                            <option value="portal">Portal</option>
+                        </select>
+                        <button id="logsRefreshBtn" style="padding: 0.5rem 0.75rem; background: var(--accent); color: #000; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 600;" data-translate="logs-refresh">Reîncarcă</button>
+                    </div>
+                </header>
+                <div class="content" id="logsContent">
+                    <div style="text-align: center; padding: 3rem; color: var(--text-secondary);" data-translate="logs-empty">
+                        Nu există activitate înregistrată.
+                    </div>
+                </div>
+            </section>
+
+            <!-- Roadmap Section -->
+            <section id="roadmap" class="section">
+                <header class="header">
+                    <h2 class="header-title" data-translate="roadmap-title">Roadmap</h2>
+                </header>
+                <div class="content" style="max-width: 1000px; margin: 0 auto; width: 100%;">
+
+                    <div class="chart-container" style="margin-bottom: 1.5rem;">
+                        <h3 class="chart-title" style="margin-bottom: 1rem; color: var(--error);" data-translate="roadmap-bugs-title">Bugs Cunoscute</h3>
+                        <ul style="color: var(--text-secondary); line-height: 2; padding-left: 1.5rem;">
+                            <li data-translate="roadmap-bug-1">Gemini API returnează 404 pe unele browsere din cauza cache-ului — necesită Ctrl+Shift+R</li>
+                            <li data-translate="roadmap-bug-2">Rata de cereri API limitată fără profil de facturare Google configurat</li>
+                            <li data-translate="roadmap-bug-3">Cross-Origin-Opener-Policy blochează popup-ul de login pe unele browsere</li>
+                        </ul>
+                    </div>
+
+                    <div class="chart-container" style="margin-bottom: 1.5rem;">
+                        <h3 class="chart-title" style="margin-bottom: 1rem; color: var(--warning);" data-translate="roadmap-findings-title">Constatări & Îmbunătățiri Recomandate</h3>
+                        <ul style="color: var(--text-secondary); line-height: 2; padding-left: 1.5rem;">
+                            <li data-translate="roadmap-finding-1">Accesibilitate — lipsesc atribute ARIA, navigare cu tastatura, contrast insuficient pe text secundar</li>
+                            <li data-translate="roadmap-finding-2">Performanță — tabelul planner-ului generează 2000+ noduri DOM; ar beneficia de virtualizare</li>
+                            <li data-translate="roadmap-finding-3">Securitate — cheia Gemini API este expusă client-side; ar trebui proxy prin Cloud Functions</li>
+                            <li data-translate="roadmap-finding-4">Stări de încărcare — lipsesc spinners/skeletons la încărcarea datelor din Firestore</li>
+                            <li data-translate="roadmap-finding-5">Validare date — lipsește validare de schemă la scrierea în Firestore</li>
+                            <li data-translate="roadmap-finding-6">Istoric chat — se pierde la reîncărcarea paginii (doar în memorie)</li>
+                        </ul>
+                    </div>
+
+                    <div class="chart-container">
+                        <h3 class="chart-title" style="margin-bottom: 1rem; color: var(--success);" data-translate="roadmap-future-title">Dezvoltări Viitoare</h3>
+                        <ul style="color: var(--text-secondary); line-height: 2; padding-left: 1.5rem;">
+                            <li data-translate="roadmap-future-1">Persistența istoricului chat în localStorage</li>
+                            <li data-translate="roadmap-future-2">Export rapoarte în PDF / Excel</li>
+                            <li data-translate="roadmap-future-3">Notificări push pentru schimbări de program</li>
+                            <li data-translate="roadmap-future-4">Roluri utilizator (admin, manager, vizualizare)</li>
+                            <li data-translate="roadmap-future-5">Dashboard cu grafice interactive (drag-and-drop pe planner)</li>
+                            <li data-translate="roadmap-future-6">Integrare calendar (Google Calendar sync)</li>
+                            <li data-translate="roadmap-future-7">Mod offline cu sincronizare la reconectare</li>
+                            <li data-translate="roadmap-future-8">Audit trail complet cu revert la versiuni anterioare</li>
+                        </ul>
+                    </div>
+
                 </div>
             </section>
 

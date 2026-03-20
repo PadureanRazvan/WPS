@@ -232,6 +232,7 @@ export const translations = {
         'chat-error': 'Eroare la comunicarea cu AI. Încearcă din nou.',
         'chat-invalid-key': 'Cheia API este invalidă. Verifică setările.',
         'chat-rate-limit': 'Prea multe cereri. Așteaptă câteva secunde.',
+        'chat-delete-cancelled': 'Ștergerea a fost anulată.',
 
         // Nav items
         'nav-dashboard': 'Dashboard',
@@ -240,7 +241,44 @@ export const translations = {
         'nav-productivity': 'Productivitate',
         'nav-upload': 'Încărcare Fișiere',
         'nav-reports': 'Rapoarte',
+        'nav-logs': 'Jurnal',
+        'nav-roadmap': 'Roadmap',
         'nav-info': 'Informații',
+
+        // Logs
+        'logs-title': 'Jurnal Activitate',
+        'logs-loading': 'Se încarcă...',
+        'logs-empty': 'Nu există activitate înregistrată.',
+        'logs-time': 'Ora',
+        'logs-user': 'Utilizator',
+        'logs-type': 'Tip',
+        'logs-action': 'Acțiune',
+        'logs-details': 'Detalii',
+        'logs-filter-all': 'Toate',
+        'logs-refresh': 'Reîncarcă',
+
+        // Roadmap
+        'roadmap-title': 'Roadmap',
+        'roadmap-bugs-title': 'Bugs Cunoscute',
+        'roadmap-findings-title': 'Constatări & Îmbunătățiri Recomandate',
+        'roadmap-future-title': 'Dezvoltări Viitoare',
+        'roadmap-bug-1': 'Gemini API returnează 404 pe unele browsere din cauza cache-ului — necesită Ctrl+Shift+R',
+        'roadmap-bug-2': 'Rata de cereri API limitată fără profil de facturare Google configurat',
+        'roadmap-bug-3': 'Cross-Origin-Opener-Policy blochează popup-ul de login pe unele browsere',
+        'roadmap-finding-1': 'Accesibilitate — lipsesc atribute ARIA, navigare cu tastatura, contrast insuficient pe text secundar',
+        'roadmap-finding-2': 'Performanță — tabelul planner-ului generează 2000+ noduri DOM; ar beneficia de virtualizare',
+        'roadmap-finding-3': 'Securitate — cheia Gemini API este expusă client-side; ar trebui proxy prin Cloud Functions',
+        'roadmap-finding-4': 'Stări de încărcare — lipsesc spinners/skeletons la încărcarea datelor din Firestore',
+        'roadmap-finding-5': 'Validare date — lipsește validare de schemă la scrierea în Firestore',
+        'roadmap-finding-6': 'Istoric chat — se pierde la reîncărcarea paginii (doar în memorie)',
+        'roadmap-future-1': 'Persistența istoricului chat în localStorage',
+        'roadmap-future-2': 'Export rapoarte în PDF / Excel',
+        'roadmap-future-3': 'Notificări push pentru schimbări de program',
+        'roadmap-future-4': 'Roluri utilizator (admin, manager, vizualizare)',
+        'roadmap-future-5': 'Dashboard cu grafice interactive (drag-and-drop pe planner)',
+        'roadmap-future-6': 'Integrare calendar (Google Calendar sync)',
+        'roadmap-future-7': 'Mod offline cu sincronizare la reconectare',
+        'roadmap-future-8': 'Audit trail complet cu revert la versiuni anterioare',
     },
     en: {
         // Dashboard
@@ -474,6 +512,7 @@ export const translations = {
         'chat-error': 'Error communicating with AI. Please try again.',
         'chat-invalid-key': 'Invalid API key. Check your settings.',
         'chat-rate-limit': 'Too many requests. Wait a few seconds.',
+        'chat-delete-cancelled': 'Deletion cancelled.',
 
         // Nav items
         'nav-dashboard': 'Dashboard',
@@ -482,7 +521,44 @@ export const translations = {
         'nav-productivity': 'Productivity',
         'nav-upload': 'Upload File',
         'nav-reports': 'Reports',
+        'nav-logs': 'Logs',
+        'nav-roadmap': 'Roadmap',
         'nav-info': 'Info',
+
+        // Logs
+        'logs-title': 'Activity Log',
+        'logs-loading': 'Loading...',
+        'logs-empty': 'No activity recorded.',
+        'logs-time': 'Time',
+        'logs-user': 'User',
+        'logs-type': 'Type',
+        'logs-action': 'Action',
+        'logs-details': 'Details',
+        'logs-filter-all': 'All',
+        'logs-refresh': 'Refresh',
+
+        // Roadmap
+        'roadmap-title': 'Roadmap',
+        'roadmap-bugs-title': 'Known Bugs',
+        'roadmap-findings-title': 'Findings & Recommended Improvements',
+        'roadmap-future-title': 'Future Development',
+        'roadmap-bug-1': 'Gemini API returns 404 on some browsers due to cache — requires Ctrl+Shift+R',
+        'roadmap-bug-2': 'API request rate limited without configured Google billing profile',
+        'roadmap-bug-3': 'Cross-Origin-Opener-Policy blocks login popup on some browsers',
+        'roadmap-finding-1': 'Accessibility — missing ARIA attributes, keyboard navigation, insufficient contrast on secondary text',
+        'roadmap-finding-2': 'Performance — planner table generates 2000+ DOM nodes; would benefit from virtualization',
+        'roadmap-finding-3': 'Security — Gemini API key is exposed client-side; should be proxied via Cloud Functions',
+        'roadmap-finding-4': 'Loading states — missing spinners/skeletons when loading data from Firestore',
+        'roadmap-finding-5': 'Data validation — missing schema validation when writing to Firestore',
+        'roadmap-finding-6': 'Chat history — lost on page reload (in-memory only)',
+        'roadmap-future-1': 'Persist chat history in localStorage',
+        'roadmap-future-2': 'Export reports to PDF / Excel',
+        'roadmap-future-3': 'Push notifications for schedule changes',
+        'roadmap-future-4': 'User roles (admin, manager, viewer)',
+        'roadmap-future-5': 'Interactive dashboard with charts (drag-and-drop on planner)',
+        'roadmap-future-6': 'Calendar integration (Google Calendar sync)',
+        'roadmap-future-7': 'Offline mode with sync on reconnect',
+        'roadmap-future-8': 'Complete audit trail with version rollback',
     },
     it: {
         // Dashboard
@@ -716,6 +792,7 @@ export const translations = {
         'chat-error': 'Errore nella comunicazione con l\'AI. Riprova.',
         'chat-invalid-key': 'Chiave API non valida. Controlla le impostazioni.',
         'chat-rate-limit': 'Troppe richieste. Attendi qualche secondo.',
+        'chat-delete-cancelled': 'Eliminazione annullata.',
 
         // Nav items
         'nav-dashboard': 'Dashboard',
@@ -724,7 +801,44 @@ export const translations = {
         'nav-productivity': 'Produttività',
         'nav-upload': 'Carica File',
         'nav-reports': 'Rapporti',
+        'nav-logs': 'Registro',
+        'nav-roadmap': 'Roadmap',
         'nav-info': 'Informazioni',
+
+        // Logs
+        'logs-title': 'Registro Attività',
+        'logs-loading': 'Caricamento...',
+        'logs-empty': 'Nessuna attività registrata.',
+        'logs-time': 'Ora',
+        'logs-user': 'Utente',
+        'logs-type': 'Tipo',
+        'logs-action': 'Azione',
+        'logs-details': 'Dettagli',
+        'logs-filter-all': 'Tutti',
+        'logs-refresh': 'Aggiorna',
+
+        // Roadmap
+        'roadmap-title': 'Roadmap',
+        'roadmap-bugs-title': 'Bug Noti',
+        'roadmap-findings-title': 'Osservazioni e Miglioramenti Raccomandati',
+        'roadmap-future-title': 'Sviluppi Futuri',
+        'roadmap-bug-1': 'Gemini API restituisce 404 su alcuni browser a causa della cache — richiede Ctrl+Shift+R',
+        'roadmap-bug-2': 'Tasso di richieste API limitato senza profilo di fatturazione Google configurato',
+        'roadmap-bug-3': 'Cross-Origin-Opener-Policy blocca il popup di login su alcuni browser',
+        'roadmap-finding-1': 'Accessibilità — mancano attributi ARIA, navigazione da tastiera, contrasto insufficiente sul testo secondario',
+        'roadmap-finding-2': 'Prestazioni — la tabella del planner genera 2000+ nodi DOM; beneficerebbe della virtualizzazione',
+        'roadmap-finding-3': 'Sicurezza — la chiave API Gemini è esposta lato client; dovrebbe essere proxata tramite Cloud Functions',
+        'roadmap-finding-4': 'Stati di caricamento — mancano spinner/skeleton durante il caricamento dati da Firestore',
+        'roadmap-finding-5': 'Validazione dati — manca la validazione dello schema nella scrittura su Firestore',
+        'roadmap-finding-6': 'Cronologia chat — si perde al ricaricamento della pagina (solo in memoria)',
+        'roadmap-future-1': 'Persistenza della cronologia chat in localStorage',
+        'roadmap-future-2': 'Esportazione rapporti in PDF / Excel',
+        'roadmap-future-3': 'Notifiche push per cambiamenti di programma',
+        'roadmap-future-4': 'Ruoli utente (admin, manager, visualizzatore)',
+        'roadmap-future-5': 'Dashboard con grafici interattivi (drag-and-drop sul planner)',
+        'roadmap-future-6': 'Integrazione calendario (sincronizzazione Google Calendar)',
+        'roadmap-future-7': 'Modalità offline con sincronizzazione alla riconnessione',
+        'roadmap-future-8': 'Audit trail completo con rollback a versioni precedenti',
     }
 };
 

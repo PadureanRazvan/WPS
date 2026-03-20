@@ -11,6 +11,7 @@ import { setTheme, updateLanguageUI, showSection, openEditModal, translatePage, 
 import { initLogoAnimation } from './logo-animation.js';
 import { initializeChat, cleanupChat } from './chat.js';
 import { loginWithGoogle, logout, onAuthChange } from './auth.js';
+import { initializeLogs, renderLogsSection, setLogUser, logActivity } from './logs.js';
 
 // --- Global State ---
 let currentLanguage = localStorage.getItem('language') || 'ro';
@@ -38,6 +39,7 @@ async function initializeApp() {
     updateAverageProductivityCard(); // Update after productivity data is loaded
     initializeCharts(); // After productivity so chart has real data
     initializeReports();
+    initializeLogs();
 
     // Initialize core UI elements and event listeners
     initializeUI();
@@ -190,10 +192,14 @@ document.addEventListener('DOMContentLoaded', () => {
         // On login
         async (user) => {
             showApp(user);
+            setLogUser(user);
             await initializeApp();
+            logActivity('auth', 'login', { email: user.email, name: user.displayName || '' });
         },
         // On logout
         () => {
+            logActivity('auth', 'logout');
+            setLogUser(null);
             showLoginScreen();
             // Clean up listeners
             cleanupPlanner();
