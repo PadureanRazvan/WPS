@@ -16,9 +16,9 @@
     --warning: #ff9800;
     --error: #f44336;
     --hover: rgba(255, 215, 0, 0.15); /* More noticeable hover */
-    --today-highlight-bg: #444; /* Darker yellow for dark mode */
-    --today-highlight-border: #666; /* Even darker for border */
-    --today-highlight-text: #fff;
+    --today-highlight-bg: rgba(255, 215, 0, 0.12); /* Subtle gold for dark mode */
+    --today-highlight-border: rgba(255, 215, 0, 0.4); /* Gold border */
+    --today-highlight-text: #ffd700;
     --space-gradient: linear-gradient(135deg, #0a0e27 0%, #1a237e 50%, #0a0e27 100%);
     --ai-glow: 0 0 10px rgba(255, 215, 0, 0.3), 0 0 20px rgba(255, 215, 0, 0.2);
     --pulse-animation: pulse 2s infinite;

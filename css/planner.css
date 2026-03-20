@@ -346,22 +346,7 @@
 }
 
 /* Hover effects */
-.unified-planner-table tbody tr:hover td {
-    background: var(--hover);
-    box-shadow: var(--ai-glow);
-}
-
-/* Ensure sticky columns also get the correct hover background */
-.unified-planner-table tbody tr:hover td:nth-child(1),
-.unified-planner-table tbody tr:hover td:nth-child(2),
-.unified-planner-table tbody tr:hover td:last-child {
-    background: var(--hover);
-}
-
-/* Preserve selected cell styling on row hover */
-.unified-planner-table tbody tr:hover td.selected {
-    background-color: rgba(255, 215, 0, 0.3) !important;
-}
+/* No row hover highlight — only individual cell hover via .planner-cell:hover */
 
 /* Legacy planner table styles - DEPRECATED - Use unified-planner-table instead */
 /*
@@ -429,10 +414,9 @@
 }
 
 .planner-cell.selected {
-    background-color: rgba(255, 215, 0, 0.3) !important;
-    box-shadow: inset 0 0 0 2px var(--accent), var(--ai-glow);
+    background-color: rgba(255, 215, 0, 0.35) !important;
+    box-shadow: inset 0 0 0 2px var(--accent);
     z-index: 5;
-    animation: var(--pulse-animation);
 }
 
 .planner-cell.selecting {
@@ -771,8 +755,7 @@
     border-left: 1px solid var(--border); /* match regular cell border */
 }
 
-/* Disable yellow (today) & orange (weekend) row/column highlights */
-.unified-planner-table .today,
+/* Disable orange weekend row/column highlights (keep today) */
 .unified-planner-table .weekend,
 .date-header-row .weekend {
     background: transparent !important;

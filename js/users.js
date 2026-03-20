@@ -81,11 +81,6 @@ function setupNewUserForm() {
             showTemporaryMessage("Please fill all required fields.", "error");
             return;
         }
-        if (!username.endsWith('.fsp')) {
-            showTemporaryMessage("Username must end with .fsp", "error");
-            return;
-        }
-
         const newUser = {
             fullName,
             username,
@@ -202,11 +197,7 @@ async function handleInlineEdit(e) {
         showTemporaryMessage("User updated.", "success", 1000);
         return; // Early return as we updated two fields
     } else if (field === 'username') {
-        if (!value.endsWith('.fsp')) {
-            showTemporaryMessage("Username must end with .fsp", "error");
-            renderUsersTable();
-            return;
-        }
+        // No .fsp validation needed
     } else if (field === 'fullName' && !value) {
         showTemporaryMessage("Full name cannot be empty.", "error");
         renderUsersTable();

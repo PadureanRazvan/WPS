@@ -437,10 +437,7 @@ async function handleCreateAgent() {
         showTemporaryMessage("Please fill all required fields.", "error");
         return;
     }
-    if (!username.endsWith('.fsp')) {
-        showTemporaryMessage("Username must end with .fsp", "error");
-        return;
-    }
+    // No .fsp validation needed
 
     // Construct the new agent object
     const newAgent = {
