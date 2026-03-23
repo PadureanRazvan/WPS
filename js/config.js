@@ -287,6 +287,7 @@ export const translations = {
         'roadmap-future-8': 'Audit trail complet cu revert la versiuni anterioare — Implementat',
         'roadmap-future-9': 'Logare acțiuni planner (editare celule, creare/ștergere agenți) în jurnal',
         'roadmap-future-10': 'Proxy API key prin Cloud Functions pentru securitate',
+        'roadmap-future-11': 'Point-in-Time Restore — salvare automată a snapshot-urilor plannerului în Firestore, cu posibilitatea de a restaura starea echipei la orice moment din trecut',
     },
     en: {
         // Dashboard
@@ -575,6 +576,7 @@ export const translations = {
         'roadmap-future-8': 'Complete audit trail with version rollback — Implemented',
         'roadmap-future-9': 'Log planner actions (cell edits, agent create/delete) in activity journal',
         'roadmap-future-10': 'Proxy API key via Cloud Functions for security',
+        'roadmap-future-11': 'Point-in-Time Restore — automatic planner snapshots saved to Firestore, with the ability to restore team state to any point in time',
     },
     it: {
         // Dashboard
@@ -863,6 +865,7 @@ export const translations = {
         'roadmap-future-8': 'Audit trail completo con rollback a versioni precedenti — Implementato',
         'roadmap-future-9': 'Registrazione azioni planner (modifica celle, creazione/eliminazione agenti) nel diario',
         'roadmap-future-10': 'Proxy chiave API tramite Cloud Functions per sicurezza',
+        'roadmap-future-11': 'Point-in-Time Restore — salvataggio automatico degli snapshot del planner in Firestore, con possibilità di ripristinare lo stato del team in qualsiasi momento passato',
     }
 };
 
