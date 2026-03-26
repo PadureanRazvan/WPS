@@ -5,7 +5,7 @@ import { languageConfig, translations, PLANNER_TEAMS, TEAM_DISPLAY_NAMES } from 
 function getLang() { return localStorage.getItem('language') || 'ro'; }
 export function t(key) { const l = getLang(); return (translations[l] && translations[l][key]) || key; }
 // Import the new Firestore functions from planner.js
-import { addAgent, applyChangesToSelectedCells, renderPlannerTable } from './planner.js';
+import { addAgent, applyChangesToSelectedCells, renderPlannerTable, clearSelection } from './planner.js';
 import { updateDashboard, updateAverageProductivityCard } from './dashboard.js';
 import { initializeCharts } from './charts.js';
 import { getPlannerData } from './planner.js';
@@ -503,7 +503,8 @@ export function saveModalChanges() {
     }
 
     closeEditModal();
-    // The success message is now shown in applyChangesToSelectedCells
+    // Clear selection after saving so counter disappears
+    clearSelection();
 }
 
 // --- New User Form Logic ---
