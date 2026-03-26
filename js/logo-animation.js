@@ -14,31 +14,16 @@ export function initLogoAnimation(canvasId = 'sherpaLogo', canvasSize = 120) {
 
     const cx = size / 2;
     const cy = size / 2;
-    const R = size * 0.32;
+    const R = size * 0.34;
 
-    // ── Earth texture loading ──
+    // ── Earth texture ──
     let earthImg = null;
-    let earthData = null;
-    let earthW = 0, earthH = 0;
-
     const img = new Image();
     img.crossOrigin = 'anonymous';
-    // NASA Blue Marble — public domain
     img.src = 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Blue_Marble_2002.png/600px-Blue_Marble_2002.png';
-    img.onload = () => {
-        // Draw to offscreen canvas to get pixel data
-        const oc = document.createElement('canvas');
-        oc.width = img.width;
-        oc.height = img.height;
-        const octx = oc.getContext('2d');
-        octx.drawImage(img, 0, 0);
-        earthData = octx.getImageData(0, 0, img.width, img.height).data;
-        earthW = img.width;
-        earthH = img.height;
-        earthImg = img;
-    };
+    img.onload = () => { earthImg = img; };
 
-    // ── Particle system for non-globe shapes ──
+    // ── Particle system ──
     const numParticles = 160;
     const particles = [];
 
@@ -48,7 +33,7 @@ export function initLogoAnimation(canvasId = 'sherpaLogo', canvasSize = 120) {
             for (let i = 0; i < numParticles; i++) {
                 const phi = Math.acos(1 - 2 * (i + 0.5) / numParticles);
                 const theta = Math.PI * (1 + Math.sqrt(5)) * i;
-                pts.push({ phi, theta, r: R * 0.85 });
+                pts.push({ phi, theta, r: R * 0.82 });
             }
             return pts;
         },
@@ -66,7 +51,7 @@ export function initLogoAnimation(canvasId = 'sherpaLogo', canvasSize = 120) {
             for (let i = 0; i < numParticles; i++) {
                 const angle = (i / numParticles) * Math.PI * 2;
                 const h = (i % 4) / 4;
-                const r = R * 0.85 * (1 - h * 0.7);
+                const r = R * 0.82 * (1 - h * 0.7);
                 pts.push({ phi: Math.PI * 0.25 + h * Math.PI * 0.55, theta: angle, r });
             }
             return pts;
@@ -84,7 +69,7 @@ export function initLogoAnimation(canvasId = 'sherpaLogo', canvasSize = 120) {
         }
     };
 
-    // Initialize particles for non-globe shapes
+    // Init particles
     const initPts = shapes.sphere();
     for (let i = 0; i < numParticles; i++) {
         const t = initPts[i];
@@ -101,10 +86,10 @@ export function initLogoAnimation(canvasId = 'sherpaLogo', canvasSize = 120) {
 
     // ── State ──
     const modes = ['globe', 'sphere', 'torus', 'mountain', 'double'];
-    let currentMode = 0; // start with globe
+    let currentMode = 0;
     let morphProgress = 1;
     let morphTimer = 0;
-    let globeFade = 1; // 1 = full globe, 0 = full particles
+    let globeFade = 1;
     const morphDuration = 2.0;
     const holdDuration = 4;
     const globeHoldDuration = 7;
@@ -112,9 +97,7 @@ export function initLogoAnimation(canvasId = 'sherpaLogo', canvasSize = 120) {
     function startMorph() {
         const nextMode = (currentMode + 1) % modes.length;
         if (modes[nextMode] !== 'globe') {
-            // Morphing between particle shapes
-            const shapeKey = modes[nextMode];
-            const toPts = shapes[shapeKey]();
+            const toPts = shapes[modes[nextMode]]();
             for (let i = 0; i < numParticles; i++) {
                 const p = particles[i];
                 p.fromPhi = p.phi;
@@ -136,93 +119,85 @@ export function initLogoAnimation(canvasId = 'sherpaLogo', canvasSize = 120) {
     }
 
     let rotationY = 0;
-    let rotationX = 0.2;
     let lastTime = performance.now();
 
-    // ── Render textured 3D globe ──
+    // ── Render Earth globe using canvas clipping + scrolling texture ──
     function renderGlobe(alpha) {
-        if (!earthData) return;
+        if (!earthImg) return;
 
-        const imgOut = ctx.createImageData(size * dpr, size * dpr);
-        const out = imgOut.data;
-        const cosRX = Math.cos(rotationX);
-        const sinRX = Math.sin(rotationX);
-        const cosRY = Math.cos(-rotationY);
-        const sinRY = Math.sin(-rotationY);
+        ctx.save();
+        ctx.globalAlpha = alpha;
 
-        for (let py = 0; py < size; py++) {
-            for (let px = 0; px < size; px++) {
-                const dx = px - cx;
-                const dy = py - cy;
-                const distSq = dx * dx + dy * dy;
-                if (distSq > R * R) continue;
+        // Clip to circle
+        ctx.beginPath();
+        ctx.arc(cx, cy, R, 0, Math.PI * 2);
+        ctx.closePath();
+        ctx.clip();
 
-                // Map screen pixel to sphere surface point
-                const dz = Math.sqrt(R * R - distSq);
+        // Dark ocean background
+        ctx.fillStyle = '#0a1628';
+        ctx.fill();
 
-                // Undo view rotation to get original sphere coords
-                let x = dx;
-                let y = dy * cosRX + dz * sinRX;
-                let z = -dy * sinRX + dz * cosRX;
+        // Calculate how much of the texture to show based on rotation
+        // The image is equirectangular: full width = 360°
+        const imgAspect = earthImg.width / earthImg.height;
+        const drawH = R * 2.2; // slightly larger than diameter for tilt effect
+        const drawW = drawH * imgAspect;
 
-                const x2 = x * cosRY - z * sinRY;
-                const z2 = x * sinRY + z * cosRY;
+        // Map rotation to horizontal scroll offset
+        const totalScroll = drawW;
+        const scrollX = ((rotationY / (Math.PI * 2)) * totalScroll) % totalScroll;
 
-                // Convert to lat/lon for texture lookup
-                const lat = Math.asin(Math.max(-1, Math.min(1, y / R)));
-                const lon = Math.atan2(x2, z2);
+        const yOff = cy - drawH / 2 + R * 0.05; // slight vertical offset for tilt
 
-                // Map to texture coords
-                const u = ((lon / Math.PI + 1) / 2) * earthW;
-                const v = (0.5 - lat / Math.PI) * earthH;
-
-                const tx = Math.floor(u) % earthW;
-                const ty = Math.max(0, Math.min(earthH - 1, Math.floor(v)));
-                const ti = (ty * earthW + tx) * 4;
-
-                // Lighting: simple diffuse based on z depth
-                const light = 0.4 + 0.6 * (dz / R);
-
-                // Atmosphere edge glow
-                const edgeDist = Math.sqrt(distSq) / R;
-                const atmo = edgeDist > 0.85 ? (edgeDist - 0.85) / 0.15 : 0;
-
-                for (let sy = 0; sy < dpr; sy++) {
-                    for (let sx = 0; sx < dpr; sx++) {
-                        const oi = ((py * dpr + sy) * size * dpr + (px * dpr + sx)) * 4;
-                        const er = earthData[ti];
-                        const eg = earthData[ti + 1];
-                        const eb = earthData[ti + 2];
-
-                        // Blend earth color with atmosphere blue at edges
-                        out[oi] = Math.round((er * light) * (1 - atmo) + 100 * atmo);
-                        out[oi + 1] = Math.round((eg * light) * (1 - atmo) + 160 * atmo);
-                        out[oi + 2] = Math.round((eb * light) * (1 - atmo) + 255 * atmo);
-                        out[oi + 3] = Math.round(255 * alpha);
-                    }
-                }
-            }
+        // Draw texture twice for seamless wrapping
+        ctx.drawImage(earthImg, cx - R - scrollX, yOff, drawW, drawH);
+        ctx.drawImage(earthImg, cx - R - scrollX + drawW, yOff, drawW, drawH);
+        if (scrollX > 0) {
+            ctx.drawImage(earthImg, cx - R - scrollX - drawW, yOff, drawW, drawH);
         }
 
-        ctx.putImageData(imgOut, 0, 0);
+        ctx.restore();
 
-        // Atmosphere glow overlay
-        const glow = ctx.createRadialGradient(cx, cy, R * 0.9, cx, cy, R * 1.25);
-        glow.addColorStop(0, `rgba(100, 180, 255, ${0.08 * alpha})`);
-        glow.addColorStop(0.5, `rgba(80, 140, 220, ${0.04 * alpha})`);
-        glow.addColorStop(1, 'rgba(0,0,0,0)');
-        ctx.fillStyle = glow;
+        // Sphere shading overlay — makes it look 3D
+        ctx.save();
+        const shading = ctx.createRadialGradient(
+            cx - R * 0.3, cy - R * 0.2, R * 0.1,  // light source offset
+            cx, cy, R
+        );
+        shading.addColorStop(0, 'rgba(255, 255, 255, 0.08)');
+        shading.addColorStop(0.4, 'rgba(255, 255, 255, 0.02)');
+        shading.addColorStop(0.7, 'rgba(0, 0, 0, 0.15)');
+        shading.addColorStop(1, 'rgba(0, 0, 0, 0.5)');
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = shading;
         ctx.beginPath();
-        ctx.arc(cx, cy, R * 1.25, 0, Math.PI * 2);
+        ctx.arc(cx, cy, R, 0, Math.PI * 2);
         ctx.fill();
+        ctx.restore();
+
+        // Atmosphere glow
+        ctx.save();
+        ctx.globalAlpha = alpha * 0.7;
+        const atmo = ctx.createRadialGradient(cx, cy, R * 0.92, cx, cy, R * 1.2);
+        atmo.addColorStop(0, 'rgba(80, 160, 255, 0.15)');
+        atmo.addColorStop(0.5, 'rgba(60, 120, 220, 0.06)');
+        atmo.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = atmo;
+        ctx.beginPath();
+        ctx.arc(cx, cy, R * 1.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
     }
 
     // ── Render particles ──
     function renderParticles(now, alpha) {
+        if (alpha < 0.01) return;
+
         const cosRY = Math.cos(rotationY);
         const sinRY = Math.sin(rotationY);
-        const cosRX = Math.cos(rotationX);
-        const sinRX = Math.sin(rotationX);
+        const cosRX = Math.cos(0.25);
+        const sinRX = Math.sin(0.25);
 
         const projected = [];
         for (let i = 0; i < numParticles; i++) {
@@ -296,8 +271,7 @@ export function initLogoAnimation(canvasId = 'sherpaLogo', canvasSize = 120) {
         lastTime = now;
 
         const isGlobe = modes[currentMode] === 'globe';
-        rotationY += dt * (isGlobe ? 0.2 : 0.5);
-        rotationX = 0.2 + Math.sin(now * 0.0002) * 0.08;
+        rotationY += dt * (isGlobe ? 0.15 : 0.5);
 
         // Morph timing
         if (morphProgress >= 1) {
@@ -312,15 +286,12 @@ export function initLogoAnimation(canvasId = 'sherpaLogo', canvasSize = 120) {
             const ease = easeInOut(morphProgress);
 
             if (isGlobe) {
-                // Fade in globe
                 globeFade = ease;
             } else if (modes[(currentMode - 1 + modes.length) % modes.length] === 'globe') {
-                // Fading out from globe
                 globeFade = 1 - ease;
             }
 
-            if (!isGlobe && modes[currentMode] !== 'globe') {
-                // Normal particle morph
+            if (!isGlobe && modes[(currentMode - 1 + modes.length) % modes.length] !== 'globe') {
                 for (let i = 0; i < numParticles; i++) {
                     const p = particles[i];
                     p.phi = p.fromPhi + (p.toPhi - p.fromPhi) * ease;
@@ -333,16 +304,11 @@ export function initLogoAnimation(canvasId = 'sherpaLogo', canvasSize = 120) {
 
         ctx.clearRect(0, 0, size, size);
 
-        // Render based on current state
-        if (isGlobe && earthData) {
+        if ((isGlobe || globeFade > 0.01) && earthImg) {
             renderGlobe(globeFade);
-            if (globeFade < 1) renderParticles(now, 1 - globeFade);
-        } else if (globeFade > 0.01 && earthData) {
-            renderGlobe(globeFade);
-            renderParticles(now, 1 - globeFade);
-        } else {
-            globeFade = 0;
-            renderParticles(now, 1);
+        }
+        if (!isGlobe || globeFade < 0.99) {
+            renderParticles(now, isGlobe ? 1 - globeFade : 1);
         }
 
         requestAnimationFrame(animate);
