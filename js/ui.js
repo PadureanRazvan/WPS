@@ -1,9 +1,9 @@
 // js/ui.js
 
 // === THEME AND LANGUAGE FUNCTIONALITY ===
-import { languageConfig, translations } from './config.js';
+import { languageConfig, translations, PLANNER_TEAMS, TEAM_DISPLAY_NAMES } from './config.js';
 function getLang() { return localStorage.getItem('language') || 'ro'; }
-function t(key) { const l = getLang(); return (translations[l] && translations[l][key]) || key; }
+export function t(key) { const l = getLang(); return (translations[l] && translations[l][key]) || key; }
 // Import the new Firestore functions from planner.js
 import { addAgent, applyChangesToSelectedCells, renderPlannerTable } from './planner.js';
 import { updateDashboard, updateAverageProductivityCard } from './dashboard.js';
@@ -392,11 +392,10 @@ export function showWorkingHoursSection() {
     workingSection.style.display = 'block';
     
     // Create team input fields
-    const teams = ['RO', 'HU', 'IT', 'NL', 'CS', 'SK', 'SV-SE', '2L', 'QA', 'TL'];
-    const specialTeamLabels = { '2L': '2nd Level', 'QA': 'QA', 'TL': 'Team Lead' };
+    const teams = PLANNER_TEAMS;
     teamAllocation.innerHTML = teams.map(team => `
         <div class="team-input-group">
-            <label for="${team.toLowerCase()}Hours">${specialTeamLabels[team] || team + ' zooplus'}</label>
+            <label for="${team.toLowerCase()}Hours">${TEAM_DISPLAY_NAMES[team] || team + ' zooplus'}</label>
             <input type="number" 
                    id="${team.toLowerCase()}Hours" 
                    class="team-input" 

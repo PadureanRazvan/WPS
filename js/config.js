@@ -28,8 +28,23 @@ export const translations = {
         'primary-team': 'Echipa Principală',
         'hire-date': 'Data Angajării',
         'active': 'Activ',
+        'inactive': 'Inactiv',
         'actions': 'Acțiuni',
         'delete': 'Șterge',
+        'contract-change-to-pt': 'Schimbare la Part-time',
+        'contract-change-to-ft': 'Schimbare la Full-time',
+        'select-start-date': 'Selectează data de începere.',
+        'date-must-be-current-month': 'Data trebuie să fie în luna curentă.',
+        'select-start-date-deact': 'Selectează data de început.',
+        'end-date-after-start': 'Data de sfârșit trebuie să fie după data de început.',
+        'connecting': 'Se conectează...',
+        'login-google': 'Conectează-te cu Google',
+        'auth-popup-closed': 'Fereastra de autentificare a fost închisă.',
+        'auth-popup-blocked': 'Fereastra popup a fost blocată. Permite popup-urile pentru acest site.',
+        'auth-cancelled': 'Cererea de autentificare a fost anulată.',
+        'auth-network-error': 'Eroare de rețea. Verifică conexiunea la internet.',
+        'auth-unauthorized-domain': 'Domeniul nu este autorizat. Contactează administratorul.',
+        'auth-generic-error': 'Eroare la autentificare. Încearcă din nou.',
 
         // Planner
         'planner-title': 'Planificator',
@@ -287,7 +302,7 @@ export const translations = {
         'roadmap-bug-3': 'Cross-Origin-Opener-Policy blochează popup-ul de login pe unele browsere',
         'roadmap-bug-4': 'Gemini 3.x „thinking mode" activ implicit provoacă eroare 400 cu function calling — Rezolvat',
         'roadmap-bug-5': 'Function response trimis ca array în loc de obiect — eroare proto serialization — Rezolvat',
-        'roadmap-bug-6': 'Acțiunile de editare din planner nu sunt înregistrate în jurnal',
+        'roadmap-bug-6': 'Acțiunile de editare din planner nu sunt înregistrate în jurnal — Rezolvat',
         'roadmap-finding-1': 'Accesibilitate — lipsesc atribute ARIA, navigare cu tastatura, contrast insuficient pe text secundar',
         'roadmap-finding-2': 'Performanță — tabelul planner-ului generează 2000+ noduri DOM; ar beneficia de virtualizare',
         'roadmap-finding-3': 'Securitate — cheia Gemini API este expusă client-side; ar trebui proxy prin Cloud Functions',
@@ -337,8 +352,23 @@ export const translations = {
         'primary-team': 'Primary Team',
         'hire-date': 'Hire Date',
         'active': 'Active',
+        'inactive': 'Inactive',
         'actions': 'Actions',
         'delete': 'Delete',
+        'contract-change-to-pt': 'Change to Part-time',
+        'contract-change-to-ft': 'Change to Full-time',
+        'select-start-date': 'Please select a start date.',
+        'date-must-be-current-month': 'The date must be in the current month.',
+        'select-start-date-deact': 'Please select a start date.',
+        'end-date-after-start': 'End date must be after the start date.',
+        'connecting': 'Connecting...',
+        'login-google': 'Sign in with Google',
+        'auth-popup-closed': 'The authentication window was closed.',
+        'auth-popup-blocked': 'The popup was blocked. Please allow popups for this site.',
+        'auth-cancelled': 'The authentication request was cancelled.',
+        'auth-network-error': 'Network error. Please check your internet connection.',
+        'auth-unauthorized-domain': 'Domain not authorized. Contact the administrator.',
+        'auth-generic-error': 'Authentication error. Please try again.',
 
         // Planner
         'planner-title': 'Planner',
@@ -646,8 +676,23 @@ export const translations = {
         'primary-team': 'Team Principale',
         'hire-date': 'Data di Assunzione',
         'active': 'Attivo',
+        'inactive': 'Inattivo',
         'actions': 'Azioni',
         'delete': 'Elimina',
+        'contract-change-to-pt': 'Cambio a Part-time',
+        'contract-change-to-ft': 'Cambio a Full-time',
+        'select-start-date': 'Seleziona la data di inizio.',
+        'date-must-be-current-month': 'La data deve essere nel mese corrente.',
+        'select-start-date-deact': 'Seleziona la data di inizio.',
+        'end-date-after-start': 'La data di fine deve essere successiva alla data di inizio.',
+        'connecting': 'Connessione...',
+        'login-google': 'Accedi con Google',
+        'auth-popup-closed': 'La finestra di autenticazione è stata chiusa.',
+        'auth-popup-blocked': 'Il popup è stato bloccato. Consenti i popup per questo sito.',
+        'auth-cancelled': 'La richiesta di autenticazione è stata annullata.',
+        'auth-network-error': 'Errore di rete. Controlla la connessione internet.',
+        'auth-unauthorized-domain': 'Dominio non autorizzato. Contatta l\'amministratore.',
+        'auth-generic-error': 'Errore di autenticazione. Riprova.',
 
         // Planner
         'planner-title': 'Pianificatore',
@@ -951,4 +996,38 @@ export const languageConfig = {
     ro: { flag: '🇷🇴', name: 'Română', code: 'RO' },
     en: { flag: '🇺🇸', name: 'English', code: 'EN' },
     it: { flag: '🇮🇹', name: 'Italiano', code: 'IT' }
+};
+
+// === CENTRALIZED CONSTANTS ===
+
+// Leave/absence codes — single source of truth
+export const LEAVE_CODES = ['Co', 'CM', 'LB', 'SL', 'MA', 'DO', 'DC', 'DZ'];
+
+// Check if a schedule value is a non-working code (leave, deactivated, or empty)
+export function isNonWorkingCode(value) {
+    const trimmed = (value || '').trim();
+    return !trimmed || LEAVE_CODES.includes(trimmed);
+}
+
+// Normalize team codes for display: SK and CZ merge into CS
+export function normalizeTeamForDisplay(code) {
+    if (code === 'SK' || code === 'CZ') return 'CS';
+    return code;
+}
+
+// All teams used in the planner allocation UI
+export const PLANNER_TEAMS = ['RO', 'HU', 'IT', 'NL', 'CS', 'SK', 'SV-SE', '2L', 'QA', 'TL'];
+
+// Teams used for productivity display (main customer-facing teams)
+export const PRODUCTIVITY_TEAMS = ['RO', 'HU', 'IT', 'NL', 'CS', 'SV-SE', 'DE', 'BRO', 'BDE'];
+
+// Valid team codes in uploaded files
+export const UPLOAD_VALID_TEAMS = ['RO', 'HU', 'IT', 'NL', 'CS', 'SK', 'SV-SE', 'DE', 'BRO', 'BDE'];
+
+// Team display names for reports
+export const TEAM_DISPLAY_NAMES = {
+    'RO': 'RO zooplus', 'HU': 'HU zooplus', 'IT': 'IT zooplus',
+    'NL': 'NL zooplus', 'CS': 'CS zooplus', 'SK': 'SK zooplus',
+    'SV-SE': 'SV-SE zooplus', 'DE': 'DE zooplus', 'BRO': 'BRO zooplus', 'BDE': 'BDE zooplus',
+    '2L': '2nd Level', 'QA': 'QA', 'TL': 'Team Lead'
 };

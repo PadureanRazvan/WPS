@@ -2,7 +2,7 @@
 import { db } from './firebase-config.js';
 import { collection, onSnapshot, Timestamp } from "https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore.js";
 import { addAgent, updateAgent, deleteAgent } from './planner.js';
-import { showTemporaryMessage } from './ui.js';
+import { showTemporaryMessage, t } from './ui.js';
 import { logActivity } from './logs.js';
 
 let usersData = [];
@@ -213,7 +213,7 @@ function renderUsersTable() {
             <td class="hide-mobile"><input type="date" class="inline-input" value="${hireDateStr}" data-field="hireDate"></td>
             <td style="text-align: center;">
                 <button class="btn-status ${user.isActive ? 'active' : 'inactive'}" data-field="isActive" data-id="${user.id}">
-                    ${user.isActive ? 'Activ' : 'Inactiv'}
+                    ${user.isActive ? t('active') : t('inactive')}
                 </button>
             </td>
             <td><button class="btn-ghost delete-btn" data-id="${user.id}" data-translate="delete">Delete</button></td>
@@ -259,10 +259,10 @@ function openContractChangeModal(userId, newContractType) {
 
     // Set title based on change type
     if (newContractType === 'Part-time') {
-        title.textContent = `${user.fullName} — Schimbare la Part-time`;
+        title.textContent = `${user.fullName} — ${t('contract-change-to-pt')}`;
         hoursGroup.style.display = '';
     } else {
-        title.textContent = `${user.fullName} — Schimbare la Full-time`;
+        title.textContent = `${user.fullName} — ${t('contract-change-to-ft')}`;
         hoursGroup.style.display = 'none';
     }
 
@@ -291,7 +291,7 @@ function openContractChangeModal(userId, newContractType) {
     newSaveBtn.addEventListener('click', async () => {
         const fromDateStr = document.getElementById('contractChangeDate').value;
         if (!fromDateStr) {
-            showTemporaryMessage("Selectează data de începere.", "error");
+            showTemporaryMessage(t('select-start-date'), "error");
             return;
         }
 
@@ -302,7 +302,7 @@ function openContractChangeModal(userId, newContractType) {
 
         // Validate date is in current month
         if (fromDate.getFullYear() !== year || fromDate.getMonth() !== month) {
-            showTemporaryMessage("Data trebuie să fie în luna curentă.", "error");
+            showTemporaryMessage(t('date-must-be-current-month'), "error");
             return;
         }
 
@@ -470,14 +470,14 @@ function openDeactivateModal(userId) {
     newSaveBtn.addEventListener('click', async () => {
         const startDate = dateFromInput._selectedDate;
         if (!startDate) {
-            showTemporaryMessage("Selectează data de început.", "error");
+            showTemporaryMessage(t('select-start-date-deact'), "error");
             return;
         }
 
         const endDate = dateToInput._selectedDate || null;
 
         if (endDate && endDate < startDate) {
-            showTemporaryMessage("Data de sfârșit trebuie să fie după data de început.", "error");
+            showTemporaryMessage(t('end-date-after-start'), "error");
             return;
         }
 

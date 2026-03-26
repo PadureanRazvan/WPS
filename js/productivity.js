@@ -4,16 +4,10 @@ import { collection, doc, setDoc, deleteDoc, getDocs } from "https://www.gstatic
 import { getPlannerData } from './planner.js';
 import { getUsersData } from './users.js';
 import { showTemporaryMessage } from './ui.js';
-import { translations } from './config.js';
+import { translations, isNonWorkingCode, normalizeTeamForDisplay, UPLOAD_VALID_TEAMS, PRODUCTIVITY_TEAMS } from './config.js';
 
 function getLang() { return localStorage.getItem('language') || 'ro'; }
 function t(key) { const l = getLang(); return (translations[l] && translations[l][key]) || key; }
-
-// Normalize team codes for display: SK and CZ merge into CS
-function normalizeTeamForDisplay(code) {
-    if (code === 'SK' || code === 'CZ') return 'CS';
-    return code;
-}
 
 // --- State ---
 // Per-date storage: Map<dateKey, { ticketsData: Map, callsData: Map }>
@@ -230,7 +224,7 @@ function parseCSVLine(line) {
 function parseHoursFromDayValue(dayValue) {
     if (!dayValue || typeof dayValue !== 'string') return 0;
     const trimmed = dayValue.trim();
-    if (['Co', 'CM', 'LB', 'SL', 'MA', 'DO', 'DC', 'DZ', ''].includes(trimmed)) return 0;
+    if (isNonWorkingCode(trimmed)) return 0;
     let total = 0;
     trimmed.split('+').forEach(entry => {
         const match = entry.trim().match(/(\d+)/);
@@ -277,7 +271,7 @@ function getHoursForTeamInRange(agent, start, end, teamFilter) {
         const dayIndex = current.getDate() - 1;
         if (dayIndex >= 0 && dayIndex < days.length) {
             const dayValue = days[dayIndex];
-            if (dayValue && typeof dayValue === 'string' && !['Co', 'CM', 'LB', 'SL', 'MA', 'DO', 'DC', 'DZ', ''].includes(dayValue.trim())) {
+            if (dayValue && typeof dayValue === 'string' && !isNonWorkingCode(dayValue.trim())) {
                 dayValue.trim().split('+').forEach(part => {
                     const m = part.trim().match(/^(\d+)\s*([A-Za-z-]+)?$/);
                     if (m) {
@@ -304,7 +298,7 @@ function getTeamsFromPlanner(agent, start, end) {
     const days = agent.days;
     if (!days || !Array.isArray(days)) return [];
 
-    const VALID_TEAMS = ['RO', 'HU', 'IT', 'NL', 'CS', 'SK', 'SV-SE', 'DE', 'BRO', 'BDE'];
+    const VALID_TEAMS = UPLOAD_VALID_TEAMS;
     const teams = new Set();
     const current = new Date(start);
     current.setHours(0, 0, 0, 0);
@@ -315,7 +309,7 @@ function getTeamsFromPlanner(agent, start, end) {
         const dayIndex = current.getDate() - 1;
         if (dayIndex >= 0 && dayIndex < days.length) {
             const dayValue = days[dayIndex];
-            if (dayValue && typeof dayValue === 'string' && !['Co', 'CM', 'LB', 'SL', 'MA', 'DO', 'DC', 'DZ', ''].includes(dayValue.trim())) {
+            if (dayValue && typeof dayValue === 'string' && !isNonWorkingCode(dayValue.trim())) {
                 dayValue.trim().split('+').forEach(part => {
                     const m = part.trim().match(/^\d+\s*([A-Za-z-]+)$/);
                     if (m) {
@@ -519,7 +513,7 @@ function calculateProductivity() {
         if (!agent) return;
 
         // Build full team breakdown from uploaded files
-        const MAIN_TEAMS = ['RO', 'HU', 'IT', 'NL', 'CS', 'SV-SE', 'DE', 'BRO', 'BDE'];
+        const MAIN_TEAMS = PRODUCTIVITY_TEAMS;
         const ticketsByTeam = new Map();
         const callsByTeam = new Map();
         if (tEntry?.teams) {
@@ -722,7 +716,7 @@ function renderDetailView() {
     }
 
     const users = getUsersData();
-    const MAIN_TEAMS = ['RO', 'HU', 'IT', 'NL', 'CS', 'SV-SE'];
+    const MAIN_TEAMS = PRODUCTIVITY_TEAMS;
     const rows = [];
 
     // Iterate each day in the range
@@ -780,7 +774,7 @@ function renderDetailView() {
             const productivity = hours > 0 ? total / hours : 0;
 
             // Teams display
-            const MAIN_TEAMS_D = ['RO', 'HU', 'IT', 'NL', 'CS', 'SV-SE', 'DE', 'BRO', 'BDE'];
+            const MAIN_TEAMS_D = PRODUCTIVITY_TEAMS;
             let teamsDisplay;
             if (currentTeamFilter !== 'all') {
                 teamsDisplay = currentTeamFilter;
@@ -1350,7 +1344,7 @@ export function getAverageProductivity() {
 
             const dayValue = agent.days[dayIndex] || '';
             let hours = 0;
-            if (dayValue && !['Co', 'CM', 'LB', 'SL', 'MA', 'DO', 'DC', 'DZ'].includes(dayValue.trim())) {
+            if (dayValue && !isNonWorkingCode(dayValue.trim())) {
                 dayValue.trim().split('+').forEach(part => {
                     const m = part.trim().match(/(\d+)/);
                     if (m) hours += parseInt(m[1], 10);
@@ -1438,7 +1432,7 @@ export function getProductivityTrendData() {
             // Hours from planner
             const dayValue = agent.days[dayIndex] || '';
             let hours = 0;
-            if (dayValue && !['Co', 'CM', 'LB', 'SL', 'MA', 'DO', 'DC', 'DZ'].includes(dayValue.trim())) {
+            if (dayValue && !isNonWorkingCode(dayValue.trim())) {
                 dayValue.trim().split('+').forEach(part => {
                     const m = part.trim().match(/(\d+)/);
                     if (m) hours += parseInt(m[1], 10);

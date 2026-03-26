@@ -1,6 +1,7 @@
 // js/auth.js - Firebase Authentication Module
 
 import { auth, googleProvider, signInWithPopup, signOut, onAuthStateChanged } from './firebase-config.js';
+import { t } from './ui.js';
 
 /**
  * Sign in with Google popup
@@ -14,7 +15,7 @@ export async function loginWithGoogle() {
             loginBtn.disabled = true;
             loginBtn.innerHTML = `
                 <div class="login-spinner"></div>
-                <span>Se conecteaza...</span>
+                <span>${t('connecting')}</span>
             `;
         }
         if (loginError) loginError.style.display = 'none';
@@ -37,7 +38,7 @@ export async function loginWithGoogle() {
                     <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
                     <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                 </svg>
-                <span>Conecteaza-te cu Google</span>
+                <span>${t('login-google')}</span>
             `;
         }
         throw error;
@@ -84,16 +85,16 @@ export function getCurrentUser() {
 function getErrorMessage(errorCode) {
     switch (errorCode) {
         case 'auth/popup-closed-by-user':
-            return 'Fereastra de autentificare a fost inchisa.';
+            return t('auth-popup-closed');
         case 'auth/popup-blocked':
-            return 'Fereastra popup a fost blocata. Permite popup-urile pentru acest site.';
+            return t('auth-popup-blocked');
         case 'auth/cancelled-popup-request':
-            return 'Cererea de autentificare a fost anulata.';
+            return t('auth-cancelled');
         case 'auth/network-request-failed':
-            return 'Eroare de retea. Verifica conexiunea la internet.';
+            return t('auth-network-error');
         case 'auth/unauthorized-domain':
-            return 'Domeniul nu este autorizat. Contacteaza administratorul.';
+            return t('auth-unauthorized-domain');
         default:
-            return 'Eroare la autentificare. Incearca din nou.';
+            return t('auth-generic-error');
     }
 }

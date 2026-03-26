@@ -1,6 +1,6 @@
 // js/dashboard.js
 import { getAverageProductivity } from './productivity.js';
-import { translations } from './config.js';
+import { translations, isNonWorkingCode, normalizeTeamForDisplay } from './config.js';
 
 let cachedPlannerData = null;
 let currentSelectedDate = null; // null means "today"
@@ -129,7 +129,7 @@ function calculateDailyStats(plannerData, date) {
         if (!dayValue || typeof dayValue !== 'string') return;
 
         const trimmed = dayValue.trim();
-        if (!trimmed || ['Co', 'CM', 'LB', 'SL', 'MA', 'DO', 'DC', 'DZ'].includes(trimmed)) return;
+        if (isNonWorkingCode(trimmed)) return;
 
         let agentHours = 0;
         const entries = trimmed.split('+');
@@ -137,9 +137,7 @@ function calculateDailyStats(plannerData, date) {
             const match = entry.trim().match(/(\d+)\s*([a-zA-Z\-]+)/);
             if (match) {
                 const hours = parseInt(match[1], 10);
-                let teamCode = match[2].toUpperCase();
-                // Normalize SK/CZ to CS for display
-                if (teamCode === 'SK' || teamCode === 'CZ') teamCode = 'CS';
+                let teamCode = normalizeTeamForDisplay(match[2].toUpperCase());
                 totalHours += hours;
                 agentHours += hours;
 

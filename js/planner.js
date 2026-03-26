@@ -5,7 +5,7 @@ import { db } from './firebase-config.js';
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, Timestamp } from "https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore.js";
 import { showTemporaryMessage } from './ui.js';
 import { updateDashboard } from './dashboard.js';
-import { translations } from './config.js';
+import { translations, PLANNER_TEAMS, UPLOAD_VALID_TEAMS } from './config.js';
 import { logActivity } from './logs.js';
 function getLang() { return localStorage.getItem('language') || 'ro'; }
 function t(key) { const l = getLang(); return (translations[l] && translations[l][key]) || key; }
@@ -1064,7 +1064,7 @@ function formatCellContent(day) {
         const cleanedParts = parts.map(part => part.trim().replace(/\s+/g, ''));
         
         // Define valid team codes (including BRO and BDE)
-        const validTeamCodes = ['RO', 'HU', 'IT', 'NL', 'CS', 'SK', 'SV-SE', 'BRO', '2L', 'QA', 'TL'];
+        const validTeamCodes = [...new Set([...PLANNER_TEAMS, ...UPLOAD_VALID_TEAMS])];
         const teamPattern = validTeamCodes.join('|');
         
         // Check if all parts are valid team allocations (any number + team code)

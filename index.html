@@ -49,7 +49,7 @@
                     <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
                     <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                 </svg>
-                <span>Conecteaza-te cu Google</span>
+                <span data-translate="login-google">Conecteaza-te cu Google</span>
             </button>
             <div id="loginError" class="login-error" style="display: none;"></div>
         </div>
@@ -534,7 +534,7 @@
                             <li data-translate="roadmap-bug-3">Cross-Origin-Opener-Policy blochează popup-ul de login pe unele browsere</li>
                             <li data-translate="roadmap-bug-4"><s>Gemini 3.x „thinking mode" activ implicit provoacă eroare 400 cu function calling</s> ✅ Rezolvat</li>
                             <li data-translate="roadmap-bug-5"><s>Function response trimis ca array în loc de obiect — eroare proto serialization</s> ✅ Rezolvat</li>
-                            <li data-translate="roadmap-bug-6">Acțiunile de editare din planner nu sunt înregistrate în jurnal</li>
+                            <li data-translate="roadmap-bug-6"><s>Acțiunile de editare din planner nu sunt înregistrate în jurnal</s> ✅ Rezolvat</li>
                         </ul>
                     </div>
 
@@ -564,9 +564,25 @@
                             <li data-translate="roadmap-future-6">Integrare calendar (Google Calendar sync)</li>
                             <li data-translate="roadmap-future-7">Mod offline cu sincronizare la reconectare</li>
                             <li data-translate="roadmap-future-8"><s>Audit trail complet cu revert la versiuni anterioare</s> ✅ Jurnal activitate implementat</li>
-                            <li data-translate="roadmap-future-9">Logare acțiuni planner (editare celule, creare/ștergere agenți) în jurnal</li>
+                            <li data-translate="roadmap-future-9"><s>Logare acțiuni planner (editare celule, creare/ștergere agenți) în jurnal</s> ✅ Implementat</li>
                             <li data-translate="roadmap-future-10">Proxy API key prin Cloud Functions pentru securitate</li>
                             <li data-translate="roadmap-future-11">Point-in-Time Restore — salvare automată a snapshot-urilor plannerului în Firestore, cu posibilitatea de a restaura starea echipei la orice moment din trecut</li>
+                        </ul>
+                    </div>
+
+                    <div class="chart-container">
+                        <h3 class="chart-title" style="margin-bottom: 1rem; color: var(--accent);" data-translate="roadmap-done-title">Implementate Recent</h3>
+                        <ul style="color: var(--text-secondary); line-height: 2; padding-left: 1.5rem;">
+                            <li>✅ Tipuri noi de concediu: Maternitate (MA), Donare Sânge (DO), Deces (DC), Sărbătoare Legală (SL)</li>
+                            <li>✅ Câmp notițe general pe toate tipurile de editare din planner</li>
+                            <li>✅ Sistem Undo — max 3 acțiuni, cu confirmare la prima anulare (Ctrl+Z)</li>
+                            <li>✅ Coduri echipă noi: 2L (Second Level), QA, TL (Team Lead)</li>
+                            <li>✅ Merge SK+CZ → CS pentru afișare (date separate în storage)</li>
+                            <li>✅ Redesign dezactivare: Litepicker, cross-month, cod DZ, notițe, tooltip</li>
+                            <li>✅ Greeting AI zilnic pe sidebar (Gemini, partajat între utilizatori)</li>
+                            <li>✅ Traduceri complete — eliminare string-uri hardcoded în română</li>
+                            <li>✅ Centralizare constante (coduri concediu, liste echipe) în config.js</li>
+                            <li>✅ Eliminare echipa pt-PT</li>
                         </ul>
                     </div>
 

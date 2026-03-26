@@ -1,7 +1,7 @@
 // js/reports.js
 import { getPlannerData } from './planner.js';
 import { getUsersData } from './users.js';
-import { translations } from './config.js';
+import { translations, isNonWorkingCode, normalizeTeamForDisplay, TEAM_DISPLAY_NAMES } from './config.js';
 
 function getLang() { return localStorage.getItem('language') || 'ro'; }
 function t(key) { const l = getLang(); return (translations[l] && translations[l][key]) || key; }
@@ -19,7 +19,7 @@ function parseTeamHours(dayValue) {
     const result = {};
     if (!dayValue || typeof dayValue !== 'string') return result;
     const trimmed = dayValue.trim();
-    if (['Co', 'CM', 'LB', 'SL', 'MA', 'DO', 'DC', 'DZ', ''].includes(trimmed)) return result;
+    if (isNonWorkingCode(trimmed)) return result;
 
     const parts = trimmed.split('+');
     for (const part of parts) {
@@ -27,9 +27,7 @@ function parseTeamHours(dayValue) {
         const match = p.match(/^(\d+)\s*([A-Za-z-]+)?$/);
         if (match) {
             const hours = parseInt(match[1], 10);
-            let team = match[2] ? match[2].toUpperCase() : null;
-            // Normalize SK/CZ to CS for display
-            if (team === 'SK' || team === 'CZ') team = 'CS';
+            let team = match[2] ? normalizeTeamForDisplay(match[2].toUpperCase()) : null;
             if (team) {
                 result[team] = (result[team] || 0) + hours;
             } else {
@@ -41,14 +39,8 @@ function parseTeamHours(dayValue) {
     return result;
 }
 
-// Team code to display name
-const TEAM_DISPLAY = {
-    'RO': 'RO zooplus', 'HU': 'HU zooplus', 'IT': 'IT zooplus',
-    'NL': 'NL zooplus', 'CS': 'CS zooplus',
-    'SV-SE': 'SV-SE zooplus', 'DE': 'DE zooplus',
-    'BRO': 'BRO', 'BDE': 'BDE',
-    '2L': '2nd Level', 'QA': 'QA', 'TL': 'Team Lead',
-};
+// Team code to display name (use centralized config)
+const TEAM_DISPLAY = TEAM_DISPLAY_NAMES;
 
 function teamCodeFromPrimaryTeam(primaryTeam) {
     if (!primaryTeam) return 'OTHER';
