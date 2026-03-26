@@ -20,7 +20,12 @@ export function initLogoAnimation(canvasId = 'sherpaLogo', canvasSize = 120) {
     let earthImg = null;
     const img = new Image();
     img.crossOrigin = 'anonymous';
-    img.src = 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Blue_Marble_2002.png/600px-Blue_Marble_2002.png';
+    // Try local asset first, fall back to NASA CDN
+    img.src = 'assets/earth.jpg';
+    img.onerror = () => {
+        img.onerror = null;
+        img.src = 'https://eoimages.gsfc.nasa.gov/images/imagerecords/57000/57735/land_ocean_ice_cloud_2048.jpg';
+    };
     img.onload = () => { earthImg = img; };
 
     // ── Particle system ──
