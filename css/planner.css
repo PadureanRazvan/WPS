@@ -618,7 +618,82 @@
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-} 
+}
+
+/* Leave type cell styles */
+.planner-cell.holiday {
+    background: rgba(33, 150, 243, 0.12);
+    color: #42a5f5;
+    font-weight: 600;
+    text-align: center;
+}
+
+.planner-cell.sick-leave {
+    background: rgba(255, 152, 0, 0.12);
+    color: #ffa726;
+    font-weight: 600;
+    text-align: center;
+}
+
+.planner-cell.medical-leave {
+    background: rgba(244, 67, 54, 0.12);
+    color: #ef5350;
+    font-weight: 600;
+    text-align: center;
+}
+
+.planner-cell.day-off {
+    background: rgba(156, 39, 176, 0.12);
+    color: #ab47bc;
+    font-weight: 600;
+    text-align: center;
+}
+
+.planner-cell.maternity-leave {
+    background: rgba(233, 30, 99, 0.12);
+    color: #ec407a;
+    font-weight: 600;
+    text-align: center;
+}
+
+.planner-cell.donation-leave {
+    background: rgba(0, 150, 136, 0.12);
+    color: #26a69a;
+    font-weight: 600;
+    text-align: center;
+}
+
+.planner-cell.bereavement-leave {
+    background: rgba(96, 125, 139, 0.12);
+    color: #78909c;
+    font-weight: 600;
+    text-align: center;
+}
+
+.planner-cell.deactivated {
+    background: rgba(158, 158, 158, 0.12);
+    color: #9e9e9e;
+    font-weight: 600;
+    text-align: center;
+    font-style: italic;
+}
+
+/* Note indicator dot on cells with notes */
+.planner-cell.has-note {
+    position: relative;
+}
+
+.planner-cell.has-note::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--accent, #e8a849);
+    z-index: 1;
+}
 
 /* ===== NEW SIMPLIFIED PLANNER CONTROLS ===== */
 

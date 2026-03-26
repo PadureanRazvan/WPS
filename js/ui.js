@@ -280,6 +280,19 @@ export function openEditModal() {
     const counter = document.getElementById('selectionCounter');
     if (counter) counter.classList.add('modal-open');
     resetEditModal();
+
+    // Pre-populate note if exactly one cell is selected
+    const noteInput = document.getElementById('cellNoteInput');
+    if (noteInput && selectedCells.length === 1) {
+        const cell = selectedCells[0];
+        const agentId = cell.dataset.agentId;
+        const dayIndex = cell.dataset.day;
+        const plannerData = getPlannerData();
+        const agent = plannerData.find(a => a.id === agentId);
+        if (agent && agent.dayNotes && agent.dayNotes[dayIndex]) {
+            noteInput.value = agent.dayNotes[dayIndex];
+        }
+    }
 }
 
 export function closeEditModal() {
@@ -295,14 +308,18 @@ export function resetEditModal() {
     document.querySelectorAll('.edit-option').forEach(option => {
         option.classList.remove('selected');
     });
-    
+
     // Hide all edit sections
     const workingSection = document.getElementById('workingHoursSection');
-    const dayOffSection = document.getElementById('dayOffSection');
+    const cellNoteSection = document.getElementById('cellNoteSection');
     const editMessage = document.getElementById('editMessage');
-    
+
     if (workingSection) workingSection.style.display = 'none';
-    if (dayOffSection) dayOffSection.style.display = 'none';
+    if (cellNoteSection) {
+        cellNoteSection.style.display = 'none';
+        const noteInput = document.getElementById('cellNoteInput');
+        if (noteInput) noteInput.value = '';
+    }
     if (editMessage) editMessage.style.display = 'none';
 }
 
@@ -344,26 +361,25 @@ export function selectEditType(type) {
     document.querySelectorAll('.edit-option').forEach(option => {
         option.classList.remove('selected');
     });
-    
+
     // Select current option
     const selectedOption = document.querySelector(`.edit-option[data-type="${type}"]`);
     if (selectedOption) {
         selectedOption.classList.add('selected');
     }
-    
-    // Hide all sections first
+
+    // Hide working hours section first
     const workingSection = document.getElementById('workingHoursSection');
-    const dayOffSection = document.getElementById('dayOffSection');
-    
     if (workingSection) workingSection.style.display = 'none';
-    if (dayOffSection) dayOffSection.style.display = 'none';
-    
+
     // Show appropriate section
     if (type === 'working') {
         showWorkingHoursSection();
-    } else if (type === 'dayoff') {
-        if (dayOffSection) dayOffSection.style.display = 'block';
     }
+
+    // Always show notes section for any edit type
+    const cellNoteSection = document.getElementById('cellNoteSection');
+    if (cellNoteSection) cellNoteSection.style.display = 'block';
 }
 
 export function showWorkingHoursSection() {
@@ -376,10 +392,11 @@ export function showWorkingHoursSection() {
     workingSection.style.display = 'block';
     
     // Create team input fields
-    const teams = ['RO', 'HU', 'IT', 'NL', 'CS', 'SK', 'SV-SE']; // Common teams
+    const teams = ['RO', 'HU', 'IT', 'NL', 'CS', 'SK', 'SV-SE', '2L', 'QA', 'TL'];
+    const specialTeamLabels = { '2L': '2nd Level', 'QA': 'QA', 'TL': 'Team Lead' };
     teamAllocation.innerHTML = teams.map(team => `
         <div class="team-input-group">
-            <label for="${team.toLowerCase()}Hours">${team} zooplus</label>
+            <label for="${team.toLowerCase()}Hours">${specialTeamLabels[team] || team + ' zooplus'}</label>
             <input type="number" 
                    id="${team.toLowerCase()}Hours" 
                    class="team-input" 
@@ -466,7 +483,7 @@ export function saveModalChanges() {
         }
         newValue = allocations.join('+');
     } else {
-        const values = { holiday: 'Co', sick: 'CM', dayoff: 'LB' };
+        const values = { holiday: 'Co', sick: 'CM', dayoff: 'LB', 'legal-holiday': 'SL', maternity: 'MA', donation: 'DO', bereavement: 'DC' };
         newValue = values[type];
     }
 
@@ -477,9 +494,13 @@ export function saveModalChanges() {
         selectedCellKeys.add(cellKey);
     });
 
+    // Get the note text
+    const noteInput = document.getElementById('cellNoteInput');
+    const noteText = noteInput ? noteInput.value.trim() : '';
+
     // Call the refactored function in planner.js to handle the database update
     if (selectedCellKeys.size > 0) {
-        applyChangesToSelectedCells(selectedCellKeys, newValue);
+        applyChangesToSelectedCells(selectedCellKeys, newValue, noteText);
     }
 
     closeEditModal();

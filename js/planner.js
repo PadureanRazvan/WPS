@@ -14,6 +14,10 @@ function t(key) { const l = getLang(); return (translations[l] && translations[l
 // This will hold the live data from Firestore. It's our local, in-memory copy.
 let plannerData = [];
 
+// --- Undo Stack ---
+const undoStack = [];
+const MAX_UNDO = 50;
+
 export function getPlannerData() { return plannerData; } 
 // This holds the unsubscribe function for our real-time listener.
 let unsubscribeFromAgents; 
@@ -156,8 +160,9 @@ export async function deleteAgent(agentId) {
  * then orchestrates the update to Firestore.
  * @param {Set<string>} selectedCellKeys - A Set of keys like 'agentId-dayIndex'.
  * @param {string} newValue - The new value for the day (e.g., '8 RO', 'SL').
+ * @param {string} noteText - Optional note/reason for the change.
  */
-export async function applyChangesToSelectedCells(selectedCellKeys, newValue) {
+export async function applyChangesToSelectedCells(selectedCellKeys, newValue, noteText = '') {
     console.log(`Applying value "${newValue}" to ${selectedCellKeys.size} cells.`);
     const updates = new Map(); // Use a Map to group changes by agentId
 
@@ -172,6 +177,9 @@ export async function applyChangesToSelectedCells(selectedCellKeys, newValue) {
         updates.get(agentId).push({ dayIndex, newValue });
     });
 
+    // Snapshot for undo before applying changes
+    const snapshot = [];
+
     // 2. For each agent, apply the changes and update Firestore
     for (const [agentId, changes] of updates.entries()) {
         // Find the full agent object from our local data store
@@ -181,18 +189,38 @@ export async function applyChangesToSelectedCells(selectedCellKeys, newValue) {
             continue;
         }
 
-        // Create a mutable copy of the agent's days array
+        // Save snapshot for undo
+        snapshot.push({
+            agentId,
+            previousDays: [...agent.days],
+            previousDayNotes: { ...(agent.dayNotes || {}) }
+        });
+
+        // Create a mutable copy of the agent's days array and dayNotes map
         const newDays = [...agent.days];
+        const newDayNotes = { ...(agent.dayNotes || {}) };
         changes.forEach(({ dayIndex, newValue }) => {
             if (dayIndex >= 0 && dayIndex < newDays.length) {
                 newDays[dayIndex] = newValue;
+                // Update or remove note for this day
+                if (noteText) {
+                    newDayNotes[dayIndex.toString()] = noteText;
+                } else {
+                    delete newDayNotes[dayIndex.toString()];
+                }
             }
         });
 
-        // 3. Call the updateAgent function to save the modified 'days' field to Firestore
-        await updateAgent(agentId, { days: newDays });
+        // 3. Call the updateAgent function to save days + dayNotes to Firestore
+        await updateAgent(agentId, { days: newDays, dayNotes: newDayNotes });
     }
-    
+
+    // Push snapshot to undo stack
+    if (snapshot.length > 0) {
+        undoStack.push(snapshot);
+        if (undoStack.length > MAX_UNDO) undoStack.shift();
+    }
+
     // Log the bulk edit
     const agentNames = [...updates.keys()].map(id => {
         const a = plannerData.find(x => x.id === id);
@@ -200,6 +228,25 @@ export async function applyChangesToSelectedCells(selectedCellKeys, newValue) {
     });
     logActivity('portal', 'edit_cells', { agents: agentNames.join(', '), cells: selectedCellKeys.size, value: newValue });
     showTemporaryMessage("Changes saved to database!", "success");
+}
+
+/**
+ * Undo the last planner edit by restoring the previous state from the undo stack.
+ */
+export async function undoLastChange() {
+    if (undoStack.length === 0) {
+        showTemporaryMessage(t('undo-nothing'), "info");
+        return;
+    }
+    const snapshot = undoStack.pop();
+    for (const entry of snapshot) {
+        await updateAgent(entry.agentId, {
+            days: entry.previousDays,
+            dayNotes: entry.previousDayNotes
+        });
+    }
+    logActivity('portal', 'undo', { agents: snapshot.length });
+    showTemporaryMessage(t('undo-success'), "success");
 }
 
 
@@ -861,7 +908,22 @@ function renderAgentRow(agent, dates) {
 
         // This assumes agent.days stores data for the month of the current date
         // This is a design limitation but we'll work with it for now.
-        const dayValue = agent.days && agent.days[dayIndex] ? agent.days[dayIndex] : '';
+        let dayValue = agent.days && agent.days[dayIndex] ? agent.days[dayIndex] : '';
+
+        // Auto-fill DZ for days within the deactivation range (cross-month support)
+        if (!dayValue && agent.inactiveFrom && agent.isActive === false) {
+            const inactiveFrom = agent.inactiveFrom.toDate ? agent.inactiveFrom.toDate() : new Date(agent.inactiveFrom);
+            const inactiveTo = agent.inactiveTo ? (agent.inactiveTo.toDate ? agent.inactiveTo.toDate() : new Date(agent.inactiveTo)) : null;
+            const cellDate = new Date(date);
+            cellDate.setHours(0, 0, 0, 0);
+            const fromNorm = new Date(inactiveFrom); fromNorm.setHours(0, 0, 0, 0);
+            const toNorm = inactiveTo ? new Date(inactiveTo) : null; if (toNorm) toNorm.setHours(0, 0, 0, 0);
+
+            if (cellDate >= fromNorm && (!toNorm || cellDate <= toNorm)) {
+                dayValue = 'DZ';
+            }
+        }
+
         const formattedContent = formatCellContent(dayValue);
         
         // FORCE CENTERING: Add inline styles to ensure proper centering
@@ -885,6 +947,17 @@ function renderAgentRow(agent, dates) {
         }
         
         cell.classList.add(...getCellClass(dayValue, date));
+
+        // Add note indicator if agent has a note for this day
+        if (agent.dayNotes && agent.dayNotes[dayIndex.toString()]) {
+            cell.classList.add('has-note');
+            cell.title = agent.dayNotes[dayIndex.toString()];
+        }
+        // Show deactivation note on DZ cells
+        if (dayValue === 'DZ' && agent.deactivationNote) {
+            cell.classList.add('has-note');
+            cell.title = agent.deactivationNote;
+        }
 
         // Add today class if this is the current day
         const today = new Date();
@@ -944,10 +1017,18 @@ function getCellClass(day, date) { // <-- Changed to accept 'date' object
         classes.push('medical-leave');
     } else if (day === 'LB') {
         classes.push('day-off');
-    } else if (day.match(/\d+\s*(RO|HU|IT|NL|CS|SK|SV-SE|BRO)/i)) {
+    } else if (day === 'MA') {
+        classes.push('maternity-leave');
+    } else if (day === 'DO') {
+        classes.push('donation-leave');
+    } else if (day === 'DC') {
+        classes.push('bereavement-leave');
+    } else if (day === 'DZ') {
+        classes.push('deactivated');
+    } else if (day.match(/\d+\s*(RO|HU|IT|NL|CS|SK|SV-SE|BRO|2L|QA|TL)/i)) {
         classes.push('working');
         // Check if it's a multi-team day (contains + or multiple teams)
-        if (day.includes('+') || day.match(/(\d+\s*(RO|HU|IT|NL|CS|SK|SV-SE|BRO).*){2,}/i)) {
+        if (day.includes('+') || day.match(/(\d+\s*(RO|HU|IT|NL|CS|SK|SV-SE|BRO|2L|QA|TL).*){2,}/i)) {
             classes.push('multi-team');
         }
     }
@@ -965,7 +1046,7 @@ function formatCellContent(day) {
     if (!day || day.trim() === '') return '';
     
     // Handle special cases
-    if (['SL', 'Co', 'CM', 'LB'].includes(day)) {
+    if (['SL', 'Co', 'CM', 'LB', 'MA', 'DO', 'DC', 'DZ'].includes(day)) {
         return day;
     }
     
@@ -975,7 +1056,7 @@ function formatCellContent(day) {
         const cleanedParts = parts.map(part => part.trim().replace(/\s+/g, ''));
         
         // Define valid team codes (including BRO and BDE)
-        const validTeamCodes = ['RO', 'HU', 'IT', 'NL', 'CS', 'SK', 'SV-SE', 'BRO'];
+        const validTeamCodes = ['RO', 'HU', 'IT', 'NL', 'CS', 'SK', 'SV-SE', 'BRO', '2L', 'QA', 'TL'];
         const teamPattern = validTeamCodes.join('|');
         
         // Check if all parts are valid team allocations (any number + team code)

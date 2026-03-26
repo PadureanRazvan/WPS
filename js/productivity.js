@@ -9,6 +9,12 @@ import { translations } from './config.js';
 function getLang() { return localStorage.getItem('language') || 'ro'; }
 function t(key) { const l = getLang(); return (translations[l] && translations[l][key]) || key; }
 
+// Normalize team codes for display: SK and CZ merge into CS
+function normalizeTeamForDisplay(code) {
+    if (code === 'SK' || code === 'CZ') return 'CS';
+    return code;
+}
+
 // --- State ---
 // Per-date storage: Map<dateKey, { ticketsData: Map, callsData: Map }>
 const dataByDate = new Map();
@@ -77,7 +83,7 @@ const LANGUAGE_TO_TEAM = {
     'cs': 'CS', 'sk': 'SK', 'sv-se': 'SV-SE', 'de': 'DE',
     'en': 'EN', 'en-gb': 'EN', 'bg': 'BG', 'da': 'DA',
     'el': 'EL', 'es': 'ES', 'fi': 'FI', 'fr': 'FR',
-    'hr': 'HR', 'nb-no': 'NO', 'pl': 'PL', 'pt-pt': 'PT',
+    'hr': 'HR', 'nb-no': 'NO', 'pl': 'PL', 'pt-pt': 'OTHER',
     'ru-ru': 'RU', 'sl': 'SL',
 };
 
@@ -224,7 +230,7 @@ function parseCSVLine(line) {
 function parseHoursFromDayValue(dayValue) {
     if (!dayValue || typeof dayValue !== 'string') return 0;
     const trimmed = dayValue.trim();
-    if (['Co', 'CM', 'LB', 'SL', ''].includes(trimmed)) return 0;
+    if (['Co', 'CM', 'LB', 'SL', 'MA', 'DO', 'DC', 'DZ', ''].includes(trimmed)) return 0;
     let total = 0;
     trimmed.split('+').forEach(entry => {
         const match = entry.trim().match(/(\d+)/);
@@ -271,13 +277,13 @@ function getHoursForTeamInRange(agent, start, end, teamFilter) {
         const dayIndex = current.getDate() - 1;
         if (dayIndex >= 0 && dayIndex < days.length) {
             const dayValue = days[dayIndex];
-            if (dayValue && typeof dayValue === 'string' && !['Co', 'CM', 'LB', 'SL', ''].includes(dayValue.trim())) {
+            if (dayValue && typeof dayValue === 'string' && !['Co', 'CM', 'LB', 'SL', 'MA', 'DO', 'DC', 'DZ', ''].includes(dayValue.trim())) {
                 dayValue.trim().split('+').forEach(part => {
                     const m = part.trim().match(/^(\d+)\s*([A-Za-z-]+)?$/);
                     if (m) {
                         const h = parseInt(m[1], 10);
                         const code = m[2] ? m[2].toUpperCase() : '';
-                        if (code === filterUpper) {
+                        if (code === filterUpper || (filterUpper === 'CS' && (code === 'SK' || code === 'CZ'))) {
                             totalHours += h;
                         } else if (!m[2]) {
                             // No team code (e.g. just "8") — check if agent's primary team matches
@@ -309,7 +315,7 @@ function getTeamsFromPlanner(agent, start, end) {
         const dayIndex = current.getDate() - 1;
         if (dayIndex >= 0 && dayIndex < days.length) {
             const dayValue = days[dayIndex];
-            if (dayValue && typeof dayValue === 'string' && !['Co', 'CM', 'LB', 'SL', ''].includes(dayValue.trim())) {
+            if (dayValue && typeof dayValue === 'string' && !['Co', 'CM', 'LB', 'SL', 'MA', 'DO', 'DC', 'DZ', ''].includes(dayValue.trim())) {
                 dayValue.trim().split('+').forEach(part => {
                     const m = part.trim().match(/^\d+\s*([A-Za-z-]+)$/);
                     if (m) {
@@ -513,17 +519,19 @@ function calculateProductivity() {
         if (!agent) return;
 
         // Build full team breakdown from uploaded files
-        const MAIN_TEAMS = ['RO', 'HU', 'IT', 'NL', 'CS', 'SK', 'SV-SE', 'DE', 'BRO', 'BDE'];
+        const MAIN_TEAMS = ['RO', 'HU', 'IT', 'NL', 'CS', 'SV-SE', 'DE', 'BRO', 'BDE'];
         const ticketsByTeam = new Map();
         const callsByTeam = new Map();
         if (tEntry?.teams) {
             tEntry.teams.forEach((count, team) => {
-                ticketsByTeam.set(team, (ticketsByTeam.get(team) || 0) + count);
+                const normalized = normalizeTeamForDisplay(team);
+                ticketsByTeam.set(normalized, (ticketsByTeam.get(normalized) || 0) + count);
             });
         }
         if (cEntry?.teams) {
             cEntry.teams.forEach((count, team) => {
-                callsByTeam.set(team, (callsByTeam.get(team) || 0) + count);
+                const normalized = normalizeTeamForDisplay(team);
+                callsByTeam.set(normalized, (callsByTeam.get(normalized) || 0) + count);
             });
         }
 
@@ -682,14 +690,14 @@ function getDataForSingleDate(dateKey, normalizedName) {
         const t = entry.ticketsData.get(normalizedName);
         if (t) {
             tickets = t.tickets || 0;
-            if (t.teams) t.teams.forEach((c, tm) => teams.set(tm, (teams.get(tm) || 0) + c));
+            if (t.teams) t.teams.forEach((c, tm) => { const n = normalizeTeamForDisplay(tm); teams.set(n, (teams.get(n) || 0) + c); });
         }
     }
     if (entry.callsData) {
         const c = entry.callsData.get(normalizedName);
         if (c) {
             calls = c.calls || 0;
-            if (c.teams) c.teams.forEach((cnt, tm) => teams.set(tm, (teams.get(tm) || 0) + cnt));
+            if (c.teams) c.teams.forEach((cnt, tm) => { const n = normalizeTeamForDisplay(tm); teams.set(n, (teams.get(n) || 0) + cnt); });
         }
     }
 
@@ -714,7 +722,7 @@ function renderDetailView() {
     }
 
     const users = getUsersData();
-    const MAIN_TEAMS = ['RO', 'HU', 'IT', 'NL', 'CS', 'SK', 'SV-SE'];
+    const MAIN_TEAMS = ['RO', 'HU', 'IT', 'NL', 'CS', 'SV-SE'];
     const rows = [];
 
     // Iterate each day in the range
@@ -749,11 +757,15 @@ function renderDetailView() {
                 let teamTickets = 0, teamCalls = 0;
                 if (singleEntry?.ticketsData) {
                     const t = singleEntry.ticketsData.get(normalizedName);
-                    if (t?.teams) teamTickets = t.teams.get(currentTeamFilter) || 0;
+                    if (t?.teams) t.teams.forEach((cnt, tm) => {
+                        if (normalizeTeamForDisplay(tm) === currentTeamFilter) teamTickets += cnt;
+                    });
                 }
                 if (singleEntry?.callsData) {
                     const c = singleEntry.callsData.get(normalizedName);
-                    if (c?.teams) teamCalls = c.teams.get(currentTeamFilter) || 0;
+                    if (c?.teams) c.teams.forEach((cnt, tm) => {
+                        if (normalizeTeamForDisplay(tm) === currentTeamFilter) teamCalls += cnt;
+                    });
                 }
                 tickets = teamTickets;
                 calls = teamCalls;
@@ -768,7 +780,7 @@ function renderDetailView() {
             const productivity = hours > 0 ? total / hours : 0;
 
             // Teams display
-            const MAIN_TEAMS_D = ['RO', 'HU', 'IT', 'NL', 'CS', 'SK', 'SV-SE', 'DE', 'BRO', 'BDE'];
+            const MAIN_TEAMS_D = ['RO', 'HU', 'IT', 'NL', 'CS', 'SV-SE', 'DE', 'BRO', 'BDE'];
             let teamsDisplay;
             if (currentTeamFilter !== 'all') {
                 teamsDisplay = currentTeamFilter;
@@ -1338,7 +1350,7 @@ export function getAverageProductivity() {
 
             const dayValue = agent.days[dayIndex] || '';
             let hours = 0;
-            if (dayValue && !['Co', 'CM', 'LB', 'SL'].includes(dayValue.trim())) {
+            if (dayValue && !['Co', 'CM', 'LB', 'SL', 'MA', 'DO', 'DC', 'DZ'].includes(dayValue.trim())) {
                 dayValue.trim().split('+').forEach(part => {
                     const m = part.trim().match(/(\d+)/);
                     if (m) hours += parseInt(m[1], 10);
@@ -1426,7 +1438,7 @@ export function getProductivityTrendData() {
             // Hours from planner
             const dayValue = agent.days[dayIndex] || '';
             let hours = 0;
-            if (dayValue && !['Co', 'CM', 'LB', 'SL'].includes(dayValue.trim())) {
+            if (dayValue && !['Co', 'CM', 'LB', 'SL', 'MA', 'DO', 'DC', 'DZ'].includes(dayValue.trim())) {
                 dayValue.trim().split('+').forEach(part => {
                     const m = part.trim().match(/(\d+)/);
                     if (m) hours += parseInt(m[1], 10);

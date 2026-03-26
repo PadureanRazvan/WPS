@@ -40,7 +40,7 @@
             <div class="login-logo">
                 <canvas id="loginLogo" width="100" height="100"></canvas>
                 <h1 class="login-title">Sherpa</h1>
-                <p class="login-subtitle">Workforce Planning System</p>
+                <p class="login-subtitle" id="loginGreeting">Workforce Planning System</p>
             </div>
             <button id="googleLoginBtn" class="google-login-btn">
                 <svg class="google-icon" viewBox="0 0 24 24" width="20" height="20">
@@ -68,7 +68,7 @@
             <div class="logo">
                 <canvas id="sherpaLogo" class="logo-canvas" width="120" height="120"></canvas>
                 <h1>Sherpa</h1>
-                <p>Workforce Planning System</p>
+                <p id="sidebarGreeting">Workforce Planning System</p>
             </div>
             <nav class="nav-menu">
                 <div class="nav-item active" data-tooltip="dashboard">
@@ -388,7 +388,6 @@
                             <option value="IT">IT</option>
                             <option value="NL">NL</option>
                             <option value="CS">CS</option>
-                            <option value="SK">SK</option>
                             <option value="SV-SE">SV-SE</option>
                         </select>
                         <div id="prodViewToggle" style="display: inline-flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; flex-shrink: 0;">
@@ -726,6 +725,26 @@
                     <div class="edit-option-title" data-translate="edit-dayoff">Zi Liberă (LB)</div>
                     <div class="edit-option-description" data-translate="edit-dayoff-desc">Marchează ca zi liberă cu justificare obligatorie</div>
                 </div>
+
+                <div class="edit-option" data-type="legal-holiday">
+                    <div class="edit-option-title" data-translate="edit-legal-holiday">Sărbătoare Legală (SL)</div>
+                    <div class="edit-option-description" data-translate="edit-legal-holiday-desc">Marchează zilele ca sărbătoare legală</div>
+                </div>
+
+                <div class="edit-option" data-type="maternity">
+                    <div class="edit-option-title" data-translate="edit-maternity">Concediu Maternitate (MA)</div>
+                    <div class="edit-option-description" data-translate="edit-maternity-desc">Marchează zilele ca concediu de maternitate</div>
+                </div>
+
+                <div class="edit-option" data-type="donation">
+                    <div class="edit-option-title" data-translate="edit-donation">Donare de Sânge (DO)</div>
+                    <div class="edit-option-description" data-translate="edit-donation-desc">Marchează zilele pentru donare de sânge</div>
+                </div>
+
+                <div class="edit-option" data-type="bereavement">
+                    <div class="edit-option-title" data-translate="edit-bereavement">Deces (DC)</div>
+                    <div class="edit-option-description" data-translate="edit-bereavement-desc">Marchează zilele pentru eveniment de deces</div>
+                </div>
             </div>
 
             <!-- Working Hours Configuration -->
@@ -739,10 +758,10 @@
                 </div>
             </div>
 
-            <!-- Day Off Note Section -->
-            <div id="dayOffSection" class="edit-section" style="display: none;">
-                <div class="edit-section-title" data-translate="edit-dayoff-reason">Justificare pentru Zi Liberă</div>
-                <textarea class="note-textarea" id="dayOffNote" data-translate="edit-dayoff-placeholder" placeholder="Introdu motivul pentru ziua liberă (obligatoriu)..."></textarea>
+            <!-- Cell Notes Section (shown for all edit types) -->
+            <div id="cellNoteSection" class="edit-section" style="display: none;">
+                <div class="edit-section-title" data-translate="edit-note-title">Notițe / Motiv</div>
+                <textarea class="note-textarea" id="cellNoteInput" data-translate="edit-note-placeholder" placeholder="Adaugă o notiță sau motiv (opțional)..."></textarea>
             </div>
 
             <div id="editMessage" style="display: none;"></div>
@@ -753,6 +772,14 @@
             </div>
         </div>
     </div>
+
+    <!-- Undo Button (floating) -->
+    <button id="undoBtn" class="btn-ghost undo-btn" title="Undo last change" style="display:none;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/>
+        </svg>
+        <span data-translate="undo-button">Anulează Ultima Modificare</span>
+    </button>
 
     <!-- Selection Counter -->
     <div id="selectionCounter" class="selection-counter">
@@ -832,37 +859,30 @@
 
     <!-- Deactivate User Modal -->
     <div id="deactivateModal" class="edit-modal">
-        <div class="edit-modal-content" style="max-width: 440px;">
+        <div class="edit-modal-content deactivate-modal-content">
             <div class="edit-modal-header">
                 <h3 class="edit-modal-title" id="deactivateTitle">Dezactivare</h3>
                 <button class="edit-modal-close" id="deactivateClose">&times;</button>
             </div>
-            <div style="padding: 1.5rem; display: flex; flex-direction: column; gap: 1.25rem;">
-                <div id="deactivateOptions" style="display: flex; gap: 1rem; justify-content: center;">
-                    <button class="deactivate-option" data-mode="indefinite" style="flex: 1; padding: 1rem; background: var(--primary-dark); border: 2px solid var(--border); border-radius: 8px; color: var(--text-primary); cursor: pointer; font-size: 0.95rem; font-weight: 600; transition: all 0.3s ease;">
-                        Indefinit
-                        <span style="display: block; font-size: 0.8rem; font-weight: 400; color: var(--text-secondary); margin-top: 0.25rem;">Din ziua curentă</span>
-                    </button>
-                    <button class="deactivate-option" data-mode="period" style="flex: 1; padding: 1rem; background: var(--primary-dark); border: 2px solid var(--border); border-radius: 8px; color: var(--text-primary); cursor: pointer; font-size: 0.95rem; font-weight: 600; transition: all 0.3s ease;">
-                        Perioadă
-                        <span style="display: block; font-size: 0.8rem; font-weight: 400; color: var(--text-secondary); margin-top: 0.25rem;">Alege intervalul</span>
-                    </button>
-                </div>
-                <div id="deactivateDateGroup" style="display: none;">
-                    <div style="display: flex; gap: 1rem;">
-                        <div class="form-group" style="flex: 1;">
-                            <label for="deactivateDateFrom">Din data</label>
-                            <input type="date" id="deactivateDateFrom" class="inline-input" style="width: 100%; padding: 0.75rem;">
-                        </div>
-                        <div class="form-group" style="flex: 1;">
-                            <label for="deactivateDateTo">Până la data</label>
-                            <input type="date" id="deactivateDateTo" class="inline-input" style="width: 100%; padding: 0.75rem;">
-                        </div>
+            <div class="deactivate-body">
+                <div class="deactivate-dates">
+                    <div class="form-group">
+                        <label data-translate="deactivate-start">Data de început</label>
+                        <input type="text" id="deactivateDateFrom" class="date-display deactivate-date-input" readonly placeholder="Selectează data...">
+                    </div>
+                    <div class="form-group">
+                        <label data-translate="deactivate-end">Data de sfârșit (opțional)</label>
+                        <input type="text" id="deactivateDateTo" class="date-display deactivate-date-input" readonly placeholder="Indefinit">
                     </div>
                 </div>
-                <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 0.5rem;">
-                    <button class="btn btn-secondary" id="deactivateCancelBtn">Anulează</button>
-                    <button class="btn btn-primary" id="deactivateSaveBtn">Aplică</button>
+                <div class="deactivate-hint" data-translate="deactivate-end-hint">Lasă data de sfârșit goală pentru dezactivare indefinită</div>
+                <div class="form-group">
+                    <label data-translate="deactivate-notes">Motiv dezactivare</label>
+                    <textarea class="note-textarea" id="deactivateNote" data-translate="deactivate-notes-placeholder" placeholder="Introdu motivul dezactivării (opțional)..."></textarea>
+                </div>
+                <div class="deactivate-actions">
+                    <button class="btn btn-secondary" id="deactivateCancelBtn" data-translate="edit-cancel">Anulează</button>
+                    <button class="btn btn-primary" id="deactivateSaveBtn" data-translate="deactivate-apply">Aplică</button>
                 </div>
             </div>
         </div>

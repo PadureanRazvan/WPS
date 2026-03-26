@@ -158,9 +158,9 @@ You have tool functions to query live data. ALWAYS use them — never guess or m
 
 == SCHEDULE VALUES REFERENCE ==
 Working: "8RO" (8h Romania), "8HU" (8h Hungary), "8IT" (8h Italy), "4RO+4HU" (split shift)
-Leave: "Co" = holiday/vacation, "CM" = sick leave, "LB" = day off, "SL" = unpaid leave
+Leave: "Co" = holiday/vacation, "CM" = sick leave, "LB" = day off, "SL" = legal holiday, "MA" = maternity leave, "DO" = blood donation, "DC" = bereavement, "DZ" = deactivated
 Clear: "" = no schedule set
-Team codes: RO, HU, IT, NL, CS, SK, SV-SE (followed by "zooplus" in primaryTeam)
+Team codes: RO, HU, IT, NL, CS, SK, SV-SE (followed by "zooplus" in primaryTeam), 2L (2nd Level), QA, TL (Team Lead)
 
 == AVAILABLE ACTIONS ==
 Include these hidden command tags in your response. They are parsed and executed automatically — the user will NOT see them.
@@ -371,7 +371,7 @@ function buildDayStatus(agents, dayNum) {
         if (!val) { schedule.unplanned.push(a.fullName); return; }
         if (val === 'Co') { schedule.holiday.push(a.fullName); return; }
         if (val === 'CM') { schedule.sick.push(a.fullName); return; }
-        if (val === 'LB' || val === 'SL') { schedule.dayOff.push(a.fullName); return; }
+        if (val === 'LB' || val === 'SL' || val === 'MA' || val === 'DO' || val === 'DC' || val === 'DZ') { schedule.dayOff.push(a.fullName); return; }
         schedule.working.push(a.fullName);
         const parts = val.match(/(\d+)/g);
         totalHours += parts ? parts.reduce((s, n) => s + parseInt(n, 10), 0) : 0;

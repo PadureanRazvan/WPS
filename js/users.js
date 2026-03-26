@@ -341,6 +341,10 @@ function openContractChangeModal(userId, newContractType) {
     });
 }
 
+// Litepicker instances for deactivation modal (cleaned up on each open)
+let deactivatePickerFrom = null;
+let deactivatePickerTo = null;
+
 // Show deactivate/reactivate modal
 function openDeactivateModal(userId) {
     const modal = document.getElementById('deactivateModal');
@@ -348,61 +352,26 @@ function openDeactivateModal(userId) {
     if (!user || !modal) return;
 
     const title = document.getElementById('deactivateTitle');
-    const optionsDiv = document.getElementById('deactivateOptions');
-    const dateGroup = document.getElementById('deactivateDateGroup');
     const dateFromInput = document.getElementById('deactivateDateFrom');
     const dateToInput = document.getElementById('deactivateDateTo');
+    const noteInput = document.getElementById('deactivateNote');
     const saveBtn = document.getElementById('deactivateSaveBtn');
     const cancelBtn = document.getElementById('deactivateCancelBtn');
     const closeBtn = document.getElementById('deactivateClose');
+    const datesDiv = modal.querySelector('.deactivate-dates');
+    const hintDiv = modal.querySelector('.deactivate-hint');
+    const noteGroup = noteInput?.closest('.form-group');
 
-    // If user is currently inactive, offer to reactivate
-    if (!user.isActive) {
-        title.textContent = `${user.fullName} — Reactivare`;
-        optionsDiv.style.display = 'none';
-        dateGroup.style.display = 'none';
+    // Destroy previous Litepicker instances
+    if (deactivatePickerFrom) { deactivatePickerFrom.destroy(); deactivatePickerFrom = null; }
+    if (deactivatePickerTo) { deactivatePickerTo.destroy(); deactivatePickerTo = null; }
 
-        modal.classList.add('active');
-
-        const newSaveBtn = saveBtn.cloneNode(true);
-        saveBtn.parentNode.replaceChild(newSaveBtn, saveBtn);
-        const newCancelBtn = cancelBtn.cloneNode(true);
-        cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
-        const newCloseBtn = closeBtn.cloneNode(true);
-        closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
-
-        newSaveBtn.textContent = 'Reactivează';
-
-        const closeModal = () => { modal.classList.remove('active'); };
-        newCancelBtn.addEventListener('click', closeModal);
-        newCloseBtn.addEventListener('click', closeModal);
-
-        newSaveBtn.addEventListener('click', async () => {
-            await updateAgent(userId, { isActive: true });
-            logActivity('portal', 'reactivate_agent', { name: user.fullName });
-            modal.classList.remove('active');
-            showTemporaryMessage(`${user.fullName} a fost reactivat.`, "success");
-        });
-        return;
-    }
-
-    // User is active — offer deactivation options
-    title.textContent = `${user.fullName} — Dezactivare`;
-    optionsDiv.style.display = '';
-    dateGroup.style.display = 'none';
-
-    // Reset selection
-    document.querySelectorAll('.deactivate-option').forEach(o => o.classList.remove('selected'));
-
-    let selectedMode = null;
-
-    const today = new Date();
-    dateFromInput.value = today.toISOString().split('T')[0];
+    // Reset inputs
+    dateFromInput.value = '';
     dateToInput.value = '';
+    if (noteInput) noteInput.value = '';
 
-    modal.classList.add('active');
-
-    // Cleanup previous listeners
+    // Clone buttons to remove old listeners
     const newSaveBtn = saveBtn.cloneNode(true);
     saveBtn.parentNode.replaceChild(newSaveBtn, saveBtn);
     const newCancelBtn = cancelBtn.cloneNode(true);
@@ -410,98 +379,149 @@ function openDeactivateModal(userId) {
     const newCloseBtn = closeBtn.cloneNode(true);
     closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
 
-    newSaveBtn.textContent = 'Aplică';
-
-    const closeModal = () => { modal.classList.remove('active'); };
+    const closeModal = () => {
+        modal.classList.remove('active');
+        if (deactivatePickerFrom) { deactivatePickerFrom.destroy(); deactivatePickerFrom = null; }
+        if (deactivatePickerTo) { deactivatePickerTo.destroy(); deactivatePickerTo = null; }
+    };
     newCancelBtn.addEventListener('click', closeModal);
     newCloseBtn.addEventListener('click', closeModal);
 
-    // Option selection
-    const options = modal.querySelectorAll('.deactivate-option');
-    options.forEach(opt => {
-        const newOpt = opt.cloneNode(true);
-        opt.parentNode.replaceChild(newOpt, opt);
-        newOpt.addEventListener('click', () => {
-            modal.querySelectorAll('.deactivate-option').forEach(o => o.classList.remove('selected'));
-            newOpt.classList.add('selected');
-            selectedMode = newOpt.dataset.mode;
-            if (selectedMode === 'period') {
-                dateGroup.style.display = '';
-            } else {
-                dateGroup.style.display = 'none';
-            }
-        });
-    });
+    // --- REACTIVATION PATH ---
+    if (!user.isActive) {
+        title.textContent = `${user.fullName} — Reactivare`;
+        // Hide date fields, hint, and notes for reactivation
+        if (datesDiv) datesDiv.style.display = 'none';
+        if (hintDiv) hintDiv.style.display = 'none';
+        if (noteGroup) noteGroup.style.display = 'none';
+        newSaveBtn.textContent = 'Reactivează';
 
+        modal.classList.add('active');
+
+        newSaveBtn.addEventListener('click', async () => {
+            // Clear DZ codes from current month
+            const now = new Date();
+            const existingDays = user.days || Array(31).fill('');
+            const clearedDays = existingDays.map(d => d === 'DZ' ? '' : (d || ''));
+            while (clearedDays.length < 31) clearedDays.push('');
+
+            await updateAgent(userId, {
+                isActive: true,
+                days: clearedDays,
+                inactiveFrom: null,
+                inactiveTo: null,
+                deactivationNote: null
+            });
+            logActivity('portal', 'reactivate_agent', { name: user.fullName });
+            closeModal();
+            showTemporaryMessage(`${user.fullName} a fost reactivat.`, "success");
+        });
+        return;
+    }
+
+    // --- DEACTIVATION PATH ---
+    title.textContent = `${user.fullName} — Dezactivare`;
+    if (datesDiv) datesDiv.style.display = '';
+    if (hintDiv) hintDiv.style.display = '';
+    if (noteGroup) noteGroup.style.display = '';
+    newSaveBtn.textContent = 'Aplică';
+
+    modal.classList.add('active');
+
+    // Initialize Litepicker for start date
+    const today = new Date();
+    deactivatePickerFrom = new Litepicker({
+        element: dateFromInput,
+        singleMode: true,
+        lang: 'ro-RO',
+        startDate: today,
+        format: 'DD MMM YYYY',
+        dropdowns: { minYear: 2024, maxYear: 2030, months: true, years: true },
+        setup: (picker) => {
+            picker.on('selected', (date) => {
+                // Store the actual date on the input for retrieval
+                dateFromInput._selectedDate = date.dateInstance;
+            });
+        }
+    });
+    dateFromInput._selectedDate = today;
+
+    // Initialize Litepicker for end date (optional)
+    deactivatePickerTo = new Litepicker({
+        element: dateToInput,
+        singleMode: true,
+        lang: 'ro-RO',
+        format: 'DD MMM YYYY',
+        dropdowns: { minYear: 2024, maxYear: 2030, months: true, years: true },
+        resetButton: true,
+        setup: (picker) => {
+            picker.on('selected', (date) => {
+                dateToInput._selectedDate = date.dateInstance;
+            });
+            picker.on('clear:selection', () => {
+                dateToInput._selectedDate = null;
+                dateToInput.value = '';
+            });
+        }
+    });
+    dateToInput._selectedDate = null;
+
+    // Save handler
     newSaveBtn.addEventListener('click', async () => {
-        if (!selectedMode) {
-            showTemporaryMessage("Selectează tipul de dezactivare.", "error");
+        const startDate = dateFromInput._selectedDate;
+        if (!startDate) {
+            showTemporaryMessage("Selectează data de început.", "error");
             return;
         }
 
+        const endDate = dateToInput._selectedDate || null;
+
+        if (endDate && endDate < startDate) {
+            showTemporaryMessage("Data de sfârșit trebuie să fie după data de început.", "error");
+            return;
+        }
+
+        const noteText = noteInput ? noteInput.value.trim() : '';
+
+        // Update days array for the current planner month
         const now = new Date();
         const year = now.getFullYear();
         const month = now.getMonth();
         const daysInMonth = new Date(year, month + 1, 0).getDate();
         const existingDays = user.days || Array(31).fill('');
 
-        if (selectedMode === 'indefinite') {
-            // Clear all days from today onwards
-            const startDay = now.getDate();
-            const clearedDays = existingDays.map((existing, i) => {
-                const dayNum = i + 1;
-                if (dayNum >= startDay && dayNum <= daysInMonth) {
-                    return '';
-                }
-                return existing || '';
-            });
-            while (clearedDays.length < 31) clearedDays.push('');
+        const newDays = existingDays.map((existing, i) => {
+            const dayNum = i + 1;
+            const cellDate = new Date(year, month, dayNum);
 
-            await updateAgent(userId, { isActive: false, days: clearedDays });
-            logActivity('portal', 'deactivate_agent', { name: user.fullName, mode: 'indefinite' });
-            modal.classList.remove('active');
-            showTemporaryMessage(`${user.fullName} dezactivat indefinit. Orele au fost șterse din ${startDay}.${month + 1}.`, "success");
+            // Check if this day falls within the deactivation range
+            const afterStart = cellDate >= new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+            const beforeEnd = !endDate || cellDate <= new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
 
-        } else if (selectedMode === 'period') {
-            const fromStr = document.getElementById('deactivateDateFrom').value;
-            const toStr = document.getElementById('deactivateDateTo').value;
-            if (!fromStr || !toStr) {
-                showTemporaryMessage("Selectează ambele date.", "error");
-                return;
+            if (afterStart && beforeEnd && dayNum <= daysInMonth) {
+                return 'DZ';
             }
+            return existing || '';
+        });
+        while (newDays.length < 31) newDays.push('');
 
-            const fromDate = new Date(fromStr);
-            const toDate = new Date(toStr);
+        // Build update object
+        const updateData = {
+            isActive: false,
+            days: newDays,
+            inactiveFrom: Timestamp.fromDate(startDate),
+            inactiveTo: endDate ? Timestamp.fromDate(endDate) : null,
+            deactivationNote: noteText || null
+        };
 
-            if (fromDate > toDate) {
-                showTemporaryMessage("Data de început trebuie să fie înainte de data de sfârșit.", "error");
-                return;
-            }
+        await updateAgent(userId, updateData);
 
-            // Only clear days within the current month
-            if (fromDate.getFullYear() !== year || fromDate.getMonth() !== month ||
-                toDate.getFullYear() !== year || toDate.getMonth() !== month) {
-                showTemporaryMessage("Ambele date trebuie să fie în luna curentă.", "error");
-                return;
-            }
-
-            const startDay = fromDate.getDate();
-            const endDay = toDate.getDate();
-
-            const clearedDays = existingDays.map((existing, i) => {
-                const dayNum = i + 1;
-                if (dayNum >= startDay && dayNum <= endDay) {
-                    return '';
-                }
-                return existing || '';
-            });
-            while (clearedDays.length < 31) clearedDays.push('');
-
-            await updateAgent(userId, { isActive: false, days: clearedDays });
-            logActivity('portal', 'deactivate_agent', { name: user.fullName, mode: 'period' });
-            modal.classList.remove('active');
-            showTemporaryMessage(`${user.fullName} dezactivat ${startDay}.${month + 1} — ${endDay}.${month + 1}. Orele au fost șterse.`, "success");
-        }
+        const modeLabel = endDate ? 'period' : 'indefinite';
+        const fromStr = startDate.toLocaleDateString('ro-RO');
+        const toStr = endDate ? endDate.toLocaleDateString('ro-RO') : 'indefinit';
+        logActivity('portal', 'deactivate_agent', { name: user.fullName, mode: modeLabel, from: fromStr, to: toStr, note: noteText });
+        closeModal();
+        showTemporaryMessage(`${user.fullName} dezactivat: ${fromStr} — ${toStr}`, "success");
     });
 }
 
@@ -513,6 +533,9 @@ async function handleInlineEdit(e) {
     const id = tr.dataset.id;
     const field = target.dataset.field;
     let value;
+
+    // isActive is handled by the deactivate modal, not inline edit
+    if (field === 'isActive') return;
 
     // Contract type change — open modal instead of direct update
     if (field === 'contractType') {
