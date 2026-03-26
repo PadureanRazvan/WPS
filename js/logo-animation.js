@@ -14,66 +14,111 @@ export function initLogoAnimation(canvasId = 'sherpaLogo', canvasSize = 120) {
 
     const cx = size / 2;
     const cy = size / 2;
-    const R = size * 0.26; // globe radius
-    const numParticles = 140;
+    const R = size * 0.28;
+    const numParticles = 200;
     const particles = [];
 
-    // Simplified continent outlines as [lat, lon] pairs (degrees)
-    // These trace the coastlines of major landmasses
-    const continentData = [
-        // Europe
-        [-10, 35], [0, 38], [10, 37], [15, 40], [20, 40], [25, 37], [30, 36],
-        [25, 45], [30, 50], [25, 55], [30, 60], [25, 65], [20, 62], [10, 60],
-        [5, 52], [0, 50], [-5, 48], [-10, 44],
-        // Africa
-        [-10, 32], [-5, 25], [0, 10], [5, 5], [10, 0], [15, -5], [20, -15],
-        [25, -25], [30, -30], [35, -33], [30, -28], [25, -20], [20, -10],
-        [30, -5], [35, 0], [40, 5], [45, 10], [50, 12], [40, 20], [35, 30],
-        [30, 32], [20, 35], [15, 33],
-        // Asia
-        [35, 35], [40, 40], [50, 45], [60, 50], [70, 55], [80, 50], [90, 48],
-        [100, 45], [110, 40], [120, 35], [125, 38], [130, 35], [130, 40],
-        [135, 45], [140, 43], [135, 35], [120, 25], [110, 20], [105, 15],
-        [100, 10], [105, 5], [100, 0], [80, 10], [75, 15], [70, 25], [60, 30],
-        [50, 30], [45, 32],
-        // North America
-        [-170, 65], [-160, 60], [-150, 55], [-140, 50], [-130, 48], [-125, 42],
-        [-120, 35], [-115, 30], [-105, 25], [-100, 20], [-95, 18], [-90, 20],
-        [-85, 25], [-82, 30], [-80, 35], [-75, 40], [-70, 43], [-65, 45],
-        [-60, 48], [-55, 50], [-65, 55], [-75, 58], [-85, 60], [-95, 62],
-        [-110, 64], [-130, 67], [-150, 68],
-        // South America
-        [-80, 10], [-75, 5], [-70, 0], [-75, -5], [-80, -10], [-70, -15],
-        [-65, -20], [-60, -25], [-55, -30], [-50, -25], [-45, -20], [-40, -15],
-        [-38, -10], [-35, -5], [-40, 0], [-50, 5], [-60, 8], [-70, 10],
-        // Australia
-        [115, -15], [120, -18], [130, -15], [140, -18], [145, -20], [150, -25],
-        [152, -30], [148, -35], [140, -37], [135, -35], [130, -32], [120, -30],
-        [115, -25], [113, -20],
+    // Dense continent coastline data [lon, lat] — enough points to be recognizable
+    // Each sub-array is one continuous coastline segment
+    const continents = [
+        // ── EUROPE ──
+        [-10,36],[-9,38],[-8,40],[-9,43],[-4,43],[-2,43],[0,43],[3,43],[5,44],
+        [7,44],[9,45],[13,45],[14,44],[16,43],[19,42],[20,40],[24,38],[26,40],
+        [29,41],[28,43],[30,45],[27,47],[24,48],[21,48],[17,48],[14,48],[12,47],
+        [10,48],[8,49],[6,51],[4,52],[1,51],[-1,50],[-3,48],[-5,48],[-8,44],
+        [-10,44],[-10,40],
+        // Scandinavia
+        [5,58],[8,58],[10,59],[12,56],[12,58],[15,59],[18,60],[18,63],[15,65],
+        [14,68],[16,69],[20,69],[25,67],[28,65],[30,62],[27,60],[24,58],[20,56],
+        [18,56],[14,56],[10,56],
+        // UK/Ireland
+        [-6,50],[-5,52],[-4,54],[-3,56],[-5,57],[-3,58],[-2,56],[0,53],[1,52],
+        [-1,51],[-3,51],[-5,51],
+        [-10,52],[-9,54],[-8,55],[-9,53],[-10,52],
+        // ── AFRICA ──
+        [-17,15],[-16,13],[-15,11],[-8,5],[-5,5],[0,5],[2,6],[5,4],[8,4],
+        [10,2],[10,0],[9,-3],[12,-5],[13,-8],[14,-12],[16,-18],[18,-23],
+        [20,-28],[22,-30],[25,-33],[28,-34],[30,-32],[32,-28],[35,-25],
+        [37,-20],[40,-15],[42,-12],[44,-10],[46,-8],[48,-5],[50,-2],[50,2],
+        [48,5],[45,8],[43,10],[42,12],[40,15],[38,18],[35,20],[33,22],
+        [32,30],[33,32],[35,35],[32,37],[30,35],[25,35],[20,35],[15,35],
+        [10,35],[5,36],[0,35],[-5,35],[-10,35],[-13,28],[-17,22],[-17,15],
+        // ── ASIA ──
+        [30,35],[35,37],[40,40],[42,42],[45,40],[50,38],[52,42],[55,45],
+        [58,48],[60,50],[65,52],[68,55],[70,58],[72,60],[75,62],[80,65],
+        [85,68],[90,70],[100,72],[110,70],[120,68],[130,65],[135,60],
+        [140,55],[142,50],[145,45],[142,42],[140,40],[135,35],[130,32],
+        [125,30],[120,28],[118,25],[115,22],[110,18],[108,15],[106,12],
+        [105,10],[103,8],[102,5],[100,2],[98,0],[95,5],[90,8],[85,10],
+        [80,12],[78,15],[75,18],[72,20],[70,22],[68,25],[65,28],[62,30],
+        [58,32],[55,35],[50,37],[45,38],[42,40],
+        // India
+        [68,28],[70,25],[72,22],[74,18],[76,14],[78,10],[80,8],[80,12],
+        [78,16],[76,20],[74,24],[72,26],
+        // Japan
+        [130,32],[132,34],[134,36],[136,38],[138,40],[140,42],[142,44],
+        [140,40],[138,36],[136,34],[134,32],
+        // ── NORTH AMERICA ──
+        [-170,65],[-165,63],[-160,60],[-155,58],[-148,62],[-140,60],
+        [-135,56],[-130,52],[-125,48],[-123,45],[-120,40],[-118,35],
+        [-115,32],[-110,30],[-105,28],[-100,26],[-98,28],[-95,30],
+        [-92,29],[-90,28],[-88,25],[-85,22],[-82,18],[-80,15],
+        [-85,18],[-88,20],[-90,25],[-88,28],[-85,30],[-82,32],
+        [-80,35],[-78,38],[-76,40],[-74,41],[-72,42],[-70,43],
+        [-68,45],[-66,47],[-64,48],[-60,47],[-58,50],[-55,52],
+        [-58,55],[-60,58],[-65,60],[-70,62],[-80,64],[-90,65],
+        [-100,66],[-110,68],[-120,70],[-135,70],[-150,68],[-160,66],
+        // Greenland
+        [-45,60],[-42,62],[-38,65],[-35,68],[-30,72],[-25,75],[-22,78],
+        [-25,80],[-30,82],[-38,82],[-45,80],[-50,76],[-52,72],[-50,68],
+        [-48,64],[-45,60],
+        // ── SOUTH AMERICA ──
+        [-80,10],[-78,8],[-76,5],[-74,2],[-72,0],[-70,-2],[-68,-5],
+        [-65,-8],[-62,-10],[-58,-12],[-55,-15],[-50,-18],[-48,-20],
+        [-45,-22],[-43,-24],[-42,-26],[-44,-28],[-46,-30],[-48,-32],
+        [-50,-34],[-52,-36],[-55,-38],[-58,-40],[-60,-42],[-62,-44],
+        [-65,-46],[-68,-50],[-70,-52],[-72,-50],[-73,-46],[-74,-42],
+        [-75,-38],[-74,-35],[-72,-30],[-70,-25],[-72,-20],[-75,-15],
+        [-78,-10],[-80,-5],[-80,0],[-80,5],[-80,10],
+        // ── AUSTRALIA ──
+        [114,-22],[116,-20],[118,-18],[120,-16],[125,-14],[130,-13],
+        [135,-12],[138,-14],[140,-16],[142,-14],[145,-16],[148,-18],
+        [150,-22],[152,-26],[153,-28],[152,-32],[150,-35],[148,-38],
+        [145,-38],[140,-37],[138,-35],[135,-34],[132,-33],[128,-32],
+        [124,-30],[120,-28],[118,-26],[115,-25],[114,-22],
+        // New Zealand
+        [172,-38],[174,-40],[176,-42],[174,-44],[172,-46],[170,-44],
+        [168,-42],[170,-40],[172,-38],
     ];
 
-    // Convert lat/lon to spherical coords on globe
     function latLonToSpherical(lon, lat) {
-        const phi = (90 - lat) * Math.PI / 180; // polar angle from top
-        const theta = (lon + 180) * Math.PI / 180; // azimuthal angle
+        const phi = (90 - lat) * Math.PI / 180;
+        const theta = (lon + 180) * Math.PI / 180;
         return { phi, theta, r: R };
     }
 
-    // Generate globe points from continent data
     function generateGlobePoints() {
         const pts = [];
+        const landCount = Math.floor(numParticles * 0.75);
 
-        // Add continent coastline particles (main feature)
-        for (let i = 0; i < Math.min(continentData.length, numParticles * 0.7); i++) {
-            const [lon, lat] = continentData[i % continentData.length];
-            // Add slight randomization for natural look
-            const jitterLon = lon + (Math.random() - 0.5) * 4;
-            const jitterLat = lat + (Math.random() - 0.5) * 4;
-            const sp = latLonToSpherical(jitterLon, jitterLat);
+        // Sample from continent data with interpolation
+        for (let i = 0; i < landCount; i++) {
+            const idx = (i / landCount) * continents.length;
+            const i0 = Math.floor(idx) % continents.length;
+            const i1 = (i0 + 1) % continents.length;
+            const frac = idx - Math.floor(idx);
+
+            const lon = continents[i0][0] + (continents[i1][0] - continents[i0][0]) * frac;
+            const lat = continents[i0][1] + (continents[i1][1] - continents[i0][1]) * frac;
+
+            // Small jitter for organic look
+            const jLon = lon + (Math.random() - 0.5) * 3;
+            const jLat = lat + (Math.random() - 0.5) * 3;
+            const sp = latLonToSpherical(jLon, jLat);
             pts.push({ ...sp, isLand: true });
         }
 
-        // Fill remaining with ocean grid particles (sparser)
+        // Ocean particles — evenly distributed on sphere
         while (pts.length < numParticles) {
             const phi = Math.acos(1 - 2 * Math.random());
             const theta = Math.random() * Math.PI * 2;
@@ -83,7 +128,7 @@ export function initLogoAnimation(canvasId = 'sherpaLogo', canvasSize = 120) {
         return pts;
     }
 
-    // Shape definitions
+    // Other morphing shapes
     const shapes = {
         globe: () => generateGlobePoints(),
         sphere: () => {
@@ -100,7 +145,7 @@ export function initLogoAnimation(canvasId = 'sherpaLogo', canvasSize = 120) {
             for (let i = 0; i < numParticles; i++) {
                 const t = (i / numParticles) * Math.PI * 2;
                 const p = (i * 7.3) % (Math.PI * 2);
-                pts.push({ phi: Math.PI / 2 + Math.sin(p) * 0.6, theta: t, r: R * 0.75 + Math.cos(p) * R * 0.35 });
+                pts.push({ phi: Math.PI / 2 + Math.sin(p) * 0.6, theta: t, r: R * 0.7 + Math.cos(p) * R * 0.35 });
             }
             return pts;
         },
@@ -108,22 +153,20 @@ export function initLogoAnimation(canvasId = 'sherpaLogo', canvasSize = 120) {
             const pts = [];
             for (let i = 0; i < numParticles; i++) {
                 const angle = (i / numParticles) * Math.PI * 2;
-                const h = (i % 3) / 3;
+                const h = (i % 4) / 4;
                 const r = R * (1 - h * 0.7);
-                pts.push({ phi: Math.PI * 0.3 + h * Math.PI * 0.5, theta: angle, r });
+                pts.push({ phi: Math.PI * 0.25 + h * Math.PI * 0.55, theta: angle, r });
             }
             return pts;
         },
-        dna: () => {
+        double: () => {
             const pts = [];
             for (let i = 0; i < numParticles; i++) {
-                const t = (i / numParticles) * Math.PI * 4;
-                const strand = i % 2 === 0 ? 1 : -1;
-                const yPos = (i / numParticles - 0.5) * R * 2;
-                const phi = Math.PI / 2 + Math.atan2(yPos, R);
-                const theta = t + (strand > 0 ? 0 : Math.PI);
-                const r = R * 0.6;
-                pts.push({ phi, theta, r });
+                const half = i < numParticles / 2 ? -1 : 1;
+                const idx = i % (numParticles / 2);
+                const phi = Math.acos(1 - 2 * (idx + 0.5) / (numParticles / 2));
+                const theta = Math.PI * (1 + Math.sqrt(5)) * idx;
+                pts.push({ phi, theta, r: R * 0.6, offsetX: half * R * 0.5 });
             }
             return pts;
         }
@@ -131,13 +174,11 @@ export function initLogoAnimation(canvasId = 'sherpaLogo', canvasSize = 120) {
 
     const shapeKeys = Object.keys(shapes);
     let currentShape = 0;
-    let nextShape = 1;
     let morphProgress = 1;
     let morphTimer = 0;
     const morphDuration = 2.0;
     const holdDuration = 4;
 
-    // Initialize particles with globe shape
     const initPts = shapes.globe();
     for (let i = 0; i < numParticles; i++) {
         const t = initPts[i];
@@ -146,7 +187,7 @@ export function initLogoAnimation(canvasId = 'sherpaLogo', canvasSize = 120) {
             offsetX: t.offsetX || 0,
             fromPhi: t.phi, fromTheta: t.theta, fromR: t.r, fromOffsetX: 0,
             toPhi: t.phi, toTheta: t.theta, toR: t.r, toOffsetX: 0,
-            size: 1.0 + Math.random() * 1.3,
+            size: 0.8 + Math.random() * 1.0,
             alpha: 0.5 + Math.random() * 0.5,
             pulse: Math.random() * Math.PI * 2,
             isLand: t.isLand || false
@@ -154,7 +195,7 @@ export function initLogoAnimation(canvasId = 'sherpaLogo', canvasSize = 120) {
     }
 
     function startMorph() {
-        nextShape = (currentShape + 1) % shapeKeys.length;
+        const nextShape = (currentShape + 1) % shapeKeys.length;
         const toPts = shapes[shapeKeys[nextShape]]();
         for (let i = 0; i < numParticles; i++) {
             const p = particles[i];
@@ -177,10 +218,9 @@ export function initLogoAnimation(canvasId = 'sherpaLogo', canvasSize = 120) {
     }
 
     let rotationY = 0;
-    let rotationX = 0.3;
+    let rotationX = 0.25;
     let lastTime = performance.now();
 
-    // Detect theme
     function isDarkTheme() {
         return document.documentElement.getAttribute('data-theme') === 'dark'
             || document.body.classList.contains('dark-theme')
@@ -188,22 +228,18 @@ export function initLogoAnimation(canvasId = 'sherpaLogo', canvasSize = 120) {
     }
 
     function animate(now) {
-        const dt = Math.min((now - lastTime) / 1000, 0.1); // cap dt
+        const dt = Math.min((now - lastTime) / 1000, 0.1);
         lastTime = now;
 
         const dark = isDarkTheme();
         const isGlobe = shapeKeys[currentShape] === 'globe';
 
-        // Slower rotation during globe for appreciation
-        const rotSpeed = isGlobe ? 0.3 : 0.6;
-        rotationY += dt * rotSpeed;
-        rotationX = 0.3 + Math.sin(now * 0.0003) * 0.12;
+        rotationY += dt * (isGlobe ? 0.25 : 0.5);
+        rotationX = 0.25 + Math.sin(now * 0.00025) * 0.1;
 
-        // Morph timing
         if (morphProgress >= 1) {
             morphTimer += dt;
-            const hold = isGlobe ? 6 : holdDuration;
-            if (morphTimer >= hold) {
+            if (morphTimer >= (isGlobe ? 7 : holdDuration)) {
                 morphTimer = 0;
                 startMorph();
             }
@@ -221,42 +257,23 @@ export function initLogoAnimation(canvasId = 'sherpaLogo', canvasSize = 120) {
 
         ctx.clearRect(0, 0, size, size);
 
-        // Color palette based on theme
-        const colors = dark ? {
-            landR: 80, landG: 180, landB: 120,    // Green continents
-            oceanR: 60, oceanG: 130, oceanB: 210,  // Blue ocean
-            accentR: 232, accentG: 168, accentB: 73, // Amber (Sherpa)
-            textColor: 'rgba(232, 168, 73, ',       // Amber text
-            bgGlow: 'rgba(60, 130, 210, 0.03)',
-            lineColor: [60, 130, 210]
-        } : {
-            landR: 34, landG: 120, landB: 60,      // Darker green
-            oceanR: 30, oceanG: 90, oceanB: 180,    // Darker blue
-            accentR: 30, accentG: 90, accentB: 180,
-            textColor: 'rgba(30, 90, 180, ',
-            bgGlow: 'rgba(30, 90, 180, 0.03)',
-            lineColor: [30, 90, 180]
-        };
-
-        // Draw subtle globe aura during globe phase
+        // Globe atmosphere glow
         if (isGlobe && morphProgress >= 1) {
-            const auraGrad = ctx.createRadialGradient(cx, cy, R * 0.6, cx, cy, R * 1.5);
-            auraGrad.addColorStop(0, dark ? 'rgba(60, 130, 210, 0.06)' : 'rgba(30, 90, 180, 0.06)');
-            auraGrad.addColorStop(0.5, dark ? 'rgba(60, 130, 210, 0.02)' : 'rgba(30, 90, 180, 0.02)');
-            auraGrad.addColorStop(1, 'rgba(0,0,0,0)');
-            ctx.fillStyle = auraGrad;
+            const glow = ctx.createRadialGradient(cx, cy, R * 0.8, cx, cy, R * 1.4);
+            glow.addColorStop(0, dark ? 'rgba(40, 100, 200, 0.08)' : 'rgba(20, 80, 160, 0.06)');
+            glow.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = glow;
             ctx.beginPath();
-            ctx.arc(cx, cy, R * 1.5, 0, Math.PI * 2);
+            ctx.arc(cx, cy, R * 1.4, 0, Math.PI * 2);
             ctx.fill();
         }
 
-        // Project particles
-        const projected = [];
         const cosRY = Math.cos(rotationY);
         const sinRY = Math.sin(rotationY);
         const cosRX = Math.cos(rotationX);
         const sinRX = Math.sin(rotationX);
 
+        const projected = [];
         for (let i = 0; i < numParticles; i++) {
             const p = particles[i];
             let x = p.r * Math.sin(p.phi) * Math.cos(p.theta) + (p.offsetX || 0);
@@ -268,19 +285,16 @@ export function initLogoAnimation(canvasId = 'sherpaLogo', canvasSize = 120) {
             const y2 = y * cosRX - z2 * sinRX;
             const z3 = y * sinRX + z2 * cosRX;
 
-            const perspD = 100;
+            const perspD = 120;
             const scale = perspD / (perspD + z3);
-            const sx = cx + x2 * scale;
-            const sy = cy + y2 * scale;
-
-            const pulse = Math.sin(now * 0.003 + p.pulse) * 0.25 + 0.75;
 
             projected.push({
-                x: sx, y: sy, z: z3,
-                size: p.size * scale * (0.8 + pulse * 0.3),
-                alpha: p.alpha * scale * pulse,
-                isLand: p.isLand,
-                i
+                x: cx + x2 * scale,
+                y: cy + y2 * scale,
+                z: z3,
+                size: p.size * scale,
+                alpha: p.alpha * scale * (Math.sin(now * 0.002 + p.pulse) * 0.2 + 0.8),
+                isLand: p.isLand
             });
         }
 
@@ -288,22 +302,24 @@ export function initLogoAnimation(canvasId = 'sherpaLogo', canvasSize = 120) {
 
         // Draw connections
         ctx.lineWidth = 0.3;
-        const maxConnDist = isGlobe ? 14 : 18;
         for (let i = 0; i < projected.length; i++) {
             for (let j = i + 1; j < projected.length; j++) {
-                const a = projected[i];
-                const b = projected[j];
-                const dx = a.x - b.x;
-                const dy = a.y - b.y;
+                const a = projected[i], b = projected[j];
+                const dx = a.x - b.x, dy = a.y - b.y;
                 const dist = Math.sqrt(dx * dx + dy * dy);
-                if (dist < maxConnDist) {
-                    const lineAlpha = (1 - dist / maxConnDist) * 0.12 * Math.min(a.alpha, b.alpha);
+                const maxD = isGlobe ? 10 : 16;
+                if (dist < maxD) {
+                    const la = (1 - dist / maxD) * 0.1 * Math.min(a.alpha, b.alpha);
                     if (isGlobe && a.isLand && b.isLand) {
-                        ctx.strokeStyle = `rgba(${colors.landR}, ${colors.landG}, ${colors.landB}, ${lineAlpha * 2})`;
+                        ctx.strokeStyle = dark
+                            ? `rgba(60, 180, 100, ${la * 2.5})`
+                            : `rgba(30, 130, 60, ${la * 2.5})`;
                     } else if (isGlobe) {
-                        ctx.strokeStyle = `rgba(${colors.oceanR}, ${colors.oceanG}, ${colors.oceanB}, ${lineAlpha * 0.6})`;
+                        ctx.strokeStyle = dark
+                            ? `rgba(50, 120, 200, ${la * 0.5})`
+                            : `rgba(30, 80, 170, ${la * 0.5})`;
                     } else {
-                        ctx.strokeStyle = `rgba(${colors.accentR}, ${colors.accentG}, ${colors.accentB}, ${lineAlpha})`;
+                        ctx.strokeStyle = `rgba(232, 168, 73, ${la})`;
                     }
                     ctx.beginPath();
                     ctx.moveTo(a.x, a.y);
@@ -319,69 +335,42 @@ export function initLogoAnimation(canvasId = 'sherpaLogo', canvasSize = 120) {
             let r, g, b;
 
             if (isGlobe && p.isLand) {
-                r = colors.landR + Math.round(depth * 40);
-                g = colors.landG + Math.round(depth * 30);
-                b = colors.landB - Math.round(depth * 20);
+                // Green continents
+                r = dark ? 50 + depth * 40 : 20 + depth * 30;
+                g = dark ? 160 + depth * 50 : 110 + depth * 40;
+                b = dark ? 80 + depth * 20 : 40 + depth * 20;
             } else if (isGlobe) {
-                r = colors.oceanR - Math.round(depth * 20);
-                g = colors.oceanG - Math.round(depth * 20);
-                b = colors.oceanB + Math.round(depth * 30);
+                // Blue ocean
+                r = dark ? 30 + depth * 20 : 15 + depth * 15;
+                g = dark ? 90 + depth * 30 : 60 + depth * 25;
+                b = dark ? 180 + depth * 40 : 150 + depth * 35;
             } else {
-                r = colors.accentR - Math.round(depth * 30);
-                g = colors.accentG - Math.round(depth * 50);
-                b = colors.accentB + Math.round(depth * 40);
+                // Amber (Sherpa brand)
+                r = 232 - Math.round(depth * 30);
+                g = 168 - Math.round(depth * 50);
+                b = 73 + Math.round(depth * 40);
             }
 
-            r = Math.max(0, Math.min(255, r));
-            g = Math.max(0, Math.min(255, g));
-            b = Math.max(0, Math.min(255, b));
+            r = Math.max(0, Math.min(255, Math.round(r)));
+            g = Math.max(0, Math.min(255, Math.round(g)));
+            b = Math.max(0, Math.min(255, Math.round(b)));
 
-            const glowSize = isGlobe && p.isLand ? p.size * 3.5 : p.size * 2.5;
-            const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, glowSize);
-            gradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${p.alpha * 0.5})`);
-            gradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
-            ctx.fillStyle = gradient;
+            // Glow
+            const gs = isGlobe && p.isLand ? p.size * 4 : p.size * 2.5;
+            const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, gs);
+            grad.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${p.alpha * 0.5})`);
+            grad.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
+            ctx.fillStyle = grad;
             ctx.beginPath();
-            ctx.arc(p.x, p.y, glowSize, 0, Math.PI * 2);
+            ctx.arc(p.x, p.y, gs, 0, Math.PI * 2);
             ctx.fill();
 
-            const coreSize = isGlobe && p.isLand ? p.size * 1.3 : p.size;
+            // Core dot
+            const cs = isGlobe && p.isLand ? p.size * 1.4 : p.size;
             ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${p.alpha})`;
             ctx.beginPath();
-            ctx.arc(p.x, p.y, coreSize, 0, Math.PI * 2);
+            ctx.arc(p.x, p.y, cs, 0, Math.PI * 2);
             ctx.fill();
-        }
-
-        // Draw "FSP GLOBAL" text during globe phase
-        if (isGlobe && morphProgress >= 1) {
-            const textAlpha = Math.min(1, morphTimer / 1.0); // fade in over 1s
-            if (textAlpha > 0.01) {
-                ctx.save();
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-
-                // "FSP" — larger, bold
-                const fspSize = Math.round(size * 0.13);
-                ctx.font = `900 ${fspSize}px "Segoe UI", Arial, sans-serif`;
-                ctx.fillStyle = dark
-                    ? `rgba(255, 255, 255, ${textAlpha * 0.85})`
-                    : `rgba(20, 60, 120, ${textAlpha * 0.9})`;
-                ctx.shadowColor = dark ? 'rgba(60, 130, 210, 0.6)' : 'rgba(30, 90, 180, 0.3)';
-                ctx.shadowBlur = 8;
-                ctx.fillText('FSP', cx, cy - size * 0.02);
-
-                // "GLOBAL" — smaller, below
-                const globalSize = Math.round(size * 0.075);
-                ctx.font = `700 ${globalSize}px "Segoe UI", Arial, sans-serif`;
-                ctx.fillStyle = dark
-                    ? `rgba(200, 220, 255, ${textAlpha * 0.7})`
-                    : `rgba(40, 80, 140, ${textAlpha * 0.75})`;
-                ctx.shadowBlur = 4;
-                ctx.fillText('GLOBAL', cx, cy + size * 0.1);
-
-                ctx.shadowBlur = 0;
-                ctx.restore();
-            }
         }
 
         requestAnimationFrame(animate);
