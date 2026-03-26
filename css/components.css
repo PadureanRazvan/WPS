@@ -1634,30 +1634,11 @@ input:focus, select:focus, textarea:focus {
     visibility: hidden !important;
 }
 
-/* Undo button */
-.undo-btn {
-    position: fixed;
-    bottom: 2rem;
-    left: calc(var(--sidebar-width, 260px) + 2rem);
-    background: var(--primary);
-    border: 1px solid var(--border);
-    color: var(--text-secondary);
-    padding: 0.6rem 1rem;
-    border-radius: 8px;
-    cursor: pointer;
+/* Planner undo button (in toolbar) */
+.planner-undo-btn {
     display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
     font-size: 0.85rem;
-    z-index: 100;
-    transition: all 0.2s;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-}
-
-.undo-btn:hover {
-    background: var(--accent);
-    color: var(--primary-dark);
-    border-color: var(--accent);
 }
 
 /* Rotate to Landscape Overlay */

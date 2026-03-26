@@ -344,8 +344,14 @@
                         <div class="date-range-picker">
                             <input id="dateRangePickerInput" class="date-display" style="text-align: center;"/>
                         </div>
+                        <button id="undoBtn" class="btn btn-secondary planner-undo-btn" title="Undo last change" data-translate="undo-button">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="margin-right: 0.4rem;">
+                                <path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/>
+                            </svg>
+                            Undo
+                        </button>
                         <div class="agent-filter">
-                            <button id="agentFilterButton" class="btn btn-secondary" data-translate="select-agents">Smart Select</button>
+                            <button id="agentFilterButton" class="btn btn-secondary" data-translate="select-agents">Search &amp; Select</button>
                             <div id="agentFilterDropdown" class="agent-filter-dropdown">
                                 <div class="filter-controls">
                                     <div class="filter-type-selector">
@@ -772,14 +778,6 @@
             </div>
         </div>
     </div>
-
-    <!-- Undo Button (floating) -->
-    <button id="undoBtn" class="btn-ghost undo-btn" title="Undo last change" style="display:none;">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/>
-        </svg>
-        <span data-translate="undo-button">Anulează Ultima Modificare</span>
-    </button>
 
     <!-- Selection Counter -->
     <div id="selectionCounter" class="selection-counter">

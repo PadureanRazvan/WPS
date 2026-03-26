@@ -245,17 +245,19 @@ function initializeUI() {
         cancelModalBtn.addEventListener('click', closeEditModal);
     }
 
-    // Undo button
+    // Undo button (in planner toolbar)
     const undoBtn = document.getElementById('undoBtn');
     if (undoBtn) {
-        undoBtn.style.display = 'inline-flex';
         undoBtn.addEventListener('click', undoLastChange);
     }
-    // Ctrl+Z keyboard shortcut for undo (when not in an input/textarea)
+    // Ctrl+Z keyboard shortcut for undo (only when planner is active and no input focused)
     document.addEventListener('keydown', (e) => {
         if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.target.matches('input, textarea, [contenteditable]')) {
-            e.preventDefault();
-            undoLastChange();
+            const plannerSection = document.getElementById('planner');
+            if (plannerSection && plannerSection.classList.contains('active')) {
+                e.preventDefault();
+                undoLastChange();
+            }
         }
     });
 

@@ -16,7 +16,8 @@ let plannerData = [];
 
 // --- Undo Stack ---
 const undoStack = [];
-const MAX_UNDO = 50;
+const MAX_UNDO = 3;
+let undoConfirmedThisSession = false; // After first confirmation, skip asking
 
 export function getPlannerData() { return plannerData; } 
 // This holds the unsubscribe function for our real-time listener.
@@ -238,6 +239,13 @@ export async function undoLastChange() {
         showTemporaryMessage(t('undo-nothing'), "info");
         return;
     }
+
+    // Ask for confirmation on first undo only
+    if (!undoConfirmedThisSession) {
+        if (!confirm(t('undo-confirm'))) return;
+        undoConfirmedThisSession = true;
+    }
+
     const snapshot = undoStack.pop();
     for (const entry of snapshot) {
         await updateAgent(entry.agentId, {

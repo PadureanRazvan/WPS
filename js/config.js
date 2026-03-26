@@ -34,7 +34,7 @@ export const translations = {
         // Planner
         'planner-title': 'Planificator',
         'search-agent-placeholder': 'Caută agent...',
-        'select-agents': 'Selectare Inteligentă',
+        'select-agents': 'Caută & Selectează',
 
         // Productivity
         'productivity-title': 'Productivitate',
@@ -156,8 +156,9 @@ export const translations = {
         'edit-selection': 'Selecție:',
         'edit-cells-selected': 'celule selectate',
         'edit-total-hours': 'Total ore:',
-        'undo-button': 'Anulează Ultima Modificare',
+        'undo-button': 'Anulează',
         'undo-nothing': 'Nu există modificări de anulat.',
+        'undo-confirm': 'Ești sigur că vrei să anulezi ultima modificare?',
         'undo-success': 'Modificările au fost anulate!',
         'deactivate-start': 'Data de început',
         'deactivate-end': 'Data de sfârșit (opțional)',
@@ -342,7 +343,7 @@ export const translations = {
         // Planner
         'planner-title': 'Planner',
         'search-agent-placeholder': 'Search agent...',
-        'select-agents': 'Smart Select',
+        'select-agents': 'Search & Select',
 
         // Productivity
         'productivity-title': 'Productivity',
@@ -464,8 +465,9 @@ export const translations = {
         'edit-selection': 'Selection:',
         'edit-cells-selected': 'cells selected',
         'edit-total-hours': 'Total hours:',
-        'undo-button': 'Undo Last Change',
+        'undo-button': 'Undo',
         'undo-nothing': 'Nothing to undo.',
+        'undo-confirm': 'Are you sure you want to undo the last change?',
         'undo-success': 'Changes undone!',
         'deactivate-start': 'Start date',
         'deactivate-end': 'End date (optional)',
@@ -650,7 +652,7 @@ export const translations = {
         // Planner
         'planner-title': 'Pianificatore',
         'search-agent-placeholder': 'Cerca agente...',
-        'select-agents': 'Selezione Intelligente',
+        'select-agents': 'Cerca & Seleziona',
 
         // Productivity
         'productivity-title': 'Produttività',
@@ -772,8 +774,9 @@ export const translations = {
         'edit-selection': 'Selezione:',
         'edit-cells-selected': 'celle selezionate',
         'edit-total-hours': 'Ore totali:',
-        'undo-button': 'Annulla Ultima Modifica',
+        'undo-button': 'Annulla',
         'undo-nothing': 'Nessuna modifica da annullare.',
+        'undo-confirm': 'Sei sicuro di voler annullare l\'ultima modifica?',
         'undo-success': 'Modifiche annullate!',
         'deactivate-start': 'Data di inizio',
         'deactivate-end': 'Data di fine (opzionale)',
