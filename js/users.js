@@ -33,7 +33,7 @@ export function initializeUsers() {
         renderUsersTable();
     }, (error) => {
         console.error("❌ Firebase onSnapshot Error (Users): ", error);
-        showTemporaryMessage("Error loading users. Data may be stale.", "error");
+        showTemporaryMessage(t('error-loading-users'), "error");
     });
 
     setupNewUserForm();
@@ -48,8 +48,8 @@ function setupTableEventDelegation() {
     tbody.addEventListener('click', (e) => {
         if (e.target.classList.contains('delete-btn')) {
             const id = e.target.dataset.id;
-            const userName = usersData.find(u => u.id === id)?.fullName || 'this user';
-            if (confirm(`Are you sure you want to delete ${userName}?`)) {
+            const userName = usersData.find(u => u.id === id)?.fullName || t('unknown-agent');
+            if (confirm(t('confirm-delete-user').replace('{name}', userName))) {
                 deleteAgent(id);
             }
         }
@@ -120,7 +120,7 @@ function setupNewUserForm() {
 
         // Validation
         if (!fullName || !username || !hireDateStr) {
-            showTemporaryMessage("Please fill all required fields.", "error");
+            showTemporaryMessage(t('fill-required-fields'), "error");
             return;
         }
 
@@ -128,7 +128,7 @@ function setupNewUserForm() {
         if (contractType === 'Part-time') {
             contractHours = parseInt(document.getElementById('newAgentContractHours').value, 10);
             if (!contractHours || contractHours < 4 || contractHours > 7) {
-                showTemporaryMessage("Part-time hours must be between 4 and 7.", "error");
+                showTemporaryMessage(t('pt-hours-range'), "error");
                 return;
             }
         } else {
@@ -174,11 +174,11 @@ function setupNewUserForm() {
         updateContractHoursVisibility();
         formContainer.style.display = 'none';
         addBtn.style.display = 'inline-flex';
-        showTemporaryMessage(`${fullName} created with ${contractHours}h/${teamCode} schedule.`, "success");
+        showTemporaryMessage(t('user-created').replace('{name}', fullName).replace('{hours}', contractHours).replace('{team}', teamCode), "success");
     });
 }
 
-function renderUsersTable() {
+export function renderUsersTable() {
     const tbody = document.getElementById('usersTableBody');
     if (!tbody) return;
 
@@ -195,8 +195,8 @@ function renderUsersTable() {
             <td class="hide-mobile-sm"><input type="number" class="inline-input" min="4" max="8" value="${hoursLabel}" data-field="contractHours"></td>
             <td>
                 <select class="inline-select" data-field="contractType">
-                    <option value="Full-time" ${contractLabel === 'Full-time' ? 'selected' : ''}>Full-time</option>
-                    <option value="Part-time" ${contractLabel === 'Part-time' ? 'selected' : ''}>Part-time</option>
+                    <option value="Full-time" ${contractLabel === 'Full-time' ? 'selected' : ''}>${t('form-full-time')}</option>
+                    <option value="Part-time" ${contractLabel === 'Part-time' ? 'selected' : ''}>${t('form-part-time')}</option>
                 </select>
             </td>
             <td>
@@ -216,7 +216,7 @@ function renderUsersTable() {
                     ${user.isActive ? t('active') : t('inactive')}
                 </button>
             </td>
-            <td><button class="btn-ghost delete-btn" data-id="${user.id}" data-translate="delete">Delete</button></td>
+            <td><button class="btn-ghost delete-btn" data-id="${user.id}">${t('delete')}</button></td>
         `;
         tbody.appendChild(tr);
     });
@@ -337,7 +337,7 @@ function openContractChangeModal(userId, newContractType) {
         logActivity('portal', 'change_contract', { name: user.fullName, type: newContractType, hours: contractHours });
 
         modal.classList.remove('active');
-        showTemporaryMessage(`Contract ${user.fullName} actualizat: ${newContractType} (${contractHours}h) din ${startDay}.${month + 1}.${year}`, "success");
+        showTemporaryMessage(t('contract-updated').replace('{name}', user.fullName).replace('{type}', newContractType).replace('{hours}', contractHours).replace('{date}', `${startDay}.${month + 1}.${year}`), "success");
     });
 }
 
@@ -389,12 +389,12 @@ function openDeactivateModal(userId) {
 
     // --- REACTIVATION PATH ---
     if (!user.isActive) {
-        title.textContent = `${user.fullName} — Reactivare`;
+        title.textContent = `${user.fullName} — ${t('reactivation-title')}`;
         // Hide date fields, hint, and notes for reactivation
         if (datesDiv) datesDiv.style.display = 'none';
         if (hintDiv) hintDiv.style.display = 'none';
         if (noteGroup) noteGroup.style.display = 'none';
-        newSaveBtn.textContent = 'Reactivează';
+        newSaveBtn.textContent = t('reactivate-btn');
 
         modal.classList.add('active');
 
@@ -414,17 +414,17 @@ function openDeactivateModal(userId) {
             });
             logActivity('portal', 'reactivate_agent', { name: user.fullName });
             closeModal();
-            showTemporaryMessage(`${user.fullName} a fost reactivat.`, "success");
+            showTemporaryMessage(t('agent-reactivated').replace('{name}', user.fullName), "success");
         });
         return;
     }
 
     // --- DEACTIVATION PATH ---
-    title.textContent = `${user.fullName} — Dezactivare`;
+    title.textContent = `${user.fullName} — ${t('deactivation-title')}`;
     if (datesDiv) datesDiv.style.display = '';
     if (hintDiv) hintDiv.style.display = '';
     if (noteGroup) noteGroup.style.display = '';
-    newSaveBtn.textContent = 'Aplică';
+    newSaveBtn.textContent = t('deactivate-apply');
 
     modal.classList.add('active');
 
@@ -521,7 +521,7 @@ function openDeactivateModal(userId) {
         const toStr = endDate ? endDate.toLocaleDateString('ro-RO') : 'indefinit';
         logActivity('portal', 'deactivate_agent', { name: user.fullName, mode: modeLabel, from: fromStr, to: toStr, note: noteText });
         closeModal();
-        showTemporaryMessage(`${user.fullName} dezactivat: ${fromStr} — ${toStr}`, "success");
+        showTemporaryMessage(t('agent-deactivated').replace('{name}', user.fullName).replace('{from}', fromStr).replace('{to}', toStr), "success");
     });
 }
 
@@ -558,13 +558,13 @@ async function handleInlineEdit(e) {
     if (field === 'contractHours') {
         value = parseInt(value, 10);
         if (isNaN(value) || value < 4 || value > 8) {
-            showTemporaryMessage("Contract hours must be between 4 and 8.", "error");
+            showTemporaryMessage(t('hours-range-error'), "error");
             renderUsersTable();
             return;
         }
     } else if (field === 'hireDate') {
         if (!value) {
-            showTemporaryMessage("Hire date cannot be empty.", "error");
+            showTemporaryMessage(t('hire-date-empty'), "error");
             renderUsersTable();
             return;
         }
@@ -573,17 +573,17 @@ async function handleInlineEdit(e) {
         const teamCode = value.split(' ')[0];
         await updateAgent(id, { primaryTeam: value, teams: [teamCode] });
         logActivity('portal', 'edit_user', { field: 'primaryTeam', value, agentId: id });
-        showTemporaryMessage("User updated.", "success", 1000);
+        showTemporaryMessage(t('user-updated'), "success", 1000);
         return;
     } else if (field === 'username') {
         // No .fsp validation needed
     } else if (field === 'fullName' && !value) {
-        showTemporaryMessage("Full name cannot be empty.", "error");
+        showTemporaryMessage(t('name-empty'), "error");
         renderUsersTable();
         return;
     }
 
     await updateAgent(id, { [field]: value });
     logActivity('portal', 'edit_user', { field, agentId: id });
-    showTemporaryMessage("User updated.", "success", 1000);
+    showTemporaryMessage(t('user-updated'), "success", 1000);
 } 

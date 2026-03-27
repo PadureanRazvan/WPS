@@ -132,7 +132,7 @@
                     <span id="userName" class="user-name"></span>
                     <span id="userEmail" class="user-email"></span>
                 </div>
-                <button id="logoutBtn" class="logout-btn" title="Deconectare">
+                <button id="logoutBtn" class="logout-btn" data-translate="logout" title="Deconectare">
                     <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
                         <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
                     </svg>
@@ -224,9 +224,9 @@
                         <table>
                             <thead>
                                 <tr>
-                                    <th>Shop</th>
-                                    <th>Agenți</th>
-                                    <th>Total Ore</th>
+                                    <th data-translate="shop">Shop</th>
+                                    <th data-translate="agents">Agenți</th>
+                                    <th data-translate="total-hours">Total Ore</th>
                                 </tr>
                             </thead>
                             <tbody id="teamHoursTableBody">
@@ -238,7 +238,7 @@
                     <!-- Productivity Chart -->
                     <div class="chart-container">
                         <div class="chart-header">
-                            <h3 class="chart-title">Trend Productivitate - Ultimele 30 Zile</h3>
+                            <h3 class="chart-title" data-translate="productivity-trend">Trend Productivitate - Ultimele 30 Zile</h3>
                         </div>
                         <canvas id="productivityChart" height="100"></canvas>
                     </div>
@@ -260,36 +260,36 @@
                         </button>
                     </div>
                     <div id="newUserFormContainer" style="display: none; margin-top: 1.5rem; background: var(--primary-light); padding: 1.5rem; border-radius: 8px; border: 1px solid var(--border);">
-                        <h3 style="margin-top: 0; margin-bottom: 1.5rem; color: var(--text-primary);">Create a New User Profile</h3>
+                        <h3 style="margin-top: 0; margin-bottom: 1.5rem; color: var(--text-primary);" data-translate="create-user-title">Create a New User Profile</h3>
                         <form id="newUserForm">
                             <div class="form-grid">
                                 <div class="form-group">
-                                    <label for="newAgentFullName">Full Name</label>
-                                    <input type="text" id="newAgentFullName" placeholder="e.g., John Doe" required>
+                                    <label for="newAgentFullName" data-translate="full-name">Full Name</label>
+                                    <input type="text" id="newAgentFullName" placeholder="e.g., John Doe" data-translate="form-name-placeholder" required>
                                 </div>
                                 <div class="form-group">
-                                    <label for="newAgentUsername">Username</label>
-                                    <input type="text" id="newAgentUsername" placeholder="e.g., john.doe" required>
+                                    <label for="newAgentUsername" data-translate="username">Username</label>
+                                    <input type="text" id="newAgentUsername" placeholder="e.g., john.doe" data-translate="form-username-placeholder" required>
                                 </div>
                                 <div class="form-group">
-                                    <label for="newAgentContractHours">Part-time Hours</label>
+                                    <label for="newAgentContractHours" data-translate="form-pt-hours">Part-time Hours</label>
                                     <select id="newAgentContractHours">
-                                        <option value="4">4 hours/day</option>
-                                        <option value="5">5 hours/day</option>
-                                        <option value="6" selected>6 hours/day</option>
-                                        <option value="7">7 hours/day</option>
-                                        <option value="8">8 hours/day</option>
+                                        <option value="4" data-translate="form-4h">4 hours/day</option>
+                                        <option value="5" data-translate="form-5h">5 hours/day</option>
+                                        <option value="6" selected data-translate="form-6h">6 hours/day</option>
+                                        <option value="7" data-translate="form-7h">7 hours/day</option>
+                                        <option value="8" data-translate="form-8h">8 hours/day</option>
                                     </select>
                                 </div>
                                 <div class="form-group">
-                                    <label for="newAgentContractType">Contract Type</label>
+                                    <label for="newAgentContractType" data-translate="contract-type">Contract Type</label>
                                     <select id="newAgentContractType">
-                                        <option>Full-time</option>
-                                        <option>Part-time</option>
+                                        <option value="Full-time" data-translate="form-full-time">Full-time</option>
+                                        <option value="Part-time" data-translate="form-part-time">Part-time</option>
                                     </select>
                                 </div>
                                 <div class="form-group">
-                                    <label for="newAgentPrimaryTeam">Primary Team</label>
+                                    <label for="newAgentPrimaryTeam" data-translate="primary-team">Primary Team</label>
                                     <select id="newAgentPrimaryTeam">
                                         <option>RO zooplus</option>
                                         <option>HU zooplus</option>
@@ -301,13 +301,13 @@
                                     </select>
                                 </div>
                                 <div class="form-group">
-                                    <label for="newAgentHireDate">Hire Date</label>
+                                    <label for="newAgentHireDate" data-translate="hire-date">Hire Date</label>
                                     <input type="date" id="newAgentHireDate" required>
                                 </div>
                             </div>
                             <div class="form-actions" style="margin-top: 1.5rem; display: flex; gap: 1rem;">
-                                <button type="submit" class="btn btn-primary">Create User</button>
-                                <button type="button" id="cancelNewUserBtn" class="btn btn-secondary">Cancel</button>
+                                <button type="submit" class="btn btn-primary" data-translate="form-create-user">Create User</button>
+                                <button type="button" id="cancelNewUserBtn" class="btn btn-secondary" data-translate="edit-cancel">Cancel</button>
                             </div>
                         </form>
                     </div>
@@ -355,8 +355,8 @@
                             <div id="agentFilterDropdown" class="agent-filter-dropdown">
                                 <div class="filter-controls">
                                     <div class="filter-type-selector">
-                                        <button class="filter-type-btn active" data-filter-type="agent">Agent</button>
-                                        <button class="filter-type-btn" data-filter-type="team">Team</button>
+                                        <button class="filter-type-btn active" data-filter-type="agent" data-translate="filter-agent">Agent</button>
+                                        <button class="filter-type-btn" data-filter-type="team" data-translate="filter-team">Team</button>
                                     </div>
                                     <input type="text" id="agentSearchInput" placeholder="Caută agent..." data-translate="search-agent-placeholder">
                                     <button id="clearSelectionBtn" class="btn-ghost" title="Clear Selections" style="display: none;"></button>
@@ -365,7 +365,7 @@
                                     <!-- Populated by JS -->
                                 </div>
                                 <div class="filter-actions">
-                                    <button id="clearAgentFilter" class="btn btn-secondary">Clear Selections</button>
+                                    <button id="clearAgentFilter" class="btn btn-secondary" data-translate="filter-clear">Clear Selections</button>
                                 </div>
                             </div>
                         </div>

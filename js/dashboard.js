@@ -106,7 +106,7 @@ function updateDashboardTitle(date) {
             month: 'long',
             year: 'numeric'
         });
-        titleEl.textContent = `Dashboard - ${dateString}`;
+        titleEl.textContent = `${t('dashboard-title')} - ${dateString}`;
     }
 }
 
@@ -188,13 +188,7 @@ function updateTeamHoursTable(dailyStats, dateLabel) {
     const sortedTeams = Object.keys(dailyStats.teams).sort();
 
     if (sortedTeams.length === 0) {
-        const lang = getLang();
-        const noDataMsg = {
-            ro: `Nu sunt ore planificate pentru ${dateLabel.toLowerCase()}.`,
-            en: `No hours planned for ${dateLabel.toLowerCase()}.`,
-            it: `Nessuna ora pianificata per ${dateLabel.toLowerCase()}.`
-        };
-        tableBody.innerHTML = `<tr><td colspan="3">${noDataMsg[lang] || noDataMsg.en}</td></tr>`;
+        tableBody.innerHTML = `<tr><td colspan="3">${t('no-hours-planned')}</td></tr>`;
         return;
     }
 
@@ -216,29 +210,18 @@ export function updateAverageProductivityCard() {
     if (!valueEl) return;
 
     const { average, days } = getAverageProductivity();
-    const lang = getLang();
 
     if (average !== null) {
         valueEl.textContent = average.toFixed(2) + ' t/h';
         valueEl.style.color = average >= 5 ? 'var(--success)' : average >= 3 ? 'var(--warning)' : 'var(--error)';
         if (detailEl) {
-            const msgs = {
-                ro: `Ultimele ${days} zile cu date`,
-                en: `Last ${days} days with data`,
-                it: `Ultimi ${days} giorni con dati`
-            };
-            detailEl.textContent = msgs[lang] || msgs.en;
+            detailEl.textContent = t('avg-prod-last-days').replace('{n}', days);
         }
     } else {
         valueEl.textContent = 'N/A';
         valueEl.style.color = '';
         if (detailEl) {
-            const msgs = {
-                ro: 'Nu sunt date încărcate',
-                en: 'No data uploaded',
-                it: 'Nessun dato caricato'
-            };
-            detailEl.textContent = msgs[lang] || msgs.en;
+            detailEl.textContent = t('avg-prod-no-data');
         }
     }
 }

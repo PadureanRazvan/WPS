@@ -978,7 +978,7 @@ window.__deselectAllAgents = function() {
 
 // --- View Management ---
 
-function renderCurrentView() {
+export function renderCurrentView() {
     if (currentView === 'detail') {
         renderDetailView();
     } else {
@@ -1157,9 +1157,9 @@ async function handleFile(file, fileNameEl, onParsed) {
         await onParsed(file, uploadDate);
         await saveToFirestore(uploadDate);
         if (wasOverride) {
-            showTemporaryMessage(`"${file.name}" — datele pentru ${formatDateDisplay(uploadDate)} au fost suprascrise.`, 'success');
+            showTemporaryMessage(t('data-overwritten').replace('{name}', file.name).replace('{date}', formatDateDisplay(uploadDate)), 'success');
         } else {
-            showTemporaryMessage(`"${file.name}" procesat pentru ${formatDateDisplay(uploadDate)}!`, 'success');
+            showTemporaryMessage(t('file-processed').replace('{name}', file.name).replace('{date}', formatDateDisplay(uploadDate)), 'success');
         }
         renderLoadedDates();
         showUploadSuccess();
@@ -1167,9 +1167,9 @@ async function handleFile(file, fileNameEl, onParsed) {
         renderCurrentView();
     } catch (err) {
         console.error('File parse error:', err);
-        showTemporaryMessage(`Eroare: ${err.message}`, 'error');
+        showTemporaryMessage(t('error-generic').replace('{msg}', err.message), 'error');
         if (fileNameEl) {
-            fileNameEl.textContent = `Eroare: ${file.name}`;
+            fileNameEl.textContent = t('error-file-processing').replace('{name}', file.name);
             fileNameEl.style.color = 'var(--error)';
         }
     }

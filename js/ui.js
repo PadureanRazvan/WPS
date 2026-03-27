@@ -10,6 +10,8 @@ import { updateDashboard, updateAverageProductivityCard } from './dashboard.js';
 import { initializeCharts } from './charts.js';
 import { getPlannerData } from './planner.js';
 import { renderLogsSection } from './logs.js';
+import { renderCurrentView as rerenderProductivity } from './productivity.js';
+import { renderUsersTable } from './users.js';
 
 // Theme and language state
 let currentTheme = localStorage.getItem('theme') || 'dark';
@@ -37,7 +39,7 @@ export function updateLanguageUI(langCode) {
         activeOption.classList.add('active');
     }
 
-    // Re-render dynamic content with new language
+    // Re-render ALL dynamic content with new language
     try {
         const plannerData = getPlannerData();
         if (plannerData && plannerData.length > 0) {
@@ -45,6 +47,9 @@ export function updateLanguageUI(langCode) {
         }
         initializeCharts();
         renderPlannerTable();
+        rerenderProductivity();
+        renderUsersTable();
+        renderLogsSection();
     } catch (e) {
         // Modules may not be initialized yet on first load
     }
@@ -188,7 +193,7 @@ export function translatePage(langCode) {
         }
     });
 
-    // Translate nav item spans
+    // Translate nav item spans (those without data-translate on the span itself)
     const navTranslations = {
         'dashboard': dict['nav-dashboard'],
         'users': dict['nav-users'],
@@ -201,11 +206,15 @@ export function translatePage(langCode) {
 
     document.querySelectorAll('.nav-item').forEach(item => {
         const tooltip = item.getAttribute('data-tooltip');
-        const span = item.querySelector('span');
+        const span = item.querySelector('span:not([data-translate])');
         if (span && navTranslations[tooltip]) {
             span.textContent = navTranslations[tooltip];
         }
     });
+
+    // Translate title attributes
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn && dict['logout']) logoutBtn.title = dict['logout'];
 }
 
 // Sidebar toggle functionality
@@ -535,7 +544,7 @@ async function handleCreateAgent() {
 
     // Basic Validation
     if (!fullName || !username || !hireDate) {
-        showTemporaryMessage("Please fill all required fields.", "error");
+        showTemporaryMessage(t('fill-required-fields'), "error");
         return;
     }
     // No .fsp validation needed
