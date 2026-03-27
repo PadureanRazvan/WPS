@@ -250,14 +250,43 @@ function initializeUI() {
     if (undoBtn) {
         undoBtn.addEventListener('click', undoLastChange);
     }
-    // Ctrl+Z keyboard shortcut for undo (only when planner is active and no input focused)
+    // Planner keyboard shortcuts (only when planner is active, no input focused, no modal open)
     document.addEventListener('keydown', (e) => {
-        if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.target.matches('input, textarea, [contenteditable]')) {
-            const plannerSection = document.getElementById('planner');
-            if (plannerSection && plannerSection.classList.contains('active')) {
+        if (e.target.matches('input, textarea, [contenteditable]')) return;
+        const plannerSection = document.getElementById('planner');
+        if (!plannerSection || !plannerSection.classList.contains('active')) return;
+        const modalOpen = document.querySelector('.edit-modal.active');
+
+        // Ctrl+Z — undo last change
+        if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+            e.preventDefault();
+            undoLastChange();
+            return;
+        }
+
+        // Enter — open edit modal when cells are selected
+        if (e.key === 'Enter' && !modalOpen) {
+            const selectedCells = document.querySelectorAll('.planner-cell.selected');
+            if (selectedCells.length > 0) {
                 e.preventDefault();
-                undoLastChange();
+                openEditModal();
             }
+            return;
+        }
+
+        // Escape — clear selection or close edit modal
+        if (e.key === 'Escape') {
+            if (modalOpen) {
+                e.preventDefault();
+                closeEditModal();
+            } else {
+                const selectedCells = document.querySelectorAll('.planner-cell.selected');
+                if (selectedCells.length > 0) {
+                    e.preventDefault();
+                    clearSelection();
+                }
+            }
+            return;
         }
     });
 
