@@ -12,12 +12,12 @@
     --accent: #e8a849;
     --accent-hover: #f0bc6a;
     --text-primary: #e8e4e0;
-    --text-secondary: #9a9590;
+    --text-secondary: #b4aca2;
     --border: #2e2e2e;
     --success: #5bb98c;
     --warning: #e8a849;
     --error: #e85d5d;
-    --hover: rgba(232, 168, 73, 0.1);
+    --hover: rgba(232, 168, 73, 0.15);
     --today-highlight-bg: rgba(232, 168, 73, 0.08);
     --today-highlight-border: rgba(232, 168, 73, 0.35);
     --today-highlight-text: #e8a849;
@@ -130,13 +130,13 @@ html, body {
 .section {
     display: none;
     opacity: 0;
-    transition: opacity 0.5s ease-in-out;
+    transition: opacity 0.25s ease-in-out;
 }
 
 .section.active {
     display: block;
     opacity: 1;
-    animation: fadeIn 0.5s ease-in;
+    animation: fadeIn 0.25s ease-out;
 }
 
 @keyframes fadeIn {
@@ -159,4 +159,25 @@ html, body {
 @keyframes background-pan {
     from { background-position: 0% 50%; }
     to { background-position: 100% 50%; }
-} 
+}
+
+/* Global focus-visible ring for keyboard navigation */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+/* Disabled state for all interactive elements */
+button:disabled,
+input:disabled,
+select:disabled,
+textarea:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+}

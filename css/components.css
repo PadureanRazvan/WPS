@@ -278,7 +278,8 @@
 .btn-secondary {
     background: transparent;
     color: var(--text-secondary);
-    border: 2px solid var(--border);
+    border: 1px solid var(--border);
+    padding: 0.75rem 1.5rem;
     font-weight: 600;
 }
 
@@ -294,7 +295,7 @@
     border: 1px solid var(--border);
     border-radius: 6px;
     color: var(--text-secondary);
-    font-size: 0.75rem;
+    font-size: 0.8rem;
     cursor: pointer;
     transition: all 0.3s ease;
 }
@@ -308,7 +309,7 @@
 .btn-status {
     padding: 0.4rem 1rem;
     border: none;
-    border-radius: 20px;
+    border-radius: 12px;
     font-size: 0.75rem;
     font-weight: 600;
     cursor: pointer;
@@ -1322,9 +1323,9 @@ input:focus, select:focus, textarea:focus {
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.7);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1952,7 +1953,7 @@ input:focus, select:focus, textarea:focus {
 }
 
 #usersTable tbody tr:hover {
-    background-color: var(--primary-light);
+    background-color: var(--hover);
 }
 
 #usersTable td, #usersTable th {
