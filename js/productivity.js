@@ -1108,7 +1108,7 @@ window.__removeProductivityDate = async function(dateKey) {
 
 // --- Upload Handlers ---
 
-function setupUploadArea(areaId, fileInputId, fileNameId, onParsed) {
+function setupUploadArea(areaId, fileInputId, fileNameId, fileType, onParsed) {
     const area = document.getElementById(areaId);
     const fileInput = document.getElementById(fileInputId);
     const fileNameEl = document.getElementById(fileNameId);
@@ -1132,22 +1132,27 @@ function setupUploadArea(areaId, fileInputId, fileNameId, onParsed) {
         area.style.borderColor = '';
         area.style.background = '';
         const file = e.dataTransfer.files[0];
-        if (file) handleFile(file, fileNameEl, onParsed);
+        if (file) handleFile(file, fileNameEl, fileType, onParsed);
     });
 
     fileInput.addEventListener('change', () => {
         const file = fileInput.files[0];
-        if (file) handleFile(file, fileNameEl, onParsed);
+        if (file) handleFile(file, fileNameEl, fileType, onParsed);
     });
 }
 
-async function handleFile(file, fileNameEl, onParsed) {
+async function handleFile(file, fileNameEl, fileType, onParsed) {
     if (!uploadDate) {
         showTemporaryMessage(t('prod-select-date-first'), 'error');
         return;
     }
 
-    const wasOverride = hasDataForDate(uploadDate);
+    // Check if this specific file type already has data (not just any data for the date)
+    const entry = dataByDate.get(uploadDate);
+    const wasOverride = entry && (
+        (fileType === 'tickets' && entry.ticketsData && entry.ticketsData.size > 0) ||
+        (fileType === 'calls' && entry.callsData && entry.callsData.size > 0)
+    );
 
     if (fileNameEl) {
         fileNameEl.textContent = file.name;
@@ -1213,14 +1218,14 @@ export async function initializeProductivity() {
     }
 
     // Setup uploads
-    setupUploadArea('uploadTickets', 'ticketsFileInput', 'ticketsFileName', async (file, dateKey) => {
+    setupUploadArea('uploadTickets', 'ticketsFileInput', 'ticketsFileName', 'tickets', async (file, dateKey) => {
         const ticketsData = await parseTicketsXLSX(file);
         const entry = getOrCreateDateEntry(dateKey);
         entry.ticketsData = ticketsData;
         console.log(`[Productivity] Parsed ${ticketsData.size} agents from tickets file for ${dateKey}.`);
     });
 
-    setupUploadArea('uploadCalls', 'callsFileInput', 'callsFileName', async (file, dateKey) => {
+    setupUploadArea('uploadCalls', 'callsFileInput', 'callsFileName', 'calls', async (file, dateKey) => {
         const text = await file.text();
         const callsData = parseCallsCSV(text);
         const entry = getOrCreateDateEntry(dateKey);
