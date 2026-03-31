@@ -5,7 +5,7 @@ import { db } from './firebase-config.js';
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, Timestamp } from "https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore.js";
 import { showTemporaryMessage } from './ui.js';
 import { updateDashboard } from './dashboard.js';
-import { translations, PLANNER_TEAMS, UPLOAD_VALID_TEAMS } from './config.js';
+import { translations, PLANNER_TEAMS, UPLOAD_VALID_TEAMS, extractHoursFromDay } from './config.js';
 import { logActivity } from './logs.js';
 function getLang() { return localStorage.getItem('language') || 'ro'; }
 function t(key) { const l = getLang(); return (translations[l] && translations[l][key]) || key; }
@@ -982,10 +982,7 @@ function renderAgentRow(agent, dates) {
         
         // Track weekly hours for weekly totals
         if (plannerState.viewOptions.showWeekTotals) {
-            const hoursMatch = dayValue.match(/\d+/g);
-            if (hoursMatch) {
-                weeklyHours += hoursMatch.reduce((sum, h) => sum + parseInt(h, 10), 0);
-            }
+            weeklyHours += extractHoursFromDay(dayValue);
             
             // Add weekly total cell after Sunday
             if (date.getDay() === 0) {
@@ -1143,12 +1140,7 @@ function calculateAgentTotalHours(agent) {
     
     let totalHours = 0;
     agent.days.forEach(day => {
-        if (day && day.match(/\d+/)) {
-            const hours = day.match(/\d+/g);
-            if (hours) {
-                totalHours += hours.reduce((sum, h) => sum + parseInt(h), 0);
-            }
-        }
+        totalHours += extractHoursFromDay(day);
     });
     
     return `${totalHours}h`;

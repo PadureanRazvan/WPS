@@ -1140,6 +1140,37 @@ export function normalizeTeamForDisplay(code) {
     return code;
 }
 
+// Parse a single shift entry (e.g. "8RO", "42L", "4CS") into { hours, team }
+// Handles team codes starting with digits like "2L" (2nd Level)
+export function parseShiftEntry(entry) {
+    const p = entry.trim();
+    // Try matching team codes that start with a digit (e.g. "42L" = 4h + 2L)
+    const match2L = p.match(/^(\d+)(2L)$/i);
+    if (match2L) {
+        return { hours: parseInt(match2L[1], 10), team: match2L[2].toUpperCase() };
+    }
+    // Standard: digits followed by optional letters (e.g. "8RO", "4HU", "8")
+    const match = p.match(/^(\d+)\s*([A-Za-z-]+)?$/);
+    if (match) {
+        return { hours: parseInt(match[1], 10), team: match[2] ? match[2].toUpperCase() : null };
+    }
+    return null;
+}
+
+// Extract total hours from a day value string (e.g. "8RO", "42L", "4CS+42L")
+export function extractHoursFromDay(dayValue) {
+    if (!dayValue || typeof dayValue !== 'string') return 0;
+    const trimmed = dayValue.trim();
+    if (isNonWorkingCode(trimmed)) return 0;
+    let total = 0;
+    const parts = trimmed.split('+');
+    for (const part of parts) {
+        const parsed = parseShiftEntry(part);
+        if (parsed) total += parsed.hours;
+    }
+    return total;
+}
+
 // All teams used in the planner allocation UI
 export const PLANNER_TEAMS = ['RO', 'HU', 'IT', 'NL', 'CS', 'SK', 'SV-SE', '2L', 'QA', 'TL'];
 

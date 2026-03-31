@@ -1,6 +1,6 @@
 // js/dashboard.js
 import { getAverageProductivity } from './productivity.js';
-import { translations, isNonWorkingCode, normalizeTeamForDisplay } from './config.js';
+import { translations, isNonWorkingCode, normalizeTeamForDisplay, parseShiftEntry } from './config.js';
 
 let cachedPlannerData = null;
 let currentSelectedDate = null; // null means "today"
@@ -134,10 +134,10 @@ function calculateDailyStats(plannerData, date) {
         let agentHours = 0;
         const entries = trimmed.split('+');
         entries.forEach(entry => {
-            const match = entry.trim().match(/(\d+)\s*([a-zA-Z\-]+)/);
-            if (match) {
-                const hours = parseInt(match[1], 10);
-                let teamCode = normalizeTeamForDisplay(match[2].toUpperCase());
+            const parsed = parseShiftEntry(entry);
+            if (parsed && parsed.team) {
+                const hours = parsed.hours;
+                let teamCode = normalizeTeamForDisplay(parsed.team);
                 totalHours += hours;
                 agentHours += hours;
 

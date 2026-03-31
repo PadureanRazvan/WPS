@@ -1,7 +1,7 @@
 // js/reports.js
 import { getPlannerData } from './planner.js';
 import { getUsersData } from './users.js';
-import { translations, isNonWorkingCode, normalizeTeamForDisplay, TEAM_DISPLAY_NAMES } from './config.js';
+import { translations, isNonWorkingCode, normalizeTeamForDisplay, TEAM_DISPLAY_NAMES, parseShiftEntry } from './config.js';
 
 function getLang() { return localStorage.getItem('language') || 'ro'; }
 function t(key) { const l = getLang(); return (translations[l] && translations[l][key]) || key; }
@@ -23,11 +23,10 @@ function parseTeamHours(dayValue) {
 
     const parts = trimmed.split('+');
     for (const part of parts) {
-        const p = part.trim();
-        const match = p.match(/^(\d+)\s*([A-Za-z-]+)?$/);
-        if (match) {
-            const hours = parseInt(match[1], 10);
-            let team = match[2] ? normalizeTeamForDisplay(match[2].toUpperCase()) : null;
+        const parsed = parseShiftEntry(part);
+        if (parsed) {
+            const hours = parsed.hours;
+            let team = parsed.team ? normalizeTeamForDisplay(parsed.team) : null;
             if (team) {
                 result[team] = (result[team] || 0) + hours;
             } else {
