@@ -1368,7 +1368,7 @@ export function getAverageProductivity() {
     };
 }
 
-export function getProductivityTrendData() {
+export function getProductivityTrendData(targetYear, targetMonth) {
     const agents = getPlannerData();
     const datesWithData = new Set(
         [...dataByDate.keys()].filter(dk => {
@@ -1379,10 +1379,10 @@ export function getProductivityTrendData() {
 
     if (datesWithData.size === 0) return null;
 
-    // Build full month range
+    // Build full month range (use target month if provided, else current)
     const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth();
+    const year = targetYear != null ? targetYear : now.getFullYear();
+    const month = targetMonth != null ? targetMonth : now.getMonth();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const allDates = [];
     for (let d = 1; d <= daysInMonth; d++) {

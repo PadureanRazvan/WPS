@@ -237,8 +237,10 @@
 
                     <!-- Productivity Chart -->
                     <div class="chart-container">
-                        <div class="chart-header">
-                            <h3 class="chart-title" data-translate="productivity-trend">Trend Productivitate - Ultimele 30 Zile</h3>
+                        <div class="chart-header" style="display: flex; align-items: center; gap: 0.5rem;">
+                            <button id="chartPrevMonth" class="btn btn-secondary" style="padding: 0.3rem 0.5rem; min-width: auto; font-size: 0.9rem; line-height: 1;">&#9664;</button>
+                            <h3 class="chart-title" data-translate="productivity-trend">Trend Productivitate</h3>
+                            <button id="chartNextMonth" class="btn btn-secondary" style="padding: 0.3rem 0.5rem; min-width: auto; font-size: 0.9rem; line-height: 1;">&#9654;</button>
                         </div>
                         <canvas id="productivityChart" height="100"></canvas>
                     </div>

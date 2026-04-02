@@ -16,7 +16,7 @@ export const translations = {
         'shop': 'Shop',
         'agents': 'Agenți',
         'total-hours': 'Total Ore',
-        'productivity-trend': 'Trend Productivitate - Ultimele 30 Zile',
+        'productivity-trend': 'Trend Productivitate',
 
         // Users
         'users-title': 'Gestionare Utilizatori',
@@ -705,7 +705,7 @@ export const translations = {
         'filter-agent': 'Agent',
         'filter-team': 'Team',
         'filter-clear': 'Clear Selections',
-        'productivity-trend': 'Productivity Trend - Last 30 Days',
+        'productivity-trend': 'Productivity Trend',
         'no-hours-planned': 'No hours planned for this date.',
         'avg-prod-last-days': 'Last {n} days with data',
         'avg-prod-no-data': 'No productivity data',
@@ -1071,7 +1071,7 @@ export const translations = {
         'filter-agent': 'Agente',
         'filter-team': 'Team',
         'filter-clear': 'Cancella Selezioni',
-        'productivity-trend': 'Trend Produttività - Ultimi 30 Giorni',
+        'productivity-trend': 'Trend Produttività',
         'no-hours-planned': 'Nessuna ora pianificata per questa data.',
         'avg-prod-last-days': 'Ultimi {n} giorni con dati',
         'avg-prod-no-data': 'Nessun dato di produttività',

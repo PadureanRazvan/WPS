@@ -3,11 +3,25 @@ import { chartColors, translations } from './config.js';
 import { getProductivityTrendData } from './productivity.js';
 
 let productivityChartInstance = null;
+let chartMonth = new Date().getMonth();   // 0-indexed
+let chartYear = new Date().getFullYear();
 
 // Initialize all charts
 export function initializeCharts() {
     initializeProductivityChart();
     initializeHoursChart();
+
+    // Chart month navigation arrows
+    document.getElementById('chartPrevMonth')?.addEventListener('click', () => {
+        chartMonth--;
+        if (chartMonth < 0) { chartMonth = 11; chartYear--; }
+        initializeProductivityChart();
+    });
+    document.getElementById('chartNextMonth')?.addEventListener('click', () => {
+        chartMonth++;
+        if (chartMonth > 11) { chartMonth = 0; chartYear++; }
+        initializeProductivityChart();
+    });
 }
 
 // Dashboard Productivity Chart — uses real data from productivity module
@@ -15,10 +29,20 @@ export function initializeProductivityChart() {
     const ctx = document.getElementById('productivityChart');
     if (!ctx) return;
 
-    const trendData = getProductivityTrendData();
+    // Always update the chart title to show the viewed month
+    const lang = localStorage.getItem('language') || 'ro';
+    const locales = { ro: 'ro-RO', en: 'en-US', it: 'it-IT' };
+    const locale = locales[lang] || 'ro-RO';
+    const trendLabel = (translations[lang] && translations[lang]['productivity-trend']) || 'Productivity Trend';
+    const monthDate = new Date(chartYear, chartMonth, 1);
+    const monthName = monthDate.toLocaleDateString(locale, { month: 'long' });
+    const capitalMonth = monthName.charAt(0).toUpperCase() + monthName.slice(1);
+    const titleEl = ctx.parentElement.querySelector('.chart-title');
+    if (titleEl) titleEl.textContent = `${trendLabel} — ${capitalMonth} ${chartYear}`;
+
+    const trendData = getProductivityTrendData(chartYear, chartMonth);
 
     if (!trendData || Object.keys(trendData.teams).length === 0) {
-        // No real data — show empty state
         if (productivityChartInstance) {
             productivityChartInstance.destroy();
             productivityChartInstance = null;
@@ -29,7 +53,6 @@ export function initializeProductivityChart() {
             emptyMsg = document.createElement('div');
             emptyMsg.className = 'chart-empty-msg';
             emptyMsg.style.cssText = 'text-align: center; padding: 3rem; color: var(--text-secondary);';
-            const lang = localStorage.getItem('language') || 'ro';
             emptyMsg.textContent = (translations[lang] && translations[lang]['charts-no-data']) || 'No productivity data uploaded.';
             parent.appendChild(emptyMsg);
         }
@@ -66,19 +89,7 @@ export function initializeProductivityChart() {
         });
     }
 
-    // Update title with month name (locale-aware)
-    const titleEl = parent.querySelector('.chart-title');
-    if (titleEl) {
-        const lang = localStorage.getItem('language') || 'ro';
-        const locales = { ro: 'ro-RO', en: 'en-US', it: 'it-IT' };
-        const locale = locales[lang] || 'ro-RO';
-        const trendLabel = (translations[lang] && translations[lang]['productivity-trend']) || 'Productivity Trend';
-        const first = trendData.dates[0].split('-');
-        const monthDate = new Date(parseInt(first[0]), parseInt(first[1]) - 1, 1);
-        const monthName = monthDate.toLocaleDateString(locale, { month: 'long' });
-        const capitalMonth = monthName.charAt(0).toUpperCase() + monthName.slice(1);
-        titleEl.textContent = `${trendLabel} — ${capitalMonth} ${first[0]}`;
-    }
+    // Title already updated above
 
     if (productivityChartInstance) {
         productivityChartInstance.destroy();
