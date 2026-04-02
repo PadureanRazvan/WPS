@@ -502,7 +502,7 @@ export function saveModalChanges() {
     // Get the keys of all selected cells
     const selectedCellKeys = new Set();
     document.querySelectorAll('.planner-cell.selected').forEach(cell => {
-        const cellKey = `${cell.dataset.agentId}-${cell.dataset.day}`;
+        const cellKey = `${cell.dataset.agentId}|${cell.dataset.month}|${cell.dataset.day}`;
         selectedCellKeys.add(cellKey);
     });
 
