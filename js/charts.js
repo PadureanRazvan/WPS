@@ -6,22 +6,27 @@ let productivityChartInstance = null;
 let chartMonth = new Date().getMonth();   // 0-indexed
 let chartYear = new Date().getFullYear();
 
+// Attach chart nav listeners once
+let chartNavInitialized = false;
+
 // Initialize all charts
 export function initializeCharts() {
     initializeProductivityChart();
     initializeHoursChart();
 
-    // Chart month navigation arrows
-    document.getElementById('chartPrevMonth')?.addEventListener('click', () => {
-        chartMonth--;
-        if (chartMonth < 0) { chartMonth = 11; chartYear--; }
-        initializeProductivityChart();
-    });
-    document.getElementById('chartNextMonth')?.addEventListener('click', () => {
-        chartMonth++;
-        if (chartMonth > 11) { chartMonth = 0; chartYear++; }
-        initializeProductivityChart();
-    });
+    if (!chartNavInitialized) {
+        chartNavInitialized = true;
+        document.getElementById('chartPrevMonth')?.addEventListener('click', () => {
+            chartMonth--;
+            if (chartMonth < 0) { chartMonth = 11; chartYear--; }
+            initializeProductivityChart();
+        });
+        document.getElementById('chartNextMonth')?.addEventListener('click', () => {
+            chartMonth++;
+            if (chartMonth > 11) { chartMonth = 0; chartYear++; }
+            initializeProductivityChart();
+        });
+    }
 }
 
 // Dashboard Productivity Chart — uses real data from productivity module
