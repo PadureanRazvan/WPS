@@ -30,6 +30,9 @@ let unsubscribeFromAgents;
  * This function is the new heart of the planner. It automatically receives updates
  * when data changes in the database and re-renders the planner.
  */
+// Track which agents have already been migrated this session (to avoid redundant writes)
+const migratedAgentIds = new Set();
+
 export function initializePlanner() {
     console.log("Setting up real-time listener for agents...");
     const agentsCollection = collection(db, 'agents');
@@ -37,10 +40,10 @@ export function initializePlanner() {
     // onSnapshot returns an 'unsubscribe' function which we can call to detach the listener
     unsubscribeFromAgents = onSnapshot(agentsCollection, (querySnapshot) => {
         console.log(`%c[Firestore] Received update. Found ${querySnapshot.size} agents.`, 'color: #4caf50; font-weight: bold;');
-        
+
         // Clear the old local data
         plannerData = [];
-        
+
         querySnapshot.forEach((doc) => {
             const agentData = doc.data();
             // Convert Firestore Timestamps to JS Date objects if they exist
@@ -53,6 +56,9 @@ export function initializePlanner() {
 
         // Sort agents by name for consistent display
         plannerData.sort((a, b) => a.fullName.localeCompare(b.fullName));
+
+        // Auto-migrate: copy legacy `days` → `monthlyDays[currentMonth]` for unmigrated agents
+        migrateUnmigratedAgents();
 
         // Now that we have the latest data, re-render the entire UI that depends on it.
         // This ensures the UI is always in sync with the database.
@@ -67,6 +73,39 @@ export function initializePlanner() {
         console.error("❌ Firebase onSnapshot Error: ", error);
         showTemporaryMessage("Error connecting to the database. Data may be stale.", "error");
     });
+}
+
+/**
+ * One-time migration: copies legacy flat `days`/`dayNotes` into
+ * `monthlyDays[currentMonth]`/`monthlyNotes[currentMonth]` for agents
+ * that haven't been migrated yet. Runs once per agent per session.
+ */
+async function migrateUnmigratedAgents() {
+    const currentMonthKey = getMonthKey(new Date());
+    const toMigrate = plannerData.filter(a =>
+        !a.monthlyDays && a.days && Array.isArray(a.days) && !migratedAgentIds.has(a.id)
+    );
+
+    if (toMigrate.length === 0) return;
+
+    console.log(`[Migration] Migrating ${toMigrate.length} agents: days → monthlyDays.${currentMonthKey}`);
+
+    for (const agent of toMigrate) {
+        migratedAgentIds.add(agent.id);
+        const updateData = {
+            [`monthlyDays.${currentMonthKey}`]: [...agent.days]
+        };
+        if (agent.dayNotes && Object.keys(agent.dayNotes).length > 0) {
+            updateData[`monthlyNotes.${currentMonthKey}`] = { ...agent.dayNotes };
+        }
+        try {
+            await updateAgent(agent.id, updateData);
+        } catch (error) {
+            console.error(`[Migration] Failed for ${agent.fullName}:`, error);
+            migratedAgentIds.delete(agent.id); // allow retry
+        }
+    }
+    console.log(`[Migration] Complete.`);
 }
 
 /**
