@@ -595,6 +595,10 @@
                             <li>✅ Fix vulnerabilitate XSS în mesaje chat</li>
                             <li>✅ Gate confirmare ștergere agenți prin AI</li>
                             <li>✅ GitHub Pages deployment (padureanrazvan.github.io/WPS)</li>
+                            <li>✅ Izolare date lunare — fiecare lună are date independente, editările într-o lună nu afectează altele</li>
+                            <li>✅ Auto-generare program de bază — lunile fără date salvate afișează automat programul din contract (ore+echipă în zilele lucrătoare)</li>
+                            <li>✅ Navigare rapidă între luni — săgeți ◀ ▶ pe planner și pe graficul de productivitate</li>
+                            <li>✅ Actualizare model Gemini API (gemini-2.0-flash → gemini-2.5-flash)</li>
                         </ul>
                     </div>
 
@@ -618,7 +622,7 @@
                             <li data-translate="info-dashboard-hours"><strong style="color: var(--text-primary);">Ore Planificate</strong> — totalul orelor planificate pentru ziua curentă (Azi) sau orice dată selectată din calendar</li>
                             <li data-translate="info-dashboard-teams"><strong style="color: var(--text-primary);">Ore Alocate pe Echipe</strong> — tabelul arată distribuția orelor pe echipe pentru data selectată</li>
                             <li data-translate="info-dashboard-prod"><strong style="color: var(--text-primary);">Productivitate Medie</strong> — media productivității (tickete+apeluri / oră) pe ultimele zile cu date încărcate</li>
-                            <li data-translate="info-dashboard-trend"><strong style="color: var(--text-primary);">Trend Productivitate</strong> — graficul arată productivitatea per echipă (tickete+apeluri / oră) pe toată luna curentă</li>
+                            <li data-translate="info-dashboard-trend"><strong style="color: var(--text-primary);">Trend Productivitate</strong> — graficul arată productivitatea per echipă (tickete+apeluri / oră) pe lună, cu săgeți ◀ ▶ pentru navigare între luni</li>
                         </ul>
                     </div>
 
@@ -642,8 +646,10 @@
                             Planificarea lunară a orelor de lucru per agent:
                         </p>
                         <ul style="color: var(--text-secondary); line-height: 2; margin-top: 0.5rem; padding-left: 1.5rem;">
+                            <li data-translate="info-planner-nav"><strong style="color: var(--text-primary);">Navigare luni</strong> — folosește săgețile ◀ ▶ pentru a trece rapid la luna anterioară sau următoare</li>
+                            <li data-translate="info-planner-monthly"><strong style="color: var(--text-primary);">Date lunare independente</strong> — fiecare lună are propriile date; editările într-o lună nu afectează altele. Lunile fără date afișează programul de bază din contract</li>
                             <li data-translate="info-planner-format"><strong style="color: var(--text-primary);">Format ore</strong> — introdu orele cu codul echipei: 8RO = 8 ore pe RO, 4RO+4IT = 4 ore RO + 4 ore IT</li>
-                            <li data-translate="info-planner-codes"><strong style="color: var(--text-primary);">Coduri speciale</strong> — Co = Concediu, CM = Concediu Medical, SL = Sărbătoare Legală, LB = Liber</li>
+                            <li data-translate="info-planner-codes"><strong style="color: var(--text-primary);">Coduri speciale</strong> — Co = Concediu, CM = Concediu Medical, SL = Sărbătoare Legală, LB = Liber, MA = Maternitate, DO = Donare Sânge, DC = Deces</li>
                             <li data-translate="info-planner-multi"><strong style="color: var(--text-primary);">Selecție multiplă</strong> — selectează mai multe celule și editează-le simultan cu modalul de editare</li>
                             <li data-translate="info-planner-auto"><strong style="color: var(--text-primary);">Salvare automată</strong> — toate modificările se salvează automat în baza de date</li>
                         </ul>
