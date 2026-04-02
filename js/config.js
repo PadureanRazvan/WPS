@@ -1195,14 +1195,53 @@ export function getMonthKey(date) {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
 }
 
-/** Returns the days array for a specific month, with backward-compat fallback.
- *  Once monthlyDays exists (agent has been migrated), only use month-specific data.
- *  Falls back to legacy `days` only for fully unmigrated agents. */
-export function getAgentDaysForMonth(agent, monthKey) {
-    if (agent.monthlyDays) {
-        return agent.monthlyDays[monthKey] || [];
+/**
+ * Generates a default weekday schedule from an agent's contract info.
+ * Returns a 31-element array: "{hours}{team}" on Mon-Fri, "" on weekends/overflow.
+ */
+export function generateDefaultSchedule(agent, monthKey) {
+    const hours = agent.contractHours || 8;
+    const teamCode = agent.primaryTeam ? agent.primaryTeam.split(' ')[0] : '';
+    const [yearStr, monthStr] = monthKey.split('-');
+    const year = parseInt(yearStr, 10);
+    const month = parseInt(monthStr, 10) - 1; // 0-indexed
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const entry = teamCode ? `${hours}${teamCode}` : `${hours}`;
+    const days = [];
+
+    for (let d = 1; d <= 31; d++) {
+        if (d <= daysInMonth) {
+            const dayOfWeek = new Date(year, month, d).getDay();
+            days.push(dayOfWeek >= 1 && dayOfWeek <= 5 ? entry : '');
+        } else {
+            days.push('');
+        }
     }
-    // Fully unmigrated agent — legacy flat array
+    return days;
+}
+
+/** Returns the days array for a specific month.
+ *  Priority: saved monthlyDays > legacy days > auto-generated from contract.
+ *  Auto-generation only for months on/after the agent's hire date. */
+export function getAgentDaysForMonth(agent, monthKey) {
+    // 1. Migrated agent — use saved month data
+    if (agent.monthlyDays) {
+        if (agent.monthlyDays[monthKey]) {
+            return agent.monthlyDays[monthKey];
+        }
+        // 2. No data for this month — auto-generate if after hire date
+        if (agent.contractHours && agent.primaryTeam) {
+            if (agent.hireDate) {
+                const hireMonthKey = getMonthKey(
+                    agent.hireDate instanceof Date ? agent.hireDate : new Date(agent.hireDate)
+                );
+                if (monthKey < hireMonthKey) return []; // Before hire — empty
+            }
+            return generateDefaultSchedule(agent, monthKey);
+        }
+        return [];
+    }
+    // 3. Fully unmigrated agent — legacy flat array
     return agent.days || [];
 }
 

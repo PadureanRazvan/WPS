@@ -2,7 +2,7 @@
 
 // --- Firestore & Application Imports ---
 import { db } from './firebase-config.js';
-import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, Timestamp } from "https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore.js";
+import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, deleteField, doc, Timestamp } from "https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore.js";
 import { showTemporaryMessage } from './ui.js';
 import { updateDashboard } from './dashboard.js';
 import { translations, PLANNER_TEAMS, UPLOAD_VALID_TEAMS, extractHoursFromDay, getMonthKey, getAgentDaysForMonth, getAgentNotesForMonth } from './config.js';
@@ -57,8 +57,9 @@ export function initializePlanner() {
         // Sort agents by name for consistent display
         plannerData.sort((a, b) => a.fullName.localeCompare(b.fullName));
 
-        // Auto-migrate: copy legacy `days` → `monthlyDays[currentMonth]` for unmigrated agents
+        // Auto-migrate legacy data and correct March placement
         migrateUnmigratedAgents();
+        correctMarchMigration();
 
         // Now that we have the latest data, re-render the entire UI that depends on it.
         // This ensures the UI is always in sync with the database.
@@ -106,6 +107,43 @@ async function migrateUnmigratedAgents() {
         }
     }
     console.log(`[Migration] Complete.`);
+}
+
+/**
+ * One-time correction: the initial migration placed March data into April's slot
+ * (because April was the current month at migration time). This moves it back to March
+ * and clears April so it auto-generates from contract.
+ */
+const marchCorrectedIds = new Set();
+async function correctMarchMigration() {
+    const toCorrect = plannerData.filter(a =>
+        a.monthlyDays &&
+        a.monthlyDays['2026-04'] &&
+        !a.monthlyDays['2026-03'] &&
+        !marchCorrectedIds.has(a.id)
+    );
+
+    if (toCorrect.length === 0) return;
+
+    console.log(`[Migration] Correcting ${toCorrect.length} agents: monthlyDays.2026-04 → 2026-03`);
+
+    for (const agent of toCorrect) {
+        marchCorrectedIds.add(agent.id);
+        try {
+            await updateAgent(agent.id, {
+                'monthlyDays.2026-03': [...agent.monthlyDays['2026-04']],
+                'monthlyDays.2026-04': deleteField(),
+                ...(agent.monthlyNotes?.['2026-04'] ? {
+                    'monthlyNotes.2026-03': { ...agent.monthlyNotes['2026-04'] },
+                    'monthlyNotes.2026-04': deleteField()
+                } : {})
+            });
+        } catch (error) {
+            console.error(`[Migration] March correction failed for ${agent.fullName}:`, error);
+            marchCorrectedIds.delete(agent.id);
+        }
+    }
+    console.log(`[Migration] March correction complete.`);
 }
 
 /**
