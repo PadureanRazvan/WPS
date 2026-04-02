@@ -463,24 +463,22 @@ function initializeDatepicker() {
     plannerState._picker = picker;
 
     // Prev/Next month arrow buttons
-    function navigateMonth(offset) {
-        const current = plannerState.dateRange.start || new Date();
-        const newMonth = new Date(current.getFullYear(), current.getMonth() + offset, 1);
-        const endOfNewMonth = new Date(newMonth.getFullYear(), newMonth.getMonth() + 1, 0);
-        plannerState.dateRange.start = newMonth;
-        plannerState.dateRange.end = endOfNewMonth;
-        picker.setDateRange(newMonth, endOfNewMonth);
-        renderPlannerIfActive();
-        updatePlannerHeader();
-    }
-
-    const prevBtn = document.getElementById('prevMonthBtn');
-    const nextBtn = document.getElementById('nextMonthBtn');
-    if (prevBtn) prevBtn.addEventListener('click', () => navigateMonth(-1));
-    if (nextBtn) nextBtn.addEventListener('click', () => navigateMonth(1));
+    document.getElementById('prevMonthBtn')?.addEventListener('click', () => navigateMonth(picker, -1));
+    document.getElementById('nextMonthBtn')?.addEventListener('click', () => navigateMonth(picker, 1));
 
     // Initial render
     renderPlannerIfActive();
+    updatePlannerHeader();
+}
+
+function navigateMonth(picker, offset) {
+    const current = plannerState.dateRange.start || new Date();
+    const newMonth = new Date(current.getFullYear(), current.getMonth() + offset, 1);
+    const endOfNewMonth = new Date(newMonth.getFullYear(), newMonth.getMonth() + 1, 0);
+    plannerState.dateRange.start = newMonth;
+    plannerState.dateRange.end = endOfNewMonth;
+    try { picker.setDateRange(newMonth, endOfNewMonth); } catch (e) { /* picker may not support setDateRange */ }
+    applyFiltersAndRender();
     updatePlannerHeader();
 }
 
