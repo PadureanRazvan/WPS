@@ -1,6 +1,6 @@
 // js/dashboard.js
 import { getAverageProductivity } from './productivity.js';
-import { translations, isNonWorkingCode, normalizeTeamForDisplay, parseShiftEntry } from './config.js';
+import { translations, isNonWorkingCode, normalizeTeamForDisplay, parseShiftEntry, getMonthKey, getAgentDaysForMonth } from './config.js';
 
 let cachedPlannerData = null;
 let currentSelectedDate = null; // null means "today"
@@ -120,12 +120,14 @@ function updateActiveAgentsCard(plannerData) {
 
 function calculateDailyStats(plannerData, date) {
     const dayIndex = date.getDate() - 1;
+    const monthKey = getMonthKey(date);
     const teamStats = {};
     let totalHours = 0;
     let scheduledAgents = 0;
 
     plannerData.forEach(agent => {
-        const dayValue = agent.days?.[dayIndex];
+        const daysArray = getAgentDaysForMonth(agent, monthKey);
+        const dayValue = daysArray[dayIndex];
         if (!dayValue || typeof dayValue !== 'string') return;
 
         const trimmed = dayValue.trim();

@@ -1,7 +1,7 @@
 // js/ui.js
 
 // === THEME AND LANGUAGE FUNCTIONALITY ===
-import { languageConfig, translations, PLANNER_TEAMS, TEAM_DISPLAY_NAMES } from './config.js';
+import { languageConfig, translations, PLANNER_TEAMS, TEAM_DISPLAY_NAMES, getMonthKey, getAgentNotesForMonth } from './config.js';
 function getLang() { return localStorage.getItem('language') || 'ro'; }
 export function t(key) { const l = getLang(); return (translations[l] && translations[l][key]) || key; }
 // Import the new Firestore functions from planner.js
@@ -296,10 +296,14 @@ export function openEditModal() {
         const cell = selectedCells[0];
         const agentId = cell.dataset.agentId;
         const dayIndex = cell.dataset.day;
+        const monthKey = cell.dataset.month || getMonthKey(new Date());
         const plannerData = getPlannerData();
         const agent = plannerData.find(a => a.id === agentId);
-        if (agent && agent.dayNotes && agent.dayNotes[dayIndex]) {
-            noteInput.value = agent.dayNotes[dayIndex];
+        if (agent) {
+            const notesForMonth = getAgentNotesForMonth(agent, monthKey);
+            if (notesForMonth[dayIndex]) {
+                noteInput.value = notesForMonth[dayIndex];
+            }
         }
     }
 }
@@ -550,6 +554,7 @@ async function handleCreateAgent() {
     // No .fsp validation needed
 
     // Construct the new agent object
+    const monthKey = getMonthKey(new Date());
     const newAgent = {
         fullName: fullName,
         username: username,
@@ -559,8 +564,8 @@ async function handleCreateAgent() {
         teams: [primaryTeam.split(' ')[0]], // e.g., "RO zooplus" -> "RO"
         hireDate: new Date(hireDate),
         isActive: true,
-        // Create a default 31-day schedule for the new agent
-        days: Array(31).fill(''), 
+        monthlyDays: { [monthKey]: Array(31).fill('') },
+        monthlyNotes: {},
     };
 
     // Call the Firestore function from planner.js

@@ -4,7 +4,7 @@ import { getUsersData } from './users.js';
 import { getAverageProductivity, getProductivityTrendData } from './productivity.js';
 import { showSection } from './ui.js';
 import { showTemporaryMessage } from './ui.js';
-import { translations } from './config.js';
+import { translations, getMonthKey, getAgentDaysForMonth } from './config.js';
 import { db } from './firebase-config.js';
 import { logActivity } from './logs.js';
 import { doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore.js";
@@ -365,9 +365,11 @@ function buildDayStatus(agents, dayNum) {
     const schedule = { working: [], holiday: [], sick: [], dayOff: [], unplanned: [] };
     let totalHours = 0;
     const teamHours = {};
+    const monthKey = getMonthKey(new Date());
 
     active.forEach(a => {
-        const val = a.days?.[dayNum - 1] || '';
+        const daysArray = getAgentDaysForMonth(a, monthKey);
+        const val = daysArray[dayNum - 1] || '';
         if (!val) { schedule.unplanned.push(a.fullName); return; }
         if (val === 'Co') { schedule.holiday.push(a.fullName); return; }
         if (val === 'CM') { schedule.sick.push(a.fullName); return; }
@@ -415,7 +417,9 @@ function executeToolCall(name, args) {
         case 'get_agent_schedule': {
             const agent = findAgent(args.agent_name);
             if (!agent) return { error: `Agent "${args.agent_name}" not found` };
-            const scheduledDays = (agent.days || [])
+            const schedMonthKey = getMonthKey(new Date());
+            const schedDaysArray = getAgentDaysForMonth(agent, schedMonthKey);
+            const scheduledDays = schedDaysArray
                 .map((v, i) => ({ day: i + 1, value: v || '' }))
                 .filter(d => d.value);
             return {
@@ -609,9 +613,12 @@ async function executeAction(command, params) {
                     }
                 }
 
-                const newDays = [...(agent.days || Array(31).fill(''))];
+                const setCellMonthKey = getMonthKey(new Date());
+                const setCellDays = getAgentDaysForMonth(agent, setCellMonthKey);
+                const newDays = [...setCellDays];
+                while (newDays.length < 31) newDays.push('');
                 newDays[dayIndex] = value || '';
-                await updateAgent(agent.id, { days: newDays });
+                await updateAgent(agent.id, { [`monthlyDays.${setCellMonthKey}`]: newDays });
                 logActivity('ai', 'set_cell', { agent: agent.fullName, day: dayStr, value: value || 'cleared' });
                 return `${agent.fullName}: day ${dayStr} → ${value || 'cleared'}`;
             }
@@ -631,6 +638,7 @@ async function executeAction(command, params) {
                 const team = primaryTeam || 'RO zooplus';
                 if (!validTeams.includes(team)) return `Unknown team: "${team}". Valid: ${validTeams.join(', ')}`;
 
+                const addAgentMonthKey = getMonthKey(new Date());
                 await addAgent({
                     fullName: fullName.trim(),
                     username: (username || fullName.toLowerCase().replace(/\s+/g, '.')).trim(),
@@ -640,7 +648,8 @@ async function executeAction(command, params) {
                     teams: [team.split(' ')[0]],
                     hireDate: new Date(),
                     isActive: true,
-                    days: Array(31).fill('')
+                    monthlyDays: { [addAgentMonthKey]: Array(31).fill('') },
+                    monthlyNotes: {}
                 });
                 logActivity('ai', 'add_agent', { name: fullName.trim(), team, contract: `${contractType || 'Full-time'} ${hours}h` });
                 return `Agent "${fullName}" created (${team}, ${contractType || 'Full-time'}, ${hours}h)`;

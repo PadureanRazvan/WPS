@@ -1,7 +1,7 @@
 // js/reports.js
 import { getPlannerData } from './planner.js';
 import { getUsersData } from './users.js';
-import { translations, isNonWorkingCode, normalizeTeamForDisplay, TEAM_DISPLAY_NAMES, parseShiftEntry } from './config.js';
+import { translations, isNonWorkingCode, normalizeTeamForDisplay, TEAM_DISPLAY_NAMES, parseShiftEntry, getMonthKey, getAgentDaysForMonth } from './config.js';
 
 function getLang() { return localStorage.getItem('language') || 'ro'; }
 function t(key) { const l = getLang(); return (translations[l] && translations[l][key]) || key; }
@@ -55,7 +55,6 @@ function calculateReportData(start, end) {
     const shopData = {};
 
     for (const agent of agents) {
-        if (!agent.days || !Array.isArray(agent.days)) continue;
         if (agent.isActive === false) continue;
 
         const agentPrimaryTeamCode = teamCodeFromPrimaryTeam(agent.primaryTeam);
@@ -68,8 +67,10 @@ function calculateReportData(start, end) {
 
         while (current <= endDate) {
             const dayIndex = current.getDate() - 1;
-            if (dayIndex >= 0 && dayIndex < agent.days.length) {
-                const dayValue = agent.days[dayIndex];
+            const monthKey = getMonthKey(current);
+            const daysArray = getAgentDaysForMonth(agent, monthKey);
+            if (dayIndex >= 0 && dayIndex < daysArray.length) {
+                const dayValue = daysArray[dayIndex];
                 const teamHours = parseTeamHours(dayValue);
 
                 for (const [teamCode, hours] of Object.entries(teamHours)) {

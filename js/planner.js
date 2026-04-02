@@ -5,7 +5,7 @@ import { db } from './firebase-config.js';
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, Timestamp } from "https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore.js";
 import { showTemporaryMessage } from './ui.js';
 import { updateDashboard } from './dashboard.js';
-import { translations, PLANNER_TEAMS, UPLOAD_VALID_TEAMS, extractHoursFromDay } from './config.js';
+import { translations, PLANNER_TEAMS, UPLOAD_VALID_TEAMS, extractHoursFromDay, getMonthKey, getAgentDaysForMonth, getAgentNotesForMonth } from './config.js';
 import { logActivity } from './logs.js';
 function getLang() { return localStorage.getItem('language') || 'ro'; }
 function t(key) { const l = getLang(); return (translations[l] && translations[l][key]) || key; }
@@ -159,70 +159,80 @@ export async function deleteAgent(agentId) {
 /**
  * This is a critical function that takes a list of selected cells and a new value,
  * then orchestrates the update to Firestore.
- * @param {Set<string>} selectedCellKeys - A Set of keys like 'agentId-dayIndex'.
+ * @param {Set<string>} selectedCellKeys - A Set of keys like 'agentId|monthKey|dayIndex'.
  * @param {string} newValue - The new value for the day (e.g., '8 RO', 'SL').
  * @param {string} noteText - Optional note/reason for the change.
  */
 export async function applyChangesToSelectedCells(selectedCellKeys, newValue, noteText = '') {
     console.log(`Applying value "${newValue}" to ${selectedCellKeys.size} cells.`);
-    const updates = new Map(); // Use a Map to group changes by agentId
+    // Group changes by agentId, then by monthKey
+    const updates = new Map();
 
-    // 1. Group all changes by agent ID
     selectedCellKeys.forEach(key => {
-        const [agentId, dayIndexStr] = key.split('-');
+        const [agentId, monthKey, dayIndexStr] = key.split('|');
         const dayIndex = parseInt(dayIndexStr, 10);
 
         if (!updates.has(agentId)) {
-            updates.set(agentId, []);
+            updates.set(agentId, new Map());
         }
-        updates.get(agentId).push({ dayIndex, newValue });
+        const agentMonths = updates.get(agentId);
+        if (!agentMonths.has(monthKey)) {
+            agentMonths.set(monthKey, []);
+        }
+        agentMonths.get(monthKey).push({ dayIndex, newValue });
     });
 
-    // Snapshot for undo before applying changes
     const snapshot = [];
 
-    // 2. For each agent, apply the changes and update Firestore
-    for (const [agentId, changes] of updates.entries()) {
-        // Find the full agent object from our local data store
+    for (const [agentId, monthsMap] of updates.entries()) {
         const agent = plannerData.find(a => a.id === agentId);
         if (!agent) {
             console.error(`Could not find agent with ID ${agentId} in local data.`);
             continue;
         }
 
-        // Save snapshot for undo
-        snapshot.push({
-            agentId,
-            previousDays: [...agent.days],
-            previousDayNotes: { ...(agent.dayNotes || {}) }
-        });
+        const updateData = {};
 
-        // Create a mutable copy of the agent's days array and dayNotes map
-        const newDays = [...agent.days];
-        const newDayNotes = { ...(agent.dayNotes || {}) };
-        changes.forEach(({ dayIndex, newValue }) => {
-            if (dayIndex >= 0 && dayIndex < newDays.length) {
-                newDays[dayIndex] = newValue;
-                // Update or remove note for this day
-                if (noteText) {
-                    newDayNotes[dayIndex.toString()] = noteText;
-                } else {
-                    delete newDayNotes[dayIndex.toString()];
+        for (const [monthKey, changes] of monthsMap.entries()) {
+            const daysArray = getAgentDaysForMonth(agent, monthKey);
+            const notesObj = getAgentNotesForMonth(agent, monthKey);
+
+            // Save snapshot for undo (per agent+month)
+            snapshot.push({
+                agentId,
+                monthKey,
+                previousDays: [...daysArray],
+                previousDayNotes: { ...notesObj }
+            });
+
+            const newDays = [...daysArray];
+            while (newDays.length < 31) newDays.push('');
+            const newDayNotes = { ...notesObj };
+
+            changes.forEach(({ dayIndex, newValue }) => {
+                if (dayIndex >= 0 && dayIndex < newDays.length) {
+                    newDays[dayIndex] = newValue;
+                    if (noteText) {
+                        newDayNotes[dayIndex.toString()] = noteText;
+                    } else {
+                        delete newDayNotes[dayIndex.toString()];
+                    }
                 }
-            }
-        });
+            });
 
-        // 3. Call the updateAgent function to save days + dayNotes to Firestore
-        await updateAgent(agentId, { days: newDays, dayNotes: newDayNotes });
+            // Use Firestore dot-notation to write to specific month
+            updateData[`monthlyDays.${monthKey}`] = newDays;
+            updateData[`monthlyNotes.${monthKey}`] = newDayNotes;
+        }
+
+        await updateAgent(agentId, updateData);
     }
 
-    // Push snapshot to undo stack
     if (snapshot.length > 0) {
         undoStack.push(snapshot);
         if (undoStack.length > MAX_UNDO) undoStack.shift();
     }
 
-    // Log the bulk edit
     const agentNames = [...updates.keys()].map(id => {
         const a = plannerData.find(x => x.id === id);
         return a?.fullName || id;
@@ -249,8 +259,8 @@ export async function undoLastChange() {
     const snapshot = undoStack.pop();
     for (const entry of snapshot) {
         await updateAgent(entry.agentId, {
-            days: entry.previousDays,
-            dayNotes: entry.previousDayNotes
+            [`monthlyDays.${entry.monthKey}`]: entry.previousDays,
+            [`monthlyNotes.${entry.monthKey}`]: entry.previousDayNotes
         });
     }
     logActivity('portal', 'undo', { agents: snapshot.length });
@@ -907,16 +917,17 @@ function renderAgentRow(agent, dates) {
     let weeklyHours = 0;
     
     dates.forEach(date => {
-        const dayIndex = date.getDate() - 1; // agent.days is 0-indexed (0 for 1st, 1 for 2nd)
+        const dayIndex = date.getDate() - 1;
+        const monthKey = getMonthKey(date);
 
         const cell = document.createElement('td');
         cell.className = 'planner-cell selectable';
-        cell.dataset.agentId = agent.id; // Use Firestore document ID
+        cell.dataset.agentId = agent.id;
         cell.dataset.day = dayIndex;
+        cell.dataset.month = monthKey;
 
-        // This assumes agent.days stores data for the month of the current date
-        // This is a design limitation but we'll work with it for now.
-        let dayValue = agent.days && agent.days[dayIndex] ? agent.days[dayIndex] : '';
+        const daysArray = getAgentDaysForMonth(agent, monthKey);
+        let dayValue = daysArray[dayIndex] || '';
 
         // Auto-fill DZ for days within the deactivation range (cross-month support)
         if (!dayValue && agent.inactiveFrom && agent.isActive === false) {
@@ -957,9 +968,10 @@ function renderAgentRow(agent, dates) {
         cell.classList.add(...getCellClass(dayValue, date));
 
         // Add note indicator if agent has a note for this day
-        if (agent.dayNotes && agent.dayNotes[dayIndex.toString()]) {
+        const notesForMonth = getAgentNotesForMonth(agent, monthKey);
+        if (notesForMonth[dayIndex.toString()]) {
             cell.classList.add('has-note');
-            cell.title = agent.dayNotes[dayIndex.toString()];
+            cell.title = notesForMonth[dayIndex.toString()];
         }
         // Show deactivation note on DZ cells
         if (dayValue === 'DZ' && agent.deactivationNote) {
@@ -998,7 +1010,7 @@ function renderAgentRow(agent, dates) {
     // Total cell
     const totalCell = document.createElement('td');
     totalCell.className = 'agent-total';
-    totalCell.textContent = calculateAgentTotalHours(agent);
+    totalCell.textContent = calculateAgentTotalHours(agent, dates);
 
     // Append all cells
     row.appendChild(nameCell);
@@ -1135,14 +1147,20 @@ function applyDynamicFontSizing(cell, content) {
     cell.style.textAlignLast = 'center';
 }
 
-function calculateAgentTotalHours(agent) {
-    if (!agent.days || !Array.isArray(agent.days)) return '0h';
-    
+function calculateAgentTotalHours(agent, dates) {
     let totalHours = 0;
-    agent.days.forEach(day => {
-        totalHours += extractHoursFromDay(day);
-    });
-    
+    if (dates && dates.length > 0) {
+        dates.forEach(date => {
+            const monthKey = getMonthKey(date);
+            const dayIndex = date.getDate() - 1;
+            const daysArray = getAgentDaysForMonth(agent, monthKey);
+            totalHours += extractHoursFromDay(daysArray[dayIndex] || '');
+        });
+    } else if (agent.days && Array.isArray(agent.days)) {
+        agent.days.forEach(day => {
+            totalHours += extractHoursFromDay(day);
+        });
+    }
     return `${totalHours}h`;
 }
 
@@ -1183,9 +1201,7 @@ function addCellEventListeners() {
 
 function handleCellMouseDown(e) {
     const cell = e.currentTarget;
-    // CRITICAL CHANGE: The key now uses the Firestore document ID (agent.id)
-    // instead of the agent's name, which is more robust.
-    const cellKey = `${cell.dataset.agentId}-${cell.dataset.day}`;
+    const cellKey = `${cell.dataset.agentId}|${cell.dataset.month}|${cell.dataset.day}`;
     
     selectionState.selectionStarted = true;
     
@@ -1203,9 +1219,9 @@ function handleCellMouseDown(e) {
 
 function handleCellMouseOver(e) {
     if (!selectionState.selectionStarted) return;
-    
+
     const cell = e.currentTarget;
-    const cellKey = `${cell.dataset.agentId}-${cell.dataset.day}`;
+    const cellKey = `${cell.dataset.agentId}|${cell.dataset.month}|${cell.dataset.day}`;
     
     if (!selectionState.selectedCells.has(cellKey)) {
         selectionState.selectedCells.add(cellKey);

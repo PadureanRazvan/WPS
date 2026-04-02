@@ -1187,3 +1187,26 @@ export const TEAM_DISPLAY_NAMES = {
     'SV-SE': 'SV-SE zooplus', 'DE': 'DE zooplus', 'BRO': 'BRO zooplus', 'BDE': 'BDE zooplus',
     '2L': '2nd Level', 'QA': 'QA', 'TL': 'Team Lead'
 };
+
+// --- Month-keyed data helpers (for multi-month planner support) ---
+
+/** Returns "YYYY-MM" from a Date object */
+export function getMonthKey(date) {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+}
+
+/** Returns the days array for a specific month, with backward-compat fallback */
+export function getAgentDaysForMonth(agent, monthKey) {
+    if (agent.monthlyDays && agent.monthlyDays[monthKey]) {
+        return agent.monthlyDays[monthKey];
+    }
+    return agent.days || [];
+}
+
+/** Returns the notes object for a specific month, with backward-compat fallback */
+export function getAgentNotesForMonth(agent, monthKey) {
+    if (agent.monthlyNotes && agent.monthlyNotes[monthKey]) {
+        return agent.monthlyNotes[monthKey];
+    }
+    return agent.dayNotes || {};
+}

@@ -4,6 +4,7 @@ import { collection, onSnapshot, Timestamp } from "https://www.gstatic.com/fireb
 import { addAgent, updateAgent, deleteAgent } from './planner.js';
 import { showTemporaryMessage, t } from './ui.js';
 import { logActivity } from './logs.js';
+import { getMonthKey, getAgentDaysForMonth } from './config.js';
 
 let usersData = [];
 
@@ -157,6 +158,7 @@ function setupNewUserForm() {
             }
         }
 
+        const monthKey = getMonthKey(now);
         const newUser = {
             fullName,
             username,
@@ -166,7 +168,8 @@ function setupNewUserForm() {
             teams: [teamCode],
             hireDate: new Date(hireDateStr),
             isActive: true,
-            days
+            monthlyDays: { [monthKey]: days },
+            monthlyNotes: {}
         };
 
         await addAgent(newUser);
@@ -318,21 +321,22 @@ function openContractChangeModal(userId, newContractType) {
         }
 
         // Generate new days, merging with existing
+        const contractMonthKey = getMonthKey(now);
         const newDays = generateDaysFromDate(startDay, daysInMonth, year, month, contractHours, teamCode);
-        const existingDays = user.days || Array(31).fill('');
-        const mergedDays = existingDays.map((existing, i) => {
-            if (i < newDays.length && newDays[i] !== null) {
-                return newDays[i];
-            }
-            return existing || '';
-        });
-        // Pad to 31 if shorter
+        const existingDays = getAgentDaysForMonth(user, contractMonthKey);
+        const mergedDays = [...existingDays];
         while (mergedDays.length < 31) mergedDays.push('');
+        for (let i = 0; i < mergedDays.length; i++) {
+            if (i < newDays.length && newDays[i] !== null) {
+                mergedDays[i] = newDays[i];
+            }
+            mergedDays[i] = mergedDays[i] || '';
+        }
 
         await updateAgent(userId, {
             contractType: newContractType,
             contractHours,
-            days: mergedDays
+            [`monthlyDays.${contractMonthKey}`]: mergedDays
         });
         logActivity('portal', 'change_contract', { name: user.fullName, type: newContractType, hours: contractHours });
 
@@ -401,13 +405,14 @@ function openDeactivateModal(userId) {
         newSaveBtn.addEventListener('click', async () => {
             // Clear DZ codes from current month
             const now = new Date();
-            const existingDays = user.days || Array(31).fill('');
+            const reactivateMonthKey = getMonthKey(now);
+            const existingDays = getAgentDaysForMonth(user, reactivateMonthKey);
             const clearedDays = existingDays.map(d => d === 'DZ' ? '' : (d || ''));
             while (clearedDays.length < 31) clearedDays.push('');
 
             await updateAgent(userId, {
                 isActive: true,
-                days: clearedDays,
+                [`monthlyDays.${reactivateMonthKey}`]: clearedDays,
                 inactiveFrom: null,
                 inactiveTo: null,
                 deactivationNote: null
@@ -488,27 +493,29 @@ function openDeactivateModal(userId) {
         const year = now.getFullYear();
         const month = now.getMonth();
         const daysInMonth = new Date(year, month + 1, 0).getDate();
-        const existingDays = user.days || Array(31).fill('');
+        const deactMonthKey = getMonthKey(now);
+        const existingDays = getAgentDaysForMonth(user, deactMonthKey);
 
-        const newDays = existingDays.map((existing, i) => {
+        const newDays = [...existingDays];
+        while (newDays.length < 31) newDays.push('');
+        for (let i = 0; i < newDays.length; i++) {
             const dayNum = i + 1;
             const cellDate = new Date(year, month, dayNum);
 
-            // Check if this day falls within the deactivation range
             const afterStart = cellDate >= new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
             const beforeEnd = !endDate || cellDate <= new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
 
             if (afterStart && beforeEnd && dayNum <= daysInMonth) {
-                return 'DZ';
+                newDays[i] = 'DZ';
+            } else {
+                newDays[i] = newDays[i] || '';
             }
-            return existing || '';
-        });
-        while (newDays.length < 31) newDays.push('');
+        }
 
         // Build update object
         const updateData = {
             isActive: false,
-            days: newDays,
+            [`monthlyDays.${deactMonthKey}`]: newDays,
             inactiveFrom: Timestamp.fromDate(startDate),
             inactiveTo: endDate ? Timestamp.fromDate(endDate) : null,
             deactivationNote: noteText || null

@@ -4,7 +4,7 @@ import { collection, doc, setDoc, deleteDoc, getDocs } from "https://www.gstatic
 import { getPlannerData } from './planner.js';
 import { getUsersData } from './users.js';
 import { showTemporaryMessage } from './ui.js';
-import { translations, isNonWorkingCode, normalizeTeamForDisplay, UPLOAD_VALID_TEAMS, PRODUCTIVITY_TEAMS } from './config.js';
+import { translations, isNonWorkingCode, normalizeTeamForDisplay, UPLOAD_VALID_TEAMS, PRODUCTIVITY_TEAMS, getMonthKey, getAgentDaysForMonth } from './config.js';
 
 function getLang() { return localStorage.getItem('language') || 'ro'; }
 function t(key) { const l = getLang(); return (translations[l] && translations[l][key]) || key; }
@@ -236,9 +236,6 @@ function parseHoursFromDayValue(dayValue) {
 // --- Get hours for a date range from planner ---
 
 function getHoursForRange(agent, start, end) {
-    const days = agent.days;
-    if (!days || !Array.isArray(days)) return 0;
-
     let totalHours = 0;
     const current = new Date(start);
     current.setHours(0, 0, 0, 0);
@@ -247,8 +244,10 @@ function getHoursForRange(agent, start, end) {
 
     while (current <= endDate) {
         const dayIndex = current.getDate() - 1;
-        if (dayIndex >= 0 && dayIndex < days.length) {
-            totalHours += parseHoursFromDayValue(days[dayIndex]);
+        const monthKey = getMonthKey(current);
+        const daysArray = getAgentDaysForMonth(agent, monthKey);
+        if (dayIndex >= 0 && dayIndex < daysArray.length) {
+            totalHours += parseHoursFromDayValue(daysArray[dayIndex]);
         }
         current.setDate(current.getDate() + 1);
     }
@@ -257,9 +256,6 @@ function getHoursForRange(agent, start, end) {
 
 // Get hours for a SPECIFIC team from planner (e.g., from "4RO+4IT" only count RO hours)
 function getHoursForTeamInRange(agent, start, end, teamFilter) {
-    const days = agent.days;
-    if (!days || !Array.isArray(days)) return 0;
-
     let totalHours = 0;
     const current = new Date(start);
     current.setHours(0, 0, 0, 0);
@@ -269,8 +265,10 @@ function getHoursForTeamInRange(agent, start, end, teamFilter) {
 
     while (current <= endDate) {
         const dayIndex = current.getDate() - 1;
-        if (dayIndex >= 0 && dayIndex < days.length) {
-            const dayValue = days[dayIndex];
+        const monthKey = getMonthKey(current);
+        const daysArray = getAgentDaysForMonth(agent, monthKey);
+        if (dayIndex >= 0 && dayIndex < daysArray.length) {
+            const dayValue = daysArray[dayIndex];
             if (dayValue && typeof dayValue === 'string' && !isNonWorkingCode(dayValue.trim())) {
                 dayValue.trim().split('+').forEach(part => {
                     const m = part.trim().match(/^(\d+)\s*([A-Za-z-]+)?$/);
@@ -295,9 +293,6 @@ function getHoursForTeamInRange(agent, start, end, teamFilter) {
 
 // Extract unique team codes from planner day values across a date range
 function getTeamsFromPlanner(agent, start, end) {
-    const days = agent.days;
-    if (!days || !Array.isArray(days)) return [];
-
     const VALID_TEAMS = UPLOAD_VALID_TEAMS;
     const teams = new Set();
     const current = new Date(start);
@@ -307,8 +302,10 @@ function getTeamsFromPlanner(agent, start, end) {
 
     while (current <= endDate) {
         const dayIndex = current.getDate() - 1;
-        if (dayIndex >= 0 && dayIndex < days.length) {
-            const dayValue = days[dayIndex];
+        const monthKey = getMonthKey(current);
+        const daysArray = getAgentDaysForMonth(agent, monthKey);
+        if (dayIndex >= 0 && dayIndex < daysArray.length) {
+            const dayValue = daysArray[dayIndex];
             if (dayValue && typeof dayValue === 'string' && !isNonWorkingCode(dayValue.trim())) {
                 dayValue.trim().split('+').forEach(part => {
                     const m = part.trim().match(/^\d+\s*([A-Za-z-]+)$/);
@@ -737,7 +734,9 @@ function renderDetailView() {
             if (!agent) return;
 
             const dayIndex = current.getDate() - 1;
-            const dayValue = agent.days?.[dayIndex] || '';
+            const monthKey = getMonthKey(current);
+            const daysArray = getAgentDaysForMonth(agent, monthKey);
+            const dayValue = daysArray[dayIndex] || '';
 
             const { tickets: allTickets, calls: allCalls, teams } = hasData ? getDataForSingleDate(dateKey, normalizedName) : { tickets: 0, calls: 0, teams: new Map() };
 
@@ -1329,10 +1328,11 @@ export function getAverageProductivity() {
 
     for (const dateKey of sortedDates) {
         const entry = dataByDate.get(dateKey);
-        const dayIndex = parseInt(dateKey.split('-')[2], 10) - 1;
+        const dateParts = dateKey.split('-');
+        const dayIndex = parseInt(dateParts[2], 10) - 1;
+        const monthKeyFromDate = `${dateParts[0]}-${dateParts[1]}`;
 
         for (const agent of agents) {
-            if (!agent.days || !Array.isArray(agent.days)) continue;
             if (agent.isActive === false) continue;
 
             const normalizedName = normalizeName(agent.fullName || agent.username || '');
@@ -1347,7 +1347,8 @@ export function getAverageProductivity() {
                 if (c) items += c.calls || 0;
             }
 
-            const dayValue = agent.days[dayIndex] || '';
+            const daysArray = getAgentDaysForMonth(agent, monthKeyFromDate);
+            const dayValue = daysArray[dayIndex] || '';
             let hours = 0;
             if (dayValue && !isNonWorkingCode(dayValue.trim())) {
                 dayValue.trim().split('+').forEach(part => {
@@ -1408,7 +1409,9 @@ export function getProductivityTrendData() {
         }
 
         const entry = dataByDate.get(dateKey);
-        const dayIndex = parseInt(dateKey.split('-')[2], 10) - 1;
+        const datePartsChart = dateKey.split('-');
+        const dayIndex = parseInt(datePartsChart[2], 10) - 1;
+        const monthKeyChart = `${datePartsChart[0]}-${datePartsChart[1]}`;
 
         // Aggregate items and hours per team (grouped by agent's primaryTeam)
         const teamItems = {};
@@ -1416,7 +1419,6 @@ export function getProductivityTrendData() {
         teamNames.forEach(t => { teamItems[t] = 0; teamHours[t] = 0; });
 
         for (const agent of agents) {
-            if (!agent.days || !Array.isArray(agent.days)) continue;
             if (agent.isActive === false) continue;
             const team = agent.primaryTeam;
             if (!team) continue;
@@ -1435,7 +1437,8 @@ export function getProductivityTrendData() {
             }
 
             // Hours from planner
-            const dayValue = agent.days[dayIndex] || '';
+            const daysArrayChart = getAgentDaysForMonth(agent, monthKeyChart);
+            const dayValue = daysArrayChart[dayIndex] || '';
             let hours = 0;
             if (dayValue && !isNonWorkingCode(dayValue.trim())) {
                 dayValue.trim().split('+').forEach(part => {
