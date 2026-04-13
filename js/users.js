@@ -221,9 +221,81 @@ export function renderUsersTable() {
             </td>
             <td><button class="btn-ghost delete-btn" data-id="${user.id}">${t('delete')}</button></td>
         `;
+
+        tr.querySelectorAll('[data-field]').forEach((fieldElement) => {
+            fieldElement.dataset.initialValue = getComparableInlineFieldState(user, fieldElement.dataset.field);
+        });
+
         tbody.appendChild(tr);
     });
 
+}
+
+function normalizeInlineDateValue(value) {
+    if (!value) return '';
+
+    const date = value instanceof Date
+        ? value
+        : value?.toDate
+            ? value.toDate()
+            : new Date(value);
+
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toISOString().split('T')[0];
+}
+
+function normalizeInlineFieldValue(field, value) {
+    if (field === 'contractHours') {
+        const numericValue = typeof value === 'number' ? value : parseInt(value, 10);
+        return Number.isNaN(numericValue) ? '' : String(numericValue);
+    }
+
+    if (field === 'hireDate') {
+        return normalizeInlineDateValue(value);
+    }
+
+    if (value == null) return '';
+    return String(value).trim();
+}
+
+function getComparableInlineFieldState(user, field) {
+    if (field === 'contractHours') {
+        const currentHours = user?.contractHours ?? ((user?.contractType || 'Full-time') === 'Full-time' ? 8 : '');
+        return normalizeInlineFieldValue(field, currentHours);
+    }
+
+    if (field === 'contractType') {
+        return normalizeInlineFieldValue(field, user?.contractType || 'Full-time');
+    }
+
+    const normalizedValue = normalizeInlineFieldValue(field, user?.[field]);
+
+    if (field === 'primaryTeam') {
+        const storedTeams = Array.isArray(user?.teams)
+            ? user.teams.map(team => String(team || '').trim()).filter(Boolean)
+            : [];
+
+        return JSON.stringify({
+            primaryTeam: normalizedValue,
+            teams: storedTeams
+        });
+    }
+
+    return normalizedValue;
+}
+
+function getComparableInlineDraftState(field, rawValue) {
+    const normalizedValue = normalizeInlineFieldValue(field, rawValue);
+
+    if (field === 'primaryTeam') {
+        const teamCode = normalizedValue ? normalizedValue.split(' ')[0] : '';
+        return JSON.stringify({
+            primaryTeam: normalizedValue,
+            teams: teamCode ? [teamCode] : []
+        });
+    }
+
+    return normalizedValue;
 }
 
 // Generate planner days from a start date to end of month
@@ -539,18 +611,20 @@ async function handleInlineEdit(e) {
     const tr = target.closest('tr');
     const id = tr.dataset.id;
     const field = target.dataset.field;
+    const user = usersData.find(u => u.id === id);
     let value;
+
+    if (!user) return;
 
     // isActive is handled by the deactivate modal, not inline edit
     if (field === 'isActive') return;
 
     // Contract type change — open modal instead of direct update
     if (field === 'contractType') {
+        if (e.type !== 'change') return;
         const newType = target.value;
-        const user = usersData.find(u => u.id === id);
-        if (user) {
-            openContractChangeModal(id, newType);
-        }
+        if (normalizeInlineFieldValue('contractType', newType) === getComparableInlineFieldState(user, 'contractType')) return;
+        openContractChangeModal(id, newType);
         return;
     }
 
@@ -560,6 +634,9 @@ async function handleInlineEdit(e) {
     } else {
         value = target.value;
     }
+
+    const currentState = getComparableInlineFieldState(user, field);
+    const lastSavedState = target.dataset.initialValue || currentState;
 
     // Field-specific validation and transformation
     if (field === 'contractHours') {
@@ -576,21 +653,31 @@ async function handleInlineEdit(e) {
             return;
         }
         value = Timestamp.fromDate(new Date(value));
-    } else if (field === 'primaryTeam') {
-        const teamCode = value.split(' ')[0];
-        await updateAgent(id, { primaryTeam: value, teams: [teamCode] });
-        logActivity('portal', 'edit_user', { field: 'primaryTeam', value, agentId: id });
-        showTemporaryMessage(t('user-updated'), "success", 1000);
-        return;
     } else if (field === 'username') {
         // No .fsp validation needed
     } else if (field === 'fullName' && !value) {
         showTemporaryMessage(t('name-empty'), "error");
         renderUsersTable();
+            return;
+    }
+
+    const nextState = getComparableInlineDraftState(field, value);
+    if (nextState === currentState || nextState === lastSavedState) {
+        target.dataset.initialValue = currentState;
         return;
     }
 
-    await updateAgent(id, { [field]: value });
-    logActivity('portal', 'edit_user', { field, agentId: id });
+    let updatePayload = { [field]: value };
+    const logDetails = { field, agentId: id };
+
+    if (field === 'primaryTeam') {
+        const teamCode = String(value).trim().split(' ')[0];
+        updatePayload = { primaryTeam: value, teams: teamCode ? [teamCode] : [] };
+        logDetails.value = value;
+    }
+
+    await updateAgent(id, updatePayload);
+    target.dataset.initialValue = nextState;
+    logActivity('portal', 'edit_user', logDetails);
     showTemporaryMessage(t('user-updated'), "success", 1000);
 } 

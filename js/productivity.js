@@ -4,7 +4,7 @@ import { collection, doc, setDoc, deleteDoc, getDocs } from "https://www.gstatic
 import { getPlannerData } from './planner.js';
 import { getUsersData } from './users.js';
 import { showTemporaryMessage } from './ui.js';
-import { translations, isNonWorkingCode, normalizeTeamForDisplay, UPLOAD_VALID_TEAMS, PRODUCTIVITY_TEAMS, getMonthKey, getAgentDaysForMonth } from './config.js';
+import { translations, isNonWorkingCode, normalizeTeamForDisplay, PRODUCTIVITY_TEAMS, parseShiftEntry, extractHoursFromDay, getMonthKey, getAgentDaysForMonth } from './config.js';
 
 function getLang() { return localStorage.getItem('language') || 'ro'; }
 function t(key) { const l = getLang(); return (translations[l] && translations[l][key]) || key; }
@@ -222,15 +222,27 @@ function parseCSVLine(line) {
 // --- Hours Parser ---
 
 function parseHoursFromDayValue(dayValue) {
-    if (!dayValue || typeof dayValue !== 'string') return 0;
+    return extractHoursFromDay(dayValue);
+}
+
+function getPrimaryTeamCode(agent) {
+    return normalizeTeamForDisplay(agent.primaryTeam?.split(' ')[0]?.toUpperCase() || '');
+}
+
+function parsePlannerDayEntries(dayValue) {
+    if (!dayValue || typeof dayValue !== 'string') return [];
+
     const trimmed = dayValue.trim();
-    if (isNonWorkingCode(trimmed)) return 0;
-    let total = 0;
-    trimmed.split('+').forEach(entry => {
-        const match = entry.trim().match(/(\d+)/);
-        if (match) total += parseInt(match[1], 10);
-    });
-    return total;
+    if (isNonWorkingCode(trimmed)) return [];
+
+    return trimmed
+        .split('+')
+        .map(part => parseShiftEntry(part))
+        .filter(Boolean)
+        .map(parsed => ({
+            hours: parsed.hours,
+            team: parsed.team ? normalizeTeamForDisplay(parsed.team) : null
+        }));
 }
 
 // --- Get hours for a date range from planner ---
@@ -261,7 +273,8 @@ function getHoursForTeamInRange(agent, start, end, teamFilter) {
     current.setHours(0, 0, 0, 0);
     const endDate = new Date(end);
     endDate.setHours(23, 59, 59, 999);
-    const filterUpper = teamFilter.toUpperCase();
+    const filterUpper = normalizeTeamForDisplay(teamFilter.toUpperCase());
+    const primaryCode = getPrimaryTeamCode(agent);
 
     while (current <= endDate) {
         const dayIndex = current.getDate() - 1;
@@ -269,21 +282,11 @@ function getHoursForTeamInRange(agent, start, end, teamFilter) {
         const daysArray = getAgentDaysForMonth(agent, monthKey);
         if (dayIndex >= 0 && dayIndex < daysArray.length) {
             const dayValue = daysArray[dayIndex];
-            if (dayValue && typeof dayValue === 'string' && !isNonWorkingCode(dayValue.trim())) {
-                dayValue.trim().split('+').forEach(part => {
-                    const m = part.trim().match(/^(\d+)\s*([A-Za-z-]+)?$/);
-                    if (m) {
-                        const h = parseInt(m[1], 10);
-                        const code = m[2] ? m[2].toUpperCase() : '';
-                        if (code === filterUpper || (filterUpper === 'CS' && (code === 'SK' || code === 'CZ'))) {
-                            totalHours += h;
-                        } else if (!m[2]) {
-                            // No team code (e.g. just "8") — check if agent's primary team matches
-                            const primaryCode = agent.primaryTeam?.split(' ')[0]?.toUpperCase() || '';
-                            if (primaryCode === filterUpper) totalHours += h;
-                        }
-                    }
-                });
+            for (const entry of parsePlannerDayEntries(dayValue)) {
+                const teamCode = entry.team || primaryCode;
+                if (teamCode === filterUpper) {
+                    totalHours += entry.hours;
+                }
             }
         }
         current.setDate(current.getDate() + 1);
@@ -293,7 +296,6 @@ function getHoursForTeamInRange(agent, start, end, teamFilter) {
 
 // Extract unique team codes from planner day values across a date range
 function getTeamsFromPlanner(agent, start, end) {
-    const VALID_TEAMS = UPLOAD_VALID_TEAMS;
     const teams = new Set();
     const current = new Date(start);
     current.setHours(0, 0, 0, 0);
@@ -306,14 +308,10 @@ function getTeamsFromPlanner(agent, start, end) {
         const daysArray = getAgentDaysForMonth(agent, monthKey);
         if (dayIndex >= 0 && dayIndex < daysArray.length) {
             const dayValue = daysArray[dayIndex];
-            if (dayValue && typeof dayValue === 'string' && !isNonWorkingCode(dayValue.trim())) {
-                dayValue.trim().split('+').forEach(part => {
-                    const m = part.trim().match(/^\d+\s*([A-Za-z-]+)$/);
-                    if (m) {
-                        const code = m[1].toUpperCase();
-                        if (VALID_TEAMS.includes(code)) teams.add(code);
-                    }
-                });
+            for (const entry of parsePlannerDayEntries(dayValue)) {
+                if (entry.team) {
+                    teams.add(entry.team);
+                }
             }
         }
         current.setDate(current.getDate() + 1);
@@ -1349,13 +1347,7 @@ export function getAverageProductivity() {
 
             const daysArray = getAgentDaysForMonth(agent, monthKeyFromDate);
             const dayValue = daysArray[dayIndex] || '';
-            let hours = 0;
-            if (dayValue && !isNonWorkingCode(dayValue.trim())) {
-                dayValue.trim().split('+').forEach(part => {
-                    const m = part.trim().match(/(\d+)/);
-                    if (m) hours += parseInt(m[1], 10);
-                });
-            }
+            const hours = extractHoursFromDay(dayValue);
 
             totalItems += items;
             totalHours += hours;
@@ -1439,13 +1431,7 @@ export function getProductivityTrendData(targetYear, targetMonth) {
             // Hours from planner
             const daysArrayChart = getAgentDaysForMonth(agent, monthKeyChart);
             const dayValue = daysArrayChart[dayIndex] || '';
-            let hours = 0;
-            if (dayValue && !isNonWorkingCode(dayValue.trim())) {
-                dayValue.trim().split('+').forEach(part => {
-                    const m = part.trim().match(/(\d+)/);
-                    if (m) hours += parseInt(m[1], 10);
-                });
-            }
+            const hours = extractHoursFromDay(dayValue);
 
             teamItems[team] += items;
             teamHours[team] += hours;

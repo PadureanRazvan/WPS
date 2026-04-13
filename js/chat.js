@@ -4,7 +4,7 @@ import { getUsersData } from './users.js';
 import { getAverageProductivity, getProductivityTrendData } from './productivity.js';
 import { showSection } from './ui.js';
 import { showTemporaryMessage } from './ui.js';
-import { translations, getMonthKey, getAgentDaysForMonth } from './config.js';
+import { translations, extractHoursFromDay, getMonthKey, getAgentDaysForMonth, isNonWorkingCode, normalizeTeamForDisplay, parseShiftEntry } from './config.js';
 import { db } from './firebase-config.js';
 import { logActivity } from './logs.js';
 import { doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore.js";
@@ -360,6 +360,29 @@ function buildToolDeclarations() {
 }
 
 // --- Tool Call Execution (reads from in-memory data) ---
+function parseScheduleEntries(dayValue) {
+    if (!dayValue || typeof dayValue !== 'string') return [];
+
+    const trimmed = dayValue.trim();
+    if (isNonWorkingCode(trimmed)) return [];
+
+    return trimmed
+        .split('+')
+        .map(part => parseShiftEntry(part))
+        .filter(Boolean)
+        .map(parsed => ({
+            hours: parsed.hours,
+            team: parsed.team ? normalizeTeamForDisplay(parsed.team) : null
+        }));
+}
+
+function isValidScheduleValue(value) {
+    const trimmed = (value || '').trim();
+    if (!trimmed) return true;
+    if (isNonWorkingCode(trimmed)) return true;
+    return trimmed.split('+').every(part => parseShiftEntry(part));
+}
+
 function buildDayStatus(agents, dayNum) {
     const active = agents.filter(a => a.isActive !== false);
     const schedule = { working: [], holiday: [], sick: [], dayOff: [], unplanned: [] };
@@ -370,16 +393,17 @@ function buildDayStatus(agents, dayNum) {
     active.forEach(a => {
         const daysArray = getAgentDaysForMonth(a, monthKey);
         const val = daysArray[dayNum - 1] || '';
-        if (!val) { schedule.unplanned.push(a.fullName); return; }
-        if (val === 'Co') { schedule.holiday.push(a.fullName); return; }
-        if (val === 'CM') { schedule.sick.push(a.fullName); return; }
-        if (val === 'LB' || val === 'SL' || val === 'MA' || val === 'DO' || val === 'DC' || val === 'DZ') { schedule.dayOff.push(a.fullName); return; }
+        const trimmed = val.trim();
+        if (!trimmed) { schedule.unplanned.push(a.fullName); return; }
+        if (trimmed === 'Co') { schedule.holiday.push(a.fullName); return; }
+        if (trimmed === 'CM') { schedule.sick.push(a.fullName); return; }
+        if (isNonWorkingCode(trimmed)) { schedule.dayOff.push(a.fullName); return; }
         schedule.working.push(a.fullName);
-        const parts = val.match(/(\d+)/g);
-        totalHours += parts ? parts.reduce((s, n) => s + parseInt(n, 10), 0) : 0;
-        val.split('+').forEach(tp => {
-            const m = tp.match(/(\d+)([A-Z-]+)/);
-            if (m) teamHours[m[2]] = (teamHours[m[2]] || 0) + parseInt(m[1], 10);
+        totalHours += extractHoursFromDay(trimmed);
+        parseScheduleEntries(trimmed).forEach(entry => {
+            if (entry.team) {
+                teamHours[entry.team] = (teamHours[entry.team] || 0) + entry.hours;
+            }
         });
     });
 
@@ -602,12 +626,11 @@ async function executeAction(command, params) {
                 if (dayIndex < 0 || dayIndex >= daysInMonth) return `Invalid day: ${dayStr} (month has ${daysInMonth} days)`;
 
                 // Safety: validate value format
-                const validValues = /^(\d{1,2}[A-Z-]{2,5}(\+\d{1,2}[A-Z-]{2,5})*|Co|CM|LB|SL|)$/;
-                if (value && !validValues.test(value)) return `Invalid schedule value: "${value}"`;
+                if (!isValidScheduleValue(value)) return `Invalid schedule value: "${value}"`;
 
                 // Safety: warn if hours exceed contract
                 if (value && agent.contractHours) {
-                    const totalHours = (value.match(/(\d+)/g) || []).reduce((s, n) => s + parseInt(n, 10), 0);
+                    const totalHours = extractHoursFromDay(value);
                     if (totalHours > agent.contractHours) {
                         console.warn(`[Chat] Schedule ${value} (${totalHours}h) exceeds contract (${agent.contractHours}h) for ${agent.fullName}`);
                     }
