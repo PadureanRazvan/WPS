@@ -16,7 +16,9 @@ const PRIMARY_TEAM_OPTIONS = [
     'CS zooplus',
     'SK zooplus',
     'SV-SE zooplus',
-    '2L 2nd Level'
+    '2L 2nd Level',
+    'QA Quality Assurance',
+    'TL Team Lead'
 ];
 
 function getPrimaryTeamOptions(selectedValue = '') {
