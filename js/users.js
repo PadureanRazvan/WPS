@@ -8,6 +8,134 @@ import { getMonthKey, getAgentDaysForMonth } from './config.js';
 
 let usersData = [];
 
+const PRIMARY_TEAM_OPTIONS = [
+    'RO zooplus',
+    'HU zooplus',
+    'IT zooplus',
+    'NL zooplus',
+    'CS zooplus',
+    'SK zooplus',
+    'SV-SE zooplus',
+    '2L 2nd Level'
+];
+
+function getPrimaryTeamOptions(selectedValue = '') {
+    const normalizedSelectedValue = String(selectedValue || '').trim();
+    const options = [...PRIMARY_TEAM_OPTIONS];
+
+    if (normalizedSelectedValue && !options.includes(normalizedSelectedValue)) {
+        options.push(normalizedSelectedValue);
+    }
+
+    return options;
+}
+
+function buildPrimaryTeamOptionsMarkup(selectedValue = '') {
+    return getPrimaryTeamOptions(selectedValue)
+        .map(team => `<option value="${team}" ${team === selectedValue ? 'selected' : ''}>${team}</option>`)
+        .join('');
+}
+
+function syncPrimaryTeamSelectOptions(selectElement, selectedValue = '') {
+    if (!selectElement) return;
+
+    const nextValue = String(selectedValue || selectElement.value || '').trim();
+    selectElement.innerHTML = buildPrimaryTeamOptionsMarkup(nextValue);
+
+    if (nextValue) {
+        selectElement.value = nextValue;
+    }
+}
+
+function normalizePlannerDate(value) {
+    const date = value instanceof Date
+        ? new Date(value)
+        : value?.toDate
+            ? value.toDate()
+            : new Date(value);
+
+    if (Number.isNaN(date.getTime())) return null;
+    date.setHours(0, 0, 0, 0);
+    return date;
+}
+
+function getMonthStartFromKey(monthKey) {
+    const [yearStr, monthStr] = String(monthKey || '').split('-');
+    const year = parseInt(yearStr, 10);
+    const month = parseInt(monthStr, 10);
+
+    if (!year || !month) return null;
+    return new Date(year, month - 1, 1);
+}
+
+function isDateWithinInclusiveRange(date, startDate, endDate) {
+    const normalizedDate = normalizePlannerDate(date);
+    const normalizedStart = normalizePlannerDate(startDate);
+    const normalizedEnd = endDate ? normalizePlannerDate(endDate) : null;
+
+    if (!normalizedDate || !normalizedStart) return false;
+    return normalizedDate >= normalizedStart && (!normalizedEnd || normalizedDate <= normalizedEnd);
+}
+
+function applyInactiveCodeToMonth(existingDays, monthDate, startDate, endDate) {
+    const monthStart = normalizePlannerDate(monthDate);
+    if (!monthStart) return [...existingDays];
+
+    const year = monthStart.getFullYear();
+    const month = monthStart.getMonth();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const nextDays = [...existingDays];
+
+    while (nextDays.length < 31) nextDays.push('');
+
+    for (let i = 0; i < nextDays.length; i++) {
+        const dayNumber = i + 1;
+        if (dayNumber > daysInMonth) {
+            nextDays[i] = nextDays[i] || '';
+            continue;
+        }
+
+        const cellDate = new Date(year, month, dayNumber);
+        if (isDateWithinInclusiveRange(cellDate, startDate, endDate)) {
+            nextDays[i] = 'DZ';
+        } else {
+            nextDays[i] = nextDays[i] || '';
+        }
+    }
+
+    return nextDays;
+}
+
+function clearInactiveCodeFromMonth(existingDays, monthDate, clearFromDate) {
+    const monthStart = normalizePlannerDate(monthDate);
+    const normalizedClearFrom = normalizePlannerDate(clearFromDate);
+    if (!monthStart || !normalizedClearFrom) return [...existingDays];
+
+    const year = monthStart.getFullYear();
+    const month = monthStart.getMonth();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const nextDays = [...existingDays];
+
+    while (nextDays.length < 31) nextDays.push('');
+
+    for (let i = 0; i < nextDays.length; i++) {
+        const dayNumber = i + 1;
+        if (dayNumber > daysInMonth) {
+            nextDays[i] = nextDays[i] || '';
+            continue;
+        }
+
+        const cellDate = new Date(year, month, dayNumber);
+        if (cellDate >= normalizedClearFrom && nextDays[i] === 'DZ') {
+            nextDays[i] = '';
+        } else {
+            nextDays[i] = nextDays[i] || '';
+        }
+    }
+
+    return nextDays;
+}
+
 export function getUsersData() { return usersData; }
 let unsubscribeFromUsers;
 
@@ -82,6 +210,9 @@ function setupNewUserForm() {
 
     const contractTypeSelect = document.getElementById('newAgentContractType');
     const contractHoursGroup = document.getElementById('newAgentContractHours').closest('.form-group');
+    const primaryTeamSelect = document.getElementById('newAgentPrimaryTeam');
+
+    syncPrimaryTeamSelectOptions(primaryTeamSelect);
 
     // Show/hide contract hours based on contract type
     function updateContractHoursVisibility() {
@@ -204,13 +335,7 @@ export function renderUsersTable() {
             </td>
             <td>
                 <select class="inline-select" data-field="primaryTeam">
-                    <option value="RO zooplus" ${user.primaryTeam === 'RO zooplus' ? 'selected' : ''}>RO zooplus</option>
-                    <option value="HU zooplus" ${user.primaryTeam === 'HU zooplus' ? 'selected' : ''}>HU zooplus</option>
-                    <option value="IT zooplus" ${user.primaryTeam === 'IT zooplus' ? 'selected' : ''}>IT zooplus</option>
-                    <option value="NL zooplus" ${user.primaryTeam === 'NL zooplus' ? 'selected' : ''}>NL zooplus</option>
-                    <option value="CS zooplus" ${user.primaryTeam === 'CS zooplus' ? 'selected' : ''}>CS zooplus</option>
-                    <option value="SK zooplus" ${user.primaryTeam === 'SK zooplus' ? 'selected' : ''}>SK zooplus</option>
-                    <option value="SV-SE zooplus" ${user.primaryTeam === 'SV-SE zooplus' ? 'selected' : ''}>SV-SE zooplus</option>
+                    ${buildPrimaryTeamOptionsMarkup(user.primaryTeam || '')}
                 </select>
             </td>
             <td class="hide-mobile"><input type="date" class="inline-input" value="${hireDateStr}" data-field="hireDate"></td>
@@ -475,20 +600,28 @@ function openDeactivateModal(userId) {
         modal.classList.add('active');
 
         newSaveBtn.addEventListener('click', async () => {
-            // Clear DZ codes from current month
             const now = new Date();
             const reactivateMonthKey = getMonthKey(now);
-            const existingDays = getAgentDaysForMonth(user, reactivateMonthKey);
-            const clearedDays = existingDays.map(d => d === 'DZ' ? '' : (d || ''));
-            while (clearedDays.length < 31) clearedDays.push('');
-
-            await updateAgent(userId, {
+            const futureMonthKeys = Object.keys(user.monthlyDays || {})
+                .filter(monthKey => monthKey >= reactivateMonthKey)
+                .sort();
+            const updateData = {
                 isActive: true,
-                [`monthlyDays.${reactivateMonthKey}`]: clearedDays,
                 inactiveFrom: null,
                 inactiveTo: null,
                 deactivationNote: null
+            };
+
+            futureMonthKeys.forEach(monthKey => {
+                const monthStart = getMonthStartFromKey(monthKey);
+                if (!monthStart) return;
+
+                const existingDays = getAgentDaysForMonth(user, monthKey);
+                const clearedDays = clearInactiveCodeFromMonth(existingDays, monthStart, now);
+                updateData[`monthlyDays.${monthKey}`] = clearedDays;
             });
+
+            await updateAgent(userId, updateData);
             logActivity('portal', 'reactivate_agent', { name: user.fullName });
             closeModal();
             showTemporaryMessage(t('agent-reactivated').replace('{name}', user.fullName), "success");
@@ -560,29 +693,10 @@ function openDeactivateModal(userId) {
 
         const noteText = noteInput ? noteInput.value.trim() : '';
 
-        // Update days array for the current planner month
         const now = new Date();
-        const year = now.getFullYear();
-        const month = now.getMonth();
-        const daysInMonth = new Date(year, month + 1, 0).getDate();
         const deactMonthKey = getMonthKey(now);
         const existingDays = getAgentDaysForMonth(user, deactMonthKey);
-
-        const newDays = [...existingDays];
-        while (newDays.length < 31) newDays.push('');
-        for (let i = 0; i < newDays.length; i++) {
-            const dayNum = i + 1;
-            const cellDate = new Date(year, month, dayNum);
-
-            const afterStart = cellDate >= new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
-            const beforeEnd = !endDate || cellDate <= new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
-
-            if (afterStart && beforeEnd && dayNum <= daysInMonth) {
-                newDays[i] = 'DZ';
-            } else {
-                newDays[i] = newDays[i] || '';
-            }
-        }
+        const newDays = applyInactiveCodeToMonth(existingDays, now, startDate, endDate);
 
         // Build update object
         const updateData = {

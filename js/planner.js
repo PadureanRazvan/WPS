@@ -885,6 +885,75 @@ function getFilteredAgents() {
     return filteredAgents;
 }
 
+function normalizePlannerDate(value) {
+    const date = value instanceof Date
+        ? new Date(value)
+        : value?.toDate
+            ? value.toDate()
+            : new Date(value);
+
+    if (Number.isNaN(date.getTime())) return null;
+    date.setHours(0, 0, 0, 0);
+    return date;
+}
+
+function getMonthStartFromKey(monthKey) {
+    const [yearStr, monthStr] = String(monthKey || '').split('-');
+    const year = parseInt(yearStr, 10);
+    const month = parseInt(monthStr, 10);
+
+    if (!year || !month) return null;
+    return new Date(year, month - 1, 1);
+}
+
+function formatMonthLabel(monthKey) {
+    const monthStart = getMonthStartFromKey(monthKey);
+    if (!monthStart) return monthKey;
+
+    const locales = { ro: 'ro-RO', en: 'en-US', it: 'it-IT' };
+    const locale = locales[getLang()] || 'ro-RO';
+    return monthStart.toLocaleDateString(locale, { month: 'long', year: 'numeric' });
+}
+
+function isDateInInactiveRange(agent, date) {
+    if (!agent?.inactiveFrom || agent?.isActive !== false) return false;
+
+    const normalizedDate = normalizePlannerDate(date);
+    const inactiveFrom = normalizePlannerDate(agent.inactiveFrom);
+    const inactiveTo = agent.inactiveTo ? normalizePlannerDate(agent.inactiveTo) : null;
+
+    if (!normalizedDate || !inactiveFrom) return false;
+    return normalizedDate >= inactiveFrom && (!inactiveTo || normalizedDate <= inactiveTo);
+}
+
+function getEffectivePlannerDayValue(agent, date) {
+    if (isDateInInactiveRange(agent, date)) {
+        return 'DZ';
+    }
+
+    const monthKey = getMonthKey(date);
+    const dayIndex = date.getDate() - 1;
+    const daysArray = getAgentDaysForMonth(agent, monthKey);
+    return daysArray[dayIndex] || '';
+}
+
+async function clearAgentPlannerMonth(agentId, monthKey) {
+    if (!agentId || !monthKey) return;
+
+    const emptyDays = Array(31).fill('');
+    await updateAgent(agentId, {
+        [`monthlyDays.${monthKey}`]: emptyDays,
+        [`monthlyNotes.${monthKey}`]: {}
+    });
+
+    const agent = plannerData.find(entry => entry.id === agentId);
+    logActivity('portal', 'clear_agent_month', {
+        name: agent?.fullName || agentId,
+        month: monthKey
+    });
+    showTemporaryMessage(`Planner data cleared for ${formatMonthLabel(monthKey)}.`, "success");
+}
+
 // Table Rendering (now renders live data)
 export function renderPlannerTable(container, startDate, endDate) {
     // Use passed-in dates or fallback to state
@@ -990,6 +1059,8 @@ export function renderPlannerTable(container, startDate, endDate) {
 function renderAgentRow(agent, dates) {
     const row = document.createElement('tr');
     row.className = 'agent-row';
+    const renderedMonthKeys = [...new Set(dates.map(date => getMonthKey(date)))];
+    const deleteMonthKey = renderedMonthKeys.length === 1 ? renderedMonthKeys[0] : '';
 
     // Agent name cell
     const nameCell = document.createElement('td');
@@ -997,7 +1068,7 @@ function renderAgentRow(agent, dates) {
     nameCell.title = agent.fullName || agent.name || t('unknown-agent'); // Add tooltip
     nameCell.innerHTML = `
         <span>${agent.fullName || agent.name || t('unknown-agent')}</span>
-        <button class="delete-agent-btn" data-agent-id="${agent.id}" title="${t('delete')}">
+        <button class="delete-agent-btn" data-agent-id="${agent.id}" data-month-key="${deleteMonthKey}" title="${t('delete')}">
             <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
         </button>
     `;
@@ -1021,22 +1092,7 @@ function renderAgentRow(agent, dates) {
         cell.dataset.day = dayIndex;
         cell.dataset.month = monthKey;
 
-        const daysArray = getAgentDaysForMonth(agent, monthKey);
-        let dayValue = daysArray[dayIndex] || '';
-
-        // Auto-fill DZ for days within the deactivation range (cross-month support)
-        if (!dayValue && agent.inactiveFrom && agent.isActive === false) {
-            const inactiveFrom = agent.inactiveFrom.toDate ? agent.inactiveFrom.toDate() : new Date(agent.inactiveFrom);
-            const inactiveTo = agent.inactiveTo ? (agent.inactiveTo.toDate ? agent.inactiveTo.toDate() : new Date(agent.inactiveTo)) : null;
-            const cellDate = new Date(date);
-            cellDate.setHours(0, 0, 0, 0);
-            const fromNorm = new Date(inactiveFrom); fromNorm.setHours(0, 0, 0, 0);
-            const toNorm = inactiveTo ? new Date(inactiveTo) : null; if (toNorm) toNorm.setHours(0, 0, 0, 0);
-
-            if (cellDate >= fromNorm && (!toNorm || cellDate <= toNorm)) {
-                dayValue = 'DZ';
-            }
-        }
+        const dayValue = getEffectivePlannerDayValue(agent, date);
 
         const formattedContent = formatCellContent(dayValue);
         
@@ -1246,10 +1302,7 @@ function calculateAgentTotalHours(agent, dates) {
     let totalHours = 0;
     if (dates && dates.length > 0) {
         dates.forEach(date => {
-            const monthKey = getMonthKey(date);
-            const dayIndex = date.getDate() - 1;
-            const daysArray = getAgentDaysForMonth(agent, monthKey);
-            totalHours += extractHoursFromDay(daysArray[dayIndex] || '');
+            totalHours += extractHoursFromDay(getEffectivePlannerDayValue(agent, date));
         });
     } else if (agent.days && Array.isArray(agent.days)) {
         agent.days.forEach(day => {
@@ -1353,10 +1406,25 @@ function handleDeleteButtonClick(e) {
         e.preventDefault();
         e.stopPropagation();
         const agentId = deleteBtn.dataset.agentId;
-        if (agentId && confirm(t('confirm-delete-agent'))) {
-            deleteAgent(agentId);
-        } else {
+        const monthKey = deleteBtn.dataset.monthKey;
+
+        if (!agentId) {
             console.error('No agent ID found on delete button');
+            return;
+        }
+
+        if (!monthKey) {
+            showTemporaryMessage("Open a single-month planner view to remove this month's data safely.", "info");
+            return;
+        }
+
+        const agent = plannerData.find(entry => entry.id === agentId);
+        const agentName = agent?.fullName || t('unknown-agent');
+        const monthLabel = formatMonthLabel(monthKey);
+        const confirmMessage = `Remove ${agentName} from ${monthLabel} only?\n\nThis clears planner data for that month and keeps previous months unchanged.`;
+
+        if (confirm(confirmMessage)) {
+            clearAgentPlannerMonth(agentId, monthKey);
         }
     }
 }

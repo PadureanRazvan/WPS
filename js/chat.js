@@ -657,7 +657,7 @@ async function executeAction(command, params) {
                 const hours = parseInt(contractHours, 10) || 8;
                 if (hours < 1 || hours > 12) return `Invalid contract hours: ${contractHours}`;
 
-                const validTeams = ['RO zooplus', 'HU zooplus', 'IT zooplus', 'NL zooplus', 'CS zooplus', 'SK zooplus', 'SV-SE zooplus'];
+                const validTeams = ['RO zooplus', 'HU zooplus', 'IT zooplus', 'NL zooplus', 'CS zooplus', 'SK zooplus', 'SV-SE zooplus', '2L 2nd Level'];
                 const team = primaryTeam || 'RO zooplus';
                 if (!validTeams.includes(team)) return `Unknown team: "${team}". Valid: ${validTeams.join(', ')}`;
 
