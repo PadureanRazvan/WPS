@@ -4,7 +4,7 @@ import { collection, onSnapshot, Timestamp } from "https://www.gstatic.com/fireb
 import { addAgent, updateAgent, deleteAgent } from './planner.js';
 import { showTemporaryMessage, t } from './ui.js';
 import { logActivity } from './logs.js';
-import { getMonthKey, getAgentDaysForMonth } from './config.js';
+import { getMonthKey, getAgentDaysForMonth, generateDefaultSchedule } from './config.js';
 
 let usersData = [];
 
@@ -267,29 +267,15 @@ function setupNewUserForm() {
             contractHours = 8;
         }
 
-        // Generate smart planner days for the current month
         const teamCode = primaryTeam.split(' ')[0]; // "RO zooplus" -> "RO"
         const now = new Date();
-        const year = now.getFullYear();
-        const month = now.getMonth(); // 0-indexed
-        const daysInMonth = new Date(year, month + 1, 0).getDate();
-        const days = [];
-
-        for (let d = 1; d <= 31; d++) {
-            if (d <= daysInMonth) {
-                const date = new Date(year, month, d);
-                const dayOfWeek = date.getDay(); // 0=Sun, 6=Sat
-                if (dayOfWeek >= 1 && dayOfWeek <= 5) {
-                    days.push(`${contractHours}${teamCode}`);
-                } else {
-                    days.push(''); // Weekend — leave empty
-                }
-            } else {
-                days.push(''); // Days beyond month length
-            }
-        }
-
         const monthKey = getMonthKey(now);
+        const hireDate = new Date(hireDateStr);
+        const days = generateDefaultSchedule({
+            contractHours,
+            primaryTeam,
+            hireDate
+        }, monthKey);
         const newUser = {
             fullName,
             username,
@@ -297,7 +283,7 @@ function setupNewUserForm() {
             contractType,
             primaryTeam,
             teams: [teamCode],
-            hireDate: new Date(hireDateStr),
+            hireDate,
             isActive: true,
             monthlyDays: { [monthKey]: days },
             monthlyNotes: {}

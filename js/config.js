@@ -1195,6 +1195,58 @@ export function getMonthKey(date) {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
 }
 
+function normalizeScheduleBoundaryDate(value) {
+    if (!value) return null;
+
+    const date = value instanceof Date
+        ? new Date(value)
+        : value?.toDate
+            ? value.toDate()
+            : new Date(value);
+
+    if (Number.isNaN(date.getTime())) return null;
+    date.setHours(0, 0, 0, 0);
+    return date;
+}
+
+function applyHireDateBoundaryToDays(agent, monthKey, sourceDays = []) {
+    const hireDate = normalizeScheduleBoundaryDate(agent?.hireDate);
+    if (!hireDate) return [...sourceDays];
+
+    const [yearStr, monthStr] = String(monthKey || '').split('-');
+    const year = parseInt(yearStr, 10);
+    const month = parseInt(monthStr, 10) - 1;
+
+    if (Number.isNaN(year) || Number.isNaN(month)) {
+        return [...sourceDays];
+    }
+
+    const monthStart = new Date(year, month, 1);
+    monthStart.setHours(0, 0, 0, 0);
+    const monthEnd = new Date(year, month + 1, 0);
+    monthEnd.setHours(0, 0, 0, 0);
+
+    if (monthEnd < hireDate) {
+        return [];
+    }
+
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const normalizedDays = [...sourceDays];
+    while (normalizedDays.length < 31) normalizedDays.push('');
+
+    if (monthStart.getFullYear() === hireDate.getFullYear() && monthStart.getMonth() === hireDate.getMonth()) {
+        for (let day = 1; day < hireDate.getDate(); day++) {
+            normalizedDays[day - 1] = '';
+        }
+    }
+
+    for (let day = daysInMonth + 1; day <= 31; day++) {
+        normalizedDays[day - 1] = '';
+    }
+
+    return normalizedDays;
+}
+
 /**
  * Generates a default weekday schedule from an agent's contract info.
  * Returns a 31-element array: "{hours}{team}" on Mon-Fri, "" on weekends/overflow.
@@ -1208,9 +1260,15 @@ export function generateDefaultSchedule(agent, monthKey) {
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const entry = teamCode ? `${hours}${teamCode}` : `${hours}`;
     const days = [];
+    const hireDate = normalizeScheduleBoundaryDate(agent?.hireDate);
 
     for (let d = 1; d <= 31; d++) {
         if (d <= daysInMonth) {
+            const cellDate = new Date(year, month, d);
+            if (hireDate && cellDate < hireDate) {
+                days.push('');
+                continue;
+            }
             const dayOfWeek = new Date(year, month, d).getDay();
             days.push(dayOfWeek >= 1 && dayOfWeek <= 5 ? entry : '');
         } else {
@@ -1224,25 +1282,25 @@ export function generateDefaultSchedule(agent, monthKey) {
  *  Priority: saved monthlyDays > legacy days > auto-generated from contract.
  *  Auto-generation only for months on/after the agent's hire date. */
 export function getAgentDaysForMonth(agent, monthKey) {
+    const hireDate = normalizeScheduleBoundaryDate(agent?.hireDate);
+    if (hireDate) {
+        const hireMonthKey = getMonthKey(hireDate);
+        if (monthKey < hireMonthKey) return [];
+    }
+
     // 1. Migrated agent — use saved month data
     if (agent.monthlyDays) {
         if (agent.monthlyDays[monthKey]) {
-            return agent.monthlyDays[monthKey];
+            return applyHireDateBoundaryToDays(agent, monthKey, agent.monthlyDays[monthKey]);
         }
         // 2. No data for this month — auto-generate if after hire date
         if (agent.contractHours && agent.primaryTeam) {
-            if (agent.hireDate) {
-                const hireMonthKey = getMonthKey(
-                    agent.hireDate instanceof Date ? agent.hireDate : new Date(agent.hireDate)
-                );
-                if (monthKey < hireMonthKey) return []; // Before hire — empty
-            }
-            return generateDefaultSchedule(agent, monthKey);
+            return applyHireDateBoundaryToDays(agent, monthKey, generateDefaultSchedule(agent, monthKey));
         }
         return [];
     }
     // 3. Fully unmigrated agent — legacy flat array
-    return agent.days || [];
+    return applyHireDateBoundaryToDays(agent, monthKey, agent.days || []);
 }
 
 /** Returns the notes object for a specific month, with backward-compat fallback. */
