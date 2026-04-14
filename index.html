@@ -117,7 +117,7 @@
                     <svg class="nav-icon" viewBox="0 0 24 24">
                         <path d="M11 17h2v-1h1c.55 0 1-.45 1-1v-3c0-.55-.45-1-1-1h-3v-1h4V8h-2V7h-2v1h-1c-.55 0-1 .45-1 1v3c0 .55.45 1 1 1h3v1H9v2h2v1zm9-12H4c-1.11 0-2 .89-2 2v10c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V7c0-1.11-.89-2-2-2z"/>
                     </svg>
-                    <span data-translate="nav-roadmap">Roadmap</span>
+                    <span data-translate="nav-roadmap">Dev</span>
                 </div>
                 <div class="nav-item" data-tooltip="info" style="margin-top: auto;">
                     <svg class="nav-icon" viewBox="0 0 24 24">
@@ -189,7 +189,7 @@
                     <!-- Stats Cards -->
                     <div class="dashboard-grid">
                         <div class="stat-card">
-                            <div class="stat-label" data-translate="total-active-agents">Total Agenți Activi</div>
+                            <div class="stat-label" data-translate="total-active-agents">Total Agenți</div>
                             <div class="stat-value" id="totalActiveAgentsValue">...</div>
                             <div class="stat-detail" id="totalActiveAgentsDetail">*</div>
                         </div>
@@ -300,6 +300,10 @@
                                         <option>CS zooplus</option>
                                         <option>SK zooplus</option>
                                         <option>SV-SE zooplus</option>
+                                        <option>DE zooplus</option>
+                                        <option>2L 2nd Level</option>
+                                        <option>QA Quality Assurance</option>
+                                        <option>TL Team Lead</option>
                                     </select>
                                 </div>
                                 <div class="form-group">
@@ -523,22 +527,19 @@
                 </div>
             </section>
 
-            <!-- Roadmap Section -->
+            <!-- Dev Section -->
             <section id="roadmap" class="section">
                 <header class="header">
-                    <h2 class="header-title" data-translate="roadmap-title">Roadmap</h2>
+                    <h2 class="header-title" data-translate="roadmap-title">Dev</h2>
                 </header>
                 <div class="content" style="max-width: 1000px; margin: 0 auto; width: 100%;">
 
                     <div class="chart-container" style="margin-bottom: 1.5rem;">
                         <h3 class="chart-title" style="margin-bottom: 1rem; color: var(--error);" data-translate="roadmap-bugs-title">Bugs Cunoscute</h3>
                         <ul style="color: var(--text-secondary); line-height: 2; padding-left: 1.5rem;">
-                            <li data-translate="roadmap-bug-1"><s>Gemini API returnează 404 pe unele browsere din cauza cache-ului — necesită Ctrl+Shift+R</s> ✅ Rezolvat</li>
                             <li data-translate="roadmap-bug-2">Rata de cereri API limitată fără profil de facturare Google configurat</li>
                             <li data-translate="roadmap-bug-3">Cross-Origin-Opener-Policy blochează popup-ul de login pe unele browsere</li>
-                            <li data-translate="roadmap-bug-4"><s>Gemini 3.x „thinking mode" activ implicit provoacă eroare 400 cu function calling</s> ✅ Rezolvat</li>
-                            <li data-translate="roadmap-bug-5"><s>Function response trimis ca array în loc de obiect — eroare proto serialization</s> ✅ Rezolvat</li>
-                            <li data-translate="roadmap-bug-6"><s>Acțiunile de editare din planner nu sunt înregistrate în jurnal</s> ✅ Rezolvat</li>
+                            <li data-translate="roadmap-bug-7">Dropdown-ul Contract Type deschide modalul „Change to Full-time” la al doilea click, chiar dacă selecția rămâne Full-time</li>
                         </ul>
                     </div>
 
@@ -551,54 +552,6 @@
                             <li data-translate="roadmap-finding-4">Stări de încărcare — lipsesc spinners/skeletons la încărcarea datelor din Firestore</li>
                             <li data-translate="roadmap-finding-5">Validare date — lipsește validare de schemă la scrierea în Firestore</li>
                             <li data-translate="roadmap-finding-6">Istoric chat — se pierde la reîncărcarea paginii (doar în memorie)</li>
-                            <li data-translate="roadmap-finding-7"><s>AI primea toate datele în prompt (10KB+) — migrat la Gemini function calling</s> ✅ Implementat</li>
-                            <li data-translate="roadmap-finding-8"><s>Vulnerabilitate XSS în renderizarea mesajelor chat</s> ✅ Rezolvat</li>
-                            <li data-translate="roadmap-finding-9"><s>AI putea șterge agenți fără confirmare utilizator</s> ✅ Adăugat gate de confirmare</li>
-                        </ul>
-                    </div>
-
-                    <div class="chart-container">
-                        <h3 class="chart-title" style="margin-bottom: 1rem; color: var(--success);" data-translate="roadmap-future-title">Dezvoltări Viitoare</h3>
-                        <ul style="color: var(--text-secondary); line-height: 2; padding-left: 1.5rem;">
-                            <li>Persistența istoricului chat în localStorage</li>
-                            <li>Export rapoarte în PDF / Excel</li>
-                            <li>Notificări push pentru schimbări de program</li>
-                            <li>Roluri utilizator (admin, manager, vizualizare)</li>
-                            <li>Dashboard cu grafice interactive (drag-and-drop pe planner)</li>
-                            <li>Integrare calendar (Google Calendar sync)</li>
-                            <li>Mod offline cu sincronizare la reconectare</li>
-                            <li>Proxy API key prin Cloud Functions pentru securitate</li>
-                            <li>Point-in-Time Restore — salvare automată a snapshot-urilor plannerului în Firestore, cu posibilitatea de a restaura starea echipei la orice moment din trecut</li>
-                            <li>Domeniu personalizat pentru platformă (ex: sherpa.fspglobal.com)</li>
-                        </ul>
-                    </div>
-
-                    <div class="chart-container">
-                        <h3 class="chart-title" style="margin-bottom: 1rem; color: var(--accent);" data-translate="roadmap-done-title">Implementate Recent</h3>
-                        <ul style="color: var(--text-secondary); line-height: 2; padding-left: 1.5rem;">
-                            <li>✅ Tipuri noi de concediu: Maternitate (MA), Donare Sânge (DO), Deces (DC), Sărbătoare Legală (SL)</li>
-                            <li>✅ Câmp notițe general pe toate tipurile de editare din planner</li>
-                            <li>✅ Sistem Undo — max 3 acțiuni, cu confirmare la prima anulare (Ctrl+Z)</li>
-                            <li>✅ Coduri echipă noi: 2L (Second Level), QA, TL (Team Lead)</li>
-                            <li>✅ Merge SK+CZ → CS pentru afișare (date separate în storage)</li>
-                            <li>✅ Redesign dezactivare: Litepicker, cross-month, cod DZ, notițe, tooltip</li>
-                            <li>✅ Greeting AI zilnic pe sidebar (Gemini, partajat între utilizatori)</li>
-                            <li>✅ Traduceri complete — eliminare string-uri hardcoded în română</li>
-                            <li>✅ Centralizare constante (coduri concediu, liste echipe) în config.js</li>
-                            <li>✅ Eliminare echipa pt-PT</li>
-                            <li>✅ Animație logo: glob 3D cu continente (morphing particule)</li>
-                            <li>✅ Fix bug dezactivare: Anulează nu mai schimbă statusul</li>
-                            <li>✅ Fix selecție celule: counter-ul se resetează după salvare</li>
-                            <li>✅ Audit trail complet cu jurnal de activitate</li>
-                            <li>✅ Logare acțiuni planner (editare celule, creare/ștergere agenți)</li>
-                            <li>✅ Migrare AI de la prompt cu date la Gemini function calling</li>
-                            <li>✅ Fix vulnerabilitate XSS în mesaje chat</li>
-                            <li>✅ Gate confirmare ștergere agenți prin AI</li>
-                            <li>✅ GitHub Pages deployment (padureanrazvan.github.io/WPS)</li>
-                            <li>✅ Izolare date lunare — fiecare lună are date independente, editările într-o lună nu afectează altele</li>
-                            <li>✅ Auto-generare program de bază — lunile fără date salvate afișează automat programul din contract (ore+echipă în zilele lucrătoare)</li>
-                            <li>✅ Navigare rapidă între luni — săgeți ◀ ▶ pe planner și pe graficul de productivitate</li>
-                            <li>✅ Actualizare model Gemini API (gemini-2.0-flash → gemini-2.5-flash)</li>
                         </ul>
                     </div>
 
@@ -618,7 +571,7 @@
                             Pagina principală oferă o vedere de ansamblu a echipei:
                         </p>
                         <ul style="color: var(--text-secondary); line-height: 2; margin-top: 0.5rem; padding-left: 1.5rem;">
-                            <li data-translate="info-dashboard-agents"><strong style="color: var(--text-primary);">Total Agenți Activi</strong> — numărul de agenți înregistrați și activi în sistem</li>
+                            <li data-translate="info-dashboard-agents"><strong style="color: var(--text-primary);">Total Agenți</strong> — cardul afișează numărul total de agenți încărcați din baza de date</li>
                             <li data-translate="info-dashboard-hours"><strong style="color: var(--text-primary);">Ore Planificate</strong> — totalul orelor planificate pentru ziua curentă (Azi) sau orice dată selectată din calendar</li>
                             <li data-translate="info-dashboard-teams"><strong style="color: var(--text-primary);">Ore Alocate pe Echipe</strong> — tabelul arată distribuția orelor pe echipe pentru data selectată</li>
                             <li data-translate="info-dashboard-prod"><strong style="color: var(--text-primary);">Productivitate Medie</strong> — media productivității (tickete+apeluri / oră) pe ultimele zile cu date încărcate</li>
@@ -634,7 +587,7 @@
                         <ul style="color: var(--text-secondary); line-height: 2; margin-top: 0.5rem; padding-left: 1.5rem;">
                             <li data-translate="info-users-add"><strong style="color: var(--text-primary);">Adaugă agent nou</strong> — completează numele, username-ul, orele de contract, tipul contractului, echipa primară și data angajării</li>
                             <li data-translate="info-users-inline"><strong style="color: var(--text-primary);">Editare inline</strong> — click direct pe orice câmp din tabel pentru a-l modifica (numele, orele, echipa etc.)</li>
-                            <li data-translate="info-users-team"><strong style="color: var(--text-primary);">Echipa primară</strong> — echipa principală a agentului (ex: RO zooplus). Agentul poate lucra și pentru alte echipe conform plannerului</li>
+                            <li data-translate="info-users-team"><strong style="color: var(--text-primary);">Echipa primară</strong> — echipa principală a agentului. Sunt suportate echipe customer (ex: RO zooplus) și roluri operaționale precum 2L, QA sau TL</li>
                             <li data-translate="info-users-contract"><strong style="color: var(--text-primary);">Tip Contract</strong> — Full-time (8h automat) sau Part-time (ore configurabile). Schimbarea tipului de contract deschide un modal pentru a selecta data de start și noile ore</li>
                             <li data-translate="info-users-active"><strong style="color: var(--text-primary);">Activ/Inactiv</strong> — buton care deschide un modal cu opțiuni: Indefinit (dezactivare permanentă) sau Perioadă (interval de date). Plannerul se actualizează automat</li>
                         </ul>
@@ -647,9 +600,9 @@
                         </p>
                         <ul style="color: var(--text-secondary); line-height: 2; margin-top: 0.5rem; padding-left: 1.5rem;">
                             <li data-translate="info-planner-nav"><strong style="color: var(--text-primary);">Navigare luni</strong> — folosește săgețile ◀ ▶ pentru a trece rapid la luna anterioară sau următoare</li>
-                            <li data-translate="info-planner-monthly"><strong style="color: var(--text-primary);">Date lunare independente</strong> — fiecare lună are propriile date; editările într-o lună nu afectează altele. Lunile fără date afișează programul de bază din contract</li>
+                            <li data-translate="info-planner-monthly"><strong style="color: var(--text-primary);">Date lunare independente</strong> — fiecare lună are propriile date; editările într-o lună nu afectează altele. Programul de bază respectă data exactă de angajare</li>
                             <li data-translate="info-planner-format"><strong style="color: var(--text-primary);">Format ore</strong> — introdu orele cu codul echipei: 8RO = 8 ore pe RO, 4RO+4IT = 4 ore RO + 4 ore IT</li>
-                            <li data-translate="info-planner-codes"><strong style="color: var(--text-primary);">Coduri speciale</strong> — Co = Concediu, CM = Concediu Medical, SL = Sărbătoare Legală, LB = Liber, MA = Maternitate, DO = Donare Sânge, DC = Deces</li>
+                            <li data-translate="info-planner-codes"><strong style="color: var(--text-primary);">Coduri speciale</strong> — Co = Concediu, CM = Concediu Medical, SL = Sărbătoare Legală, LB = Liber, MA = Maternitate, DO = Donare Sânge, DC = Deces, DZ = Dezactivat</li>
                             <li data-translate="info-planner-multi"><strong style="color: var(--text-primary);">Selecție multiplă</strong> — selectează mai multe celule și editează-le simultan cu modalul de editare</li>
                             <li data-translate="info-planner-auto"><strong style="color: var(--text-primary);">Salvare automată</strong> — toate modificările se salvează automat în baza de date</li>
                         </ul>
@@ -658,7 +611,7 @@
                     <div class="chart-container" style="margin-bottom: 1.5rem;">
                         <h3 class="chart-title" style="margin-bottom: 1rem;" data-translate="info-prod-title">4. Productivitate</h3>
                         <p style="color: var(--text-secondary); line-height: 1.7;" data-translate="info-prod-desc">
-                            Analiza productivității bazată pe datele încărcate (tickete + apeluri) și orele din planner:
+                            Analiza productivității bazată pe datele încărcate (tickete + apeluri) și orele eligibile din planner:
                         </p>
                         <ul style="color: var(--text-secondary); line-height: 2; margin-top: 0.5rem; padding-left: 1.5rem;">
                             <li data-translate="info-prod-period"><strong style="color: var(--text-primary);">Selectare perioadă</strong> — alege un interval de date cu calendarul din colțul dreapta-sus</li>
@@ -666,7 +619,7 @@
                             <li data-translate="info-prod-summary"><strong style="color: var(--text-primary);">Sumar</strong> — vedere agregată per agent pe întreaga perioadă selectată</li>
                             <li data-translate="info-prod-agent"><strong style="color: var(--text-primary);">Per Agent</strong> — vedere detaliată zi cu zi, per agent. Selectează agenții folosind chipurile sau căutarea</li>
                             <li data-translate="info-prod-teams"><strong style="color: var(--text-primary);">Echipe (coloana)</strong> — arată echipele pentru care agentul a lucrat efectiv, bazat pe fișierele încărcate</li>
-                            <li data-translate="info-prod-formula"><strong style="color: var(--text-primary);">Formula</strong> — Productivitate = (Tickete + Apeluri) / Ore Lucrate</li>
+                            <li data-translate="info-prod-formula"><strong style="color: var(--text-primary);">Formula</strong> — Productivitate = (Tickete + Apeluri) / Ore Lucrate eligibile. QA și TL sunt excluși din calcul; 2L rămâne inclus</li>
                         </ul>
                     </div>
 
@@ -720,6 +673,9 @@
                             <div class="stat-card" style="padding: 0.75rem; text-align: center;"><strong style="color: var(--accent);">SK</strong><br><span style="color: var(--text-secondary); font-size: 0.85rem;" data-translate="info-team-sk">Slovacia</span></div>
                             <div class="stat-card" style="padding: 0.75rem; text-align: center;"><strong style="color: var(--accent);">SV-SE</strong><br><span style="color: var(--text-secondary); font-size: 0.85rem;" data-translate="info-team-se">Suedia</span></div>
                             <div class="stat-card" style="padding: 0.75rem; text-align: center;"><strong style="color: var(--accent);">DE</strong><br><span style="color: var(--text-secondary); font-size: 0.85rem;" data-translate="info-team-de">Germania</span></div>
+                            <div class="stat-card" style="padding: 0.75rem; text-align: center;"><strong style="color: var(--accent);">2L</strong><br><span style="color: var(--text-secondary); font-size: 0.85rem;" data-translate="info-team-2l">Second Level</span></div>
+                            <div class="stat-card" style="padding: 0.75rem; text-align: center;"><strong style="color: var(--accent);">QA</strong><br><span style="color: var(--text-secondary); font-size: 0.85rem;" data-translate="info-team-qa">Quality Assurance</span></div>
+                            <div class="stat-card" style="padding: 0.75rem; text-align: center;"><strong style="color: var(--accent);">TL</strong><br><span style="color: var(--text-secondary); font-size: 0.85rem;" data-translate="info-team-tl">Team Lead</span></div>
                         </div>
                     </div>
 
