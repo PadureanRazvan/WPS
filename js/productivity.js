@@ -19,7 +19,7 @@ let currentTeamFilter = 'all';
 let productivityPicker = null;
 let currentView = 'overview'; // 'overview' or 'detail'
 let selectedAgents = new Set(); // normalized names of selected agents
-const PRODUCTIVITY_EXCLUDED_PRIMARY_TEAM_CODES = new Set(['TL']);
+const PRODUCTIVITY_EXCLUDED_PRIMARY_TEAM_CODES = new Set(['TL', 'QA']);
 
 // --- Name Normalization & Matching ---
 
