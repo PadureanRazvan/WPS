@@ -19,6 +19,7 @@ let currentTeamFilter = 'all';
 let productivityPicker = null;
 let currentView = 'overview'; // 'overview' or 'detail'
 let selectedAgents = new Set(); // normalized names of selected agents
+const PRODUCTIVITY_EXCLUDED_PRIMARY_TEAM_CODES = new Set(['TL']);
 
 // --- Name Normalization & Matching ---
 
@@ -227,6 +228,19 @@ function parseHoursFromDayValue(dayValue) {
 
 function getPrimaryTeamCode(agent) {
     return normalizeTeamForDisplay(agent.primaryTeam?.split(' ')[0]?.toUpperCase() || '');
+}
+
+function isExcludedFromProductivity(agent) {
+    return PRODUCTIVITY_EXCLUDED_PRIMARY_TEAM_CODES.has(getPrimaryTeamCode(agent));
+}
+
+function pruneSelectedAgents() {
+    const allowedAgents = new Set(getFilteredAgents().map(([normalizedName]) => normalizedName));
+    selectedAgents.forEach(normalizedName => {
+        if (!allowedAgents.has(normalizedName)) {
+            selectedAgents.delete(normalizedName);
+        }
+    });
 }
 
 function parsePlannerDayEntries(dayValue) {
@@ -506,6 +520,7 @@ function calculateProductivity() {
 
         const agent = matchAgent(originalName);
         if (!agent) return;
+        if (isExcludedFromProductivity(agent)) return;
 
         // Build full team breakdown from uploaded files
         const MAIN_TEAMS = PRODUCTIVITY_TEAMS;
@@ -698,6 +713,8 @@ function renderDetailView() {
     const statsContainer = document.getElementById('productivityStats');
     if (!container) return;
 
+    pruneSelectedAgents();
+
     if (!hasAnyData()) {
         container.innerHTML = `<p style="color: var(--text-secondary); text-align: center; padding: 3rem;">${t('prod-upload-to-see')}</p>`;
         if (statsContainer) statsContainer.innerHTML = '';
@@ -730,6 +747,7 @@ function renderDetailView() {
         selectedAgents.forEach(normalizedName => {
             const agent = users.find(u => normalizeName(u.fullName) === normalizedName || normalizeName(u.username) === normalizedName);
             if (!agent) return;
+            if (isExcludedFromProductivity(agent)) return;
 
             const dayIndex = current.getDate() - 1;
             const monthKey = getMonthKey(current);
@@ -894,7 +912,7 @@ function getFilteredAgents() {
             map.forEach((val, normalizedName) => {
                 if (agentNames.has(normalizedName)) return;
                 const agent = matchAgent(val.originalName);
-                if (agent) {
+                if (agent && !isExcludedFromProductivity(agent)) {
                     agentNames.set(normalizeName(agent.fullName), { fullName: agent.fullName, primaryTeam: agent.primaryTeam });
                 }
             });
@@ -904,6 +922,7 @@ function getFilteredAgents() {
     });
 
     getUsersData().forEach(u => {
+        if (isExcludedFromProductivity(u)) return;
         const key = normalizeName(u.fullName);
         if (!agentNames.has(key)) {
             agentNames.set(key, { fullName: u.fullName, primaryTeam: u.primaryTeam });
@@ -924,6 +943,7 @@ function renderAgentChips(searchTerm = '') {
     if (!container) return;
 
     let agents = getFilteredAgents();
+    pruneSelectedAgents();
 
     // Apply search filter
     if (searchTerm) {
@@ -1307,7 +1327,7 @@ export function cleanupProductivity() {
  * Returns { average: number|null, days: number }
  */
 export function getAverageProductivity() {
-    const agents = getPlannerData();
+    const agents = getPlannerData().filter(agent => !isExcludedFromProductivity(agent));
     if (!hasAnyData() || agents.length === 0) return { average: null, days: 0 };
 
     // Get the last 7 days with actual uploaded data
@@ -1361,7 +1381,7 @@ export function getAverageProductivity() {
 }
 
 export function getProductivityTrendData(targetYear, targetMonth) {
-    const agents = getPlannerData();
+    const agents = getPlannerData().filter(agent => !isExcludedFromProductivity(agent));
     const datesWithData = new Set(
         [...dataByDate.keys()].filter(dk => {
             const e = dataByDate.get(dk);
