@@ -19,7 +19,7 @@ let currentTeamFilter = 'all';
 let productivityPicker = null;
 let currentView = 'overview'; // 'overview' or 'detail'
 let selectedAgents = new Set(); // normalized names of selected agents
-const PRODUCTIVITY_EXCLUDED_PRIMARY_TEAM_CODES = new Set(['TL', 'QA']);
+const PRODUCTIVITY_HOURS_EXCLUDED_PRIMARY_TEAM_CODES = new Set(['TL', 'QA']);
 
 // --- Name Normalization & Matching ---
 
@@ -230,8 +230,8 @@ function getPrimaryTeamCode(agent) {
     return normalizeTeamForDisplay(agent.primaryTeam?.split(' ')[0]?.toUpperCase() || '');
 }
 
-function isExcludedFromProductivity(agent) {
-    return PRODUCTIVITY_EXCLUDED_PRIMARY_TEAM_CODES.has(getPrimaryTeamCode(agent));
+function hasExcludedProductivityHours(agent) {
+    return PRODUCTIVITY_HOURS_EXCLUDED_PRIMARY_TEAM_CODES.has(getPrimaryTeamCode(agent));
 }
 
 function pruneSelectedAgents() {
@@ -257,6 +257,66 @@ function parsePlannerDayEntries(dayValue) {
             hours: parsed.hours,
             team: parsed.team ? normalizeTeamForDisplay(parsed.team) : null
         }));
+}
+
+function getEligibleHoursForRange(agent, start, end) {
+    if (hasExcludedProductivityHours(agent)) return 0;
+    return getHoursForRange(agent, start, end);
+}
+
+function getEligibleHoursForTeamInRange(agent, start, end, teamFilter) {
+    if (hasExcludedProductivityHours(agent)) return 0;
+    return getHoursForTeamInRange(agent, start, end, teamFilter);
+}
+
+function entryHasTeamData(entry, teamCode) {
+    if (!entry?.teams) return false;
+
+    let hasTeam = false;
+    entry.teams.forEach((count, team) => {
+        if (count > 0 && normalizeTeamForDisplay(team) === teamCode) {
+            hasTeam = true;
+        }
+    });
+    return hasTeam;
+}
+
+function getAgentsWithUploadedTeamData(teamCode, start = dateStart, end = dateEnd) {
+    const matchingAgents = new Set();
+    const normalizedTeamCode = normalizeTeamForDisplay(teamCode);
+    const { mergedTickets, mergedCalls } = getMergedDataForRange(start, end);
+
+    const addMatchedAgent = (entry) => {
+        if (!entryHasTeamData(entry, normalizedTeamCode)) return;
+        const agent = matchAgent(entry.originalName);
+        if (!agent) return;
+        matchingAgents.add(normalizeName(agent.fullName));
+    };
+
+    mergedTickets.forEach(addMatchedAgent);
+    mergedCalls.forEach(addMatchedAgent);
+    return matchingAgents;
+}
+
+function addUploadedEntryTeams(teamSet, entry) {
+    if (!entry?.teams) return;
+
+    entry.teams.forEach((count, team) => {
+        const normalizedTeam = normalizeTeamForDisplay(team);
+        if (count > 0 && PRODUCTIVITY_TEAMS.includes(normalizedTeam)) {
+            teamSet.add(normalizedTeam);
+        }
+    });
+}
+
+function addUploadedEntryCounts(teamItems, entry) {
+    if (!entry?.teams) return;
+
+    entry.teams.forEach((count, team) => {
+        const normalizedTeam = normalizeTeamForDisplay(team);
+        if (!PRODUCTIVITY_TEAMS.includes(normalizedTeam)) return;
+        teamItems[normalizedTeam] = (teamItems[normalizedTeam] || 0) + count;
+    });
 }
 
 // --- Get hours for a date range from planner ---
@@ -520,7 +580,6 @@ function calculateProductivity() {
 
         const agent = matchAgent(originalName);
         if (!agent) return;
-        if (isExcludedFromProductivity(agent)) return;
 
         // Build full team breakdown from uploaded files
         const MAIN_TEAMS = PRODUCTIVITY_TEAMS;
@@ -546,11 +605,11 @@ function calculateProductivity() {
             calls = callsByTeam.get(currentTeamFilter) || 0;
             // Only include agent if they have data for this team
             if (tickets === 0 && calls === 0) return;
-            hours = getHoursForTeamInRange(agent, dateStart, dateEnd, currentTeamFilter);
+            hours = getEligibleHoursForTeamInRange(agent, dateStart, dateEnd, currentTeamFilter);
         } else {
             tickets = tEntry?.tickets || 0;
             calls = cEntry?.calls || 0;
-            hours = getHoursForRange(agent, dateStart, dateEnd);
+            hours = getEligibleHoursForRange(agent, dateStart, dateEnd);
         }
         const total = tickets + calls;
 
@@ -747,7 +806,6 @@ function renderDetailView() {
         selectedAgents.forEach(normalizedName => {
             const agent = users.find(u => normalizeName(u.fullName) === normalizedName || normalizeName(u.username) === normalizedName);
             if (!agent) return;
-            if (isExcludedFromProductivity(agent)) return;
 
             const dayIndex = current.getDate() - 1;
             const monthKey = getMonthKey(current);
@@ -779,11 +837,11 @@ function renderDetailView() {
                 tickets = teamTickets;
                 calls = teamCalls;
                 if (tickets === 0 && calls === 0) return; // skip if no data for this team
-                hours = getHoursForTeamInRange(agent, current, current, currentTeamFilter);
+                hours = getEligibleHoursForTeamInRange(agent, current, current, currentTeamFilter);
             } else {
                 tickets = allTickets;
                 calls = allCalls;
-                hours = parseHoursFromDayValue(dayValue);
+                hours = getEligibleHoursForRange(agent, current, current);
             }
             const total = tickets + calls;
             const productivity = hours > 0 ? total / hours : 0;
@@ -910,10 +968,11 @@ function getFilteredAgents() {
         const addFromMap = (map) => {
             if (!map) return;
             map.forEach((val, normalizedName) => {
-                if (agentNames.has(normalizedName)) return;
                 const agent = matchAgent(val.originalName);
-                if (agent && !isExcludedFromProductivity(agent)) {
-                    agentNames.set(normalizeName(agent.fullName), { fullName: agent.fullName, primaryTeam: agent.primaryTeam });
+                if (agent) {
+                    const agentKey = normalizeName(agent.fullName);
+                    if (agentNames.has(agentKey)) return;
+                    agentNames.set(agentKey, { fullName: agent.fullName, primaryTeam: agent.primaryTeam });
                 }
             });
         };
@@ -922,7 +981,6 @@ function getFilteredAgents() {
     });
 
     getUsersData().forEach(u => {
-        if (isExcludedFromProductivity(u)) return;
         const key = normalizeName(u.fullName);
         if (!agentNames.has(key)) {
             agentNames.set(key, { fullName: u.fullName, primaryTeam: u.primaryTeam });
@@ -931,7 +989,8 @@ function getFilteredAgents() {
 
     let agents = [...agentNames.entries()];
     if (currentTeamFilter !== 'all') {
-        agents = agents.filter(([, info]) => info.primaryTeam?.includes(currentTeamFilter));
+        const matchingAgents = getAgentsWithUploadedTeamData(currentTeamFilter);
+        agents = agents.filter(([normalizedName]) => matchingAgents.has(normalizedName));
     }
     agents.sort((a, b) => a[1].fullName.localeCompare(b[1].fullName));
     return agents;
@@ -1319,15 +1378,15 @@ export function cleanupProductivity() {
 
 /**
  * Returns productivity trend data for the dashboard chart.
- * Groups agents by primaryTeam, calculates per-team productivity per day.
- * Returns { dates: string[], teams: { teamDisplayName: number[] } }
+ * Groups uploaded work by customer team and divides it by eligible planner hours per team/day.
+ * Returns { dates: string[], teams: { teamCode: number[] } }
  */
 /**
  * Returns the average productivity (items/hour) across all teams for the last 7 days with data.
  * Returns { average: number|null, days: number }
  */
 export function getAverageProductivity() {
-    const agents = getPlannerData().filter(agent => !isExcludedFromProductivity(agent));
+    const agents = getPlannerData();
     if (!hasAnyData() || agents.length === 0) return { average: null, days: 0 };
 
     // Get the last 7 days with actual uploaded data
@@ -1346,9 +1405,7 @@ export function getAverageProductivity() {
 
     for (const dateKey of sortedDates) {
         const entry = dataByDate.get(dateKey);
-        const dateParts = dateKey.split('-');
-        const dayIndex = parseInt(dateParts[2], 10) - 1;
-        const monthKeyFromDate = `${dateParts[0]}-${dateParts[1]}`;
+        const currentDate = new Date(`${dateKey}T00:00:00`);
 
         for (const agent of agents) {
             if (agent.isActive === false) continue;
@@ -1365,9 +1422,7 @@ export function getAverageProductivity() {
                 if (c) items += c.calls || 0;
             }
 
-            const daysArray = getAgentDaysForMonth(agent, monthKeyFromDate);
-            const dayValue = daysArray[dayIndex] || '';
-            const hours = extractHoursFromDay(dayValue);
+            const hours = getEligibleHoursForRange(agent, currentDate, currentDate);
 
             totalItems += items;
             totalHours += hours;
@@ -1381,7 +1436,7 @@ export function getAverageProductivity() {
 }
 
 export function getProductivityTrendData(targetYear, targetMonth) {
-    const agents = getPlannerData().filter(agent => !isExcludedFromProductivity(agent));
+    const agents = getPlannerData();
     const datesWithData = new Set(
         [...dataByDate.keys()].filter(dk => {
             const e = dataByDate.get(dk);
@@ -1403,12 +1458,17 @@ export function getProductivityTrendData(targetYear, targetMonth) {
         allDates.push(`${year}-${mm}-${dd}`);
     }
 
-    // Discover all teams from agents
+    // Discover all uploaded customer-facing teams for the selected month
     const teamSet = new Set();
-    for (const agent of agents) {
-        if (agent.primaryTeam) teamSet.add(agent.primaryTeam);
+    for (const dateKey of allDates) {
+        if (!datesWithData.has(dateKey)) continue;
+        const entry = dataByDate.get(dateKey);
+        if (!entry) continue;
+        if (entry.ticketsData) entry.ticketsData.forEach(val => addUploadedEntryTeams(teamSet, val));
+        if (entry.callsData) entry.callsData.forEach(val => addUploadedEntryTeams(teamSet, val));
     }
     const teamNames = [...teamSet].sort();
+    if (teamNames.length === 0) return null;
 
     // Per-team series: { teamName: number[] }
     const teamSeries = {};
@@ -1421,40 +1481,26 @@ export function getProductivityTrendData(targetYear, targetMonth) {
         }
 
         const entry = dataByDate.get(dateKey);
-        const datePartsChart = dateKey.split('-');
-        const dayIndex = parseInt(datePartsChart[2], 10) - 1;
-        const monthKeyChart = `${datePartsChart[0]}-${datePartsChart[1]}`;
+        const currentDate = new Date(`${dateKey}T00:00:00`);
 
-        // Aggregate items and hours per team (grouped by agent's primaryTeam)
+        // Aggregate uploaded items per customer team, and eligible planner hours per team.
         const teamItems = {};
         const teamHours = {};
         teamNames.forEach(t => { teamItems[t] = 0; teamHours[t] = 0; });
 
+        if (entry.ticketsData) {
+            entry.ticketsData.forEach(val => addUploadedEntryCounts(teamItems, val));
+        }
+        if (entry.callsData) {
+            entry.callsData.forEach(val => addUploadedEntryCounts(teamItems, val));
+        }
+
         for (const agent of agents) {
             if (agent.isActive === false) continue;
-            const team = agent.primaryTeam;
-            if (!team) continue;
 
-            const normalizedName = normalizeName(agent.fullName || agent.username || '');
-
-            // Items: all tickets + calls for this agent go to their primaryTeam
-            let items = 0;
-            if (entry.ticketsData) {
-                const t = entry.ticketsData.get(normalizedName);
-                if (t) items += t.tickets || 0;
-            }
-            if (entry.callsData) {
-                const c = entry.callsData.get(normalizedName);
-                if (c) items += c.calls || 0;
-            }
-
-            // Hours from planner
-            const daysArrayChart = getAgentDaysForMonth(agent, monthKeyChart);
-            const dayValue = daysArrayChart[dayIndex] || '';
-            const hours = extractHoursFromDay(dayValue);
-
-            teamItems[team] += items;
-            teamHours[team] += hours;
+            teamNames.forEach(team => {
+                teamHours[team] += getEligibleHoursForTeamInRange(agent, currentDate, currentDate, team);
+            });
         }
 
         // Calculate productivity per team

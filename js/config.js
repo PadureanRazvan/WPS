@@ -59,7 +59,7 @@ export const translations = {
         'prod-average': 'Productivitate Medie',
         'prod-from-xlsx': 'din fișiere XLSX',
         'prod-from-csv': 'din fișiere CSV',
-        'prod-formula': '(tickete+apeluri) / ore',
+        'prod-formula': '(tickete+apeluri) / ore eligibile',
         'prod-days': 'zile',
         'prod-day': 'zi',
         'prod-with-data': 'cu date',
@@ -226,7 +226,7 @@ export const translations = {
         'info-prod-summary': 'Sumar — vedere agregată per agent pe întreaga perioadă selectată',
         'info-prod-agent': 'Per Agent — vedere detaliată zi cu zi, per agent. Selectează agenții folosind chipurile sau căutarea',
         'info-prod-teams': 'Echipe (coloana) — arată echipele pentru care agentul a lucrat efectiv, bazat pe fișierele încărcate',
-        'info-prod-formula': 'Formula — Productivitate = (Tickete + Apeluri) / Ore Lucrate eligibile. QA și TL sunt excluși din calcul; 2L rămâne inclus',
+        'info-prod-formula': 'Formula — Productivitate = (Tickete + Apeluri) / Ore Lucrate eligibile. Ticketele și apelurile QA/TL rămân incluse, dar orele lor nu intră în denominator; 2L rămâne inclus',
         'info-upload-title': '5. Upload File',
         'info-upload-desc': 'Încărcarea fișierelor de productivitate zilnică:',
         'info-upload-step1': 'Pasul 1: Selectează data — alege data din calendar pentru care încarci datele. Sistemul avertizează dacă data are deja date încărcate',
@@ -411,7 +411,7 @@ export const translations = {
         'prod-average': 'Average Productivity',
         'prod-from-xlsx': 'from XLSX files',
         'prod-from-csv': 'from CSV files',
-        'prod-formula': '(tickets+calls) / hours',
+        'prod-formula': '(tickets+calls) / eligible hours',
         'prod-days': 'days',
         'prod-day': 'day',
         'prod-with-data': 'with data',
@@ -578,7 +578,7 @@ export const translations = {
         'info-prod-summary': 'Summary — aggregated view per agent for the entire selected period',
         'info-prod-agent': 'Per Agent — detailed day-by-day view per agent. Select agents using chips or search',
         'info-prod-teams': 'Teams (column) — shows the teams the agent actually worked for, based on uploaded files',
-        'info-prod-formula': 'Formula — Productivity = (Tickets + Calls) / Eligible hours worked. QA and TL are excluded from the calculation; 2L remains included',
+        'info-prod-formula': 'Formula — Productivity = (Tickets + Calls) / Eligible hours worked. QA and TL tickets/calls stay included, but their hours are excluded from the denominator; 2L remains included',
         'info-upload-title': '5. File Upload',
         'info-upload-desc': 'Upload daily productivity files:',
         'info-upload-step1': 'Step 1: Select date — choose the date for which you\'re uploading data. The system warns if data already exists for that date',
@@ -764,7 +764,7 @@ export const translations = {
         'prod-average': 'Produttività Media',
         'prod-from-xlsx': 'da file XLSX',
         'prod-from-csv': 'da file CSV',
-        'prod-formula': '(ticket+chiamate) / ore',
+        'prod-formula': '(ticket+chiamate) / ore eleggibili',
         'prod-days': 'giorni',
         'prod-day': 'giorno',
         'prod-with-data': 'con dati',
@@ -931,7 +931,7 @@ export const translations = {
         'info-prod-summary': 'Riepilogo — vista aggregata per agente sull\'intero periodo selezionato',
         'info-prod-agent': 'Per Agente — vista dettagliata giorno per giorno, per agente. Seleziona gli agenti usando i chip o la ricerca',
         'info-prod-teams': 'Team (colonna) — mostra i team per cui l\'agente ha effettivamente lavorato, basato sui file caricati',
-        'info-prod-formula': 'Formula — Produttività = (Ticket + Chiamate) / Ore Lavorate eleggibili. QA e TL sono esclusi dal calcolo; 2L resta incluso',
+        'info-prod-formula': 'Formula — Produttività = (Ticket + Chiamate) / Ore Lavorate eleggibili. I ticket e le chiamate QA/TL restano inclusi, ma le loro ore sono escluse dal denominatore; 2L resta incluso',
         'info-upload-title': '5. Carica File',
         'info-upload-desc': 'Caricamento dei file di produttività giornaliera:',
         'info-upload-step1': 'Passo 1: Seleziona data — scegli la data per cui carichi i dati. Il sistema avvisa se esistono già dati per quella data',
@@ -1073,7 +1073,17 @@ export const chartColors = {
         'NL zooplus': '#e8915b',  // Orange
         'CS zooplus': '#b07de8',  // Purple
         'SK zooplus': '#e85b8a',  // Pink
-        'SV-SE zooplus': '#5bc8d4' // Cyan
+        'SV-SE zooplus': '#5bc8d4', // Cyan
+        'DE zooplus': '#7ecb63',
+        'RO': '#e8a849',
+        'HU': '#5bb98c',
+        'IT': '#5b9fe8',
+        'NL': '#e8915b',
+        'CS': '#b07de8',
+        'SV-SE': '#5bc8d4',
+        'DE': '#7ecb63',
+        'BRO': '#d4b15b',
+        'BDE': '#63bfa7'
     }
 };
 
