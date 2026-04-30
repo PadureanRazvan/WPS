@@ -5,7 +5,7 @@ import { db } from './firebase-config.js';
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, Timestamp } from "https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore.js";
 import { showTemporaryMessage } from './ui.js';
 import { updateDashboard } from './dashboard.js';
-import { translations, PLANNER_TEAMS, UPLOAD_VALID_TEAMS, extractHoursFromDay, getMonthKey, getAgentDaysForMonth, getAgentNotesForMonth } from './config.js';
+import { translations, PLANNER_TEAMS, UPLOAD_VALID_TEAMS, extractHoursFromDay, getMonthKey, getAgentDaysForMonth, getAgentNotesForMonth, getEffectiveAgentDayValue } from './config.js';
 import { logActivity } from './logs.js';
 function getLang() { return localStorage.getItem('language') || 'ro'; }
 function t(key) { const l = getLang(); return (translations[l] && translations[l][key]) || key; }
@@ -847,18 +847,6 @@ function getFilteredAgents() {
     return filteredAgents;
 }
 
-function normalizePlannerDate(value) {
-    const date = value instanceof Date
-        ? new Date(value)
-        : value?.toDate
-            ? value.toDate()
-            : new Date(value);
-
-    if (Number.isNaN(date.getTime())) return null;
-    date.setHours(0, 0, 0, 0);
-    return date;
-}
-
 function getMonthStartFromKey(monthKey) {
     const [yearStr, monthStr] = String(monthKey || '').split('-');
     const year = parseInt(yearStr, 10);
@@ -877,40 +865,8 @@ function formatMonthLabel(monthKey) {
     return monthStart.toLocaleDateString(locale, { month: 'long', year: 'numeric' });
 }
 
-function isDateInInactiveRange(agent, date) {
-    if (!agent?.inactiveFrom || agent?.isActive !== false) return false;
-
-    const normalizedDate = normalizePlannerDate(date);
-    const inactiveFrom = normalizePlannerDate(agent.inactiveFrom);
-    const inactiveTo = agent.inactiveTo ? normalizePlannerDate(agent.inactiveTo) : null;
-
-    if (!normalizedDate || !inactiveFrom) return false;
-    return normalizedDate >= inactiveFrom && (!inactiveTo || normalizedDate <= inactiveTo);
-}
-
-function isDateBeforeHire(agent, date) {
-    if (!agent?.hireDate) return false;
-
-    const normalizedDate = normalizePlannerDate(date);
-    const hireDate = normalizePlannerDate(agent.hireDate);
-
-    if (!normalizedDate || !hireDate) return false;
-    return normalizedDate < hireDate;
-}
-
 function getEffectivePlannerDayValue(agent, date) {
-    if (isDateBeforeHire(agent, date)) {
-        return '';
-    }
-
-    if (isDateInInactiveRange(agent, date)) {
-        return 'DZ';
-    }
-
-    const monthKey = getMonthKey(date);
-    const dayIndex = date.getDate() - 1;
-    const daysArray = getAgentDaysForMonth(agent, monthKey);
-    return daysArray[dayIndex] || '';
+    return getEffectiveAgentDayValue(agent, date);
 }
 
 async function clearAgentPlannerMonth(agentId, monthKey) {

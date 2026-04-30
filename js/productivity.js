@@ -4,7 +4,7 @@ import { collection, doc, setDoc, deleteDoc, getDocs } from "https://www.gstatic
 import { getPlannerData } from './planner.js';
 import { getUsersData } from './users.js';
 import { showTemporaryMessage } from './ui.js';
-import { translations, isNonWorkingCode, normalizeTeamForDisplay, PRODUCTIVITY_TEAMS, parseShiftEntry, extractHoursFromDay, getMonthKey, getAgentDaysForMonth } from './config.js';
+import { translations, isNonWorkingCode, normalizeTeamForDisplay, PRODUCTIVITY_TEAMS, parseShiftEntry, extractHoursFromDay, getMonthKey, getEffectiveAgentDayValue } from './config.js';
 
 function getLang() { return localStorage.getItem('language') || 'ro'; }
 function t(key) { const l = getLang(); return (translations[l] && translations[l][key]) || key; }
@@ -329,12 +329,7 @@ function getHoursForRange(agent, start, end) {
     endDate.setHours(23, 59, 59, 999);
 
     while (current <= endDate) {
-        const dayIndex = current.getDate() - 1;
-        const monthKey = getMonthKey(current);
-        const daysArray = getAgentDaysForMonth(agent, monthKey);
-        if (dayIndex >= 0 && dayIndex < daysArray.length) {
-            totalHours += parseHoursFromDayValue(daysArray[dayIndex]);
-        }
+        totalHours += parseHoursFromDayValue(getEffectiveAgentDayValue(agent, current));
         current.setDate(current.getDate() + 1);
     }
     return totalHours;
@@ -351,16 +346,11 @@ function getHoursForTeamInRange(agent, start, end, teamFilter) {
     const primaryCode = getPrimaryTeamCode(agent);
 
     while (current <= endDate) {
-        const dayIndex = current.getDate() - 1;
-        const monthKey = getMonthKey(current);
-        const daysArray = getAgentDaysForMonth(agent, monthKey);
-        if (dayIndex >= 0 && dayIndex < daysArray.length) {
-            const dayValue = daysArray[dayIndex];
-            for (const entry of parsePlannerDayEntries(dayValue)) {
-                const teamCode = entry.team || primaryCode;
-                if (teamCode === filterUpper) {
-                    totalHours += entry.hours;
-                }
+        const dayValue = getEffectiveAgentDayValue(agent, current);
+        for (const entry of parsePlannerDayEntries(dayValue)) {
+            const teamCode = entry.team || primaryCode;
+            if (teamCode === filterUpper) {
+                totalHours += entry.hours;
             }
         }
         current.setDate(current.getDate() + 1);
@@ -377,15 +367,10 @@ function getTeamsFromPlanner(agent, start, end) {
     endDate.setHours(23, 59, 59, 999);
 
     while (current <= endDate) {
-        const dayIndex = current.getDate() - 1;
-        const monthKey = getMonthKey(current);
-        const daysArray = getAgentDaysForMonth(agent, monthKey);
-        if (dayIndex >= 0 && dayIndex < daysArray.length) {
-            const dayValue = daysArray[dayIndex];
-            for (const entry of parsePlannerDayEntries(dayValue)) {
-                if (entry.team) {
-                    teams.add(entry.team);
-                }
+        const dayValue = getEffectiveAgentDayValue(agent, current);
+        for (const entry of parsePlannerDayEntries(dayValue)) {
+            if (entry.team) {
+                teams.add(entry.team);
             }
         }
         current.setDate(current.getDate() + 1);
@@ -807,10 +792,7 @@ function renderDetailView() {
             const agent = users.find(u => normalizeName(u.fullName) === normalizedName || normalizeName(u.username) === normalizedName);
             if (!agent) return;
 
-            const dayIndex = current.getDate() - 1;
-            const monthKey = getMonthKey(current);
-            const daysArray = getAgentDaysForMonth(agent, monthKey);
-            const dayValue = daysArray[dayIndex] || '';
+            const dayValue = getEffectiveAgentDayValue(agent, current);
 
             const { tickets: allTickets, calls: allCalls, teams } = hasData ? getDataForSingleDate(dateKey, normalizedName) : { tickets: 0, calls: 0, teams: new Map() };
 
@@ -936,7 +918,7 @@ function renderDetailView() {
     let lastDate = '';
     rows.forEach(r => {
         const prodColor = r.hours === 0 ? 'var(--text-secondary)' : r.productivity >= 5 ? 'var(--success)' : r.productivity >= 3 ? 'var(--warning)' : 'var(--error)';
-        const prodDisplay = r.hours > 0 ? r.productivity.toFixed(2) : '-';
+        const prodDisplay = r.hours > 0 ? r.productivity.toFixed(2) : 'N/A';
         const teamTooltip = [...r.teams.entries()].map(([t, c]) => `${t}: ${c}`).join(', ');
         const rowBg = r.isWeekend ? 'background: rgba(255,255,255,0.03);' : '';
         const noDataStyle = !r.hasData ? 'opacity: 0.4;' : '';
@@ -951,7 +933,7 @@ function renderDetailView() {
             <td>${r.calls || '-'}</td>
             <td style="font-weight: bold;">${r.total || '-'}</td>
             <td style="font-size: 0.85rem; color: var(--text-secondary);">${r.dayValue || '-'}</td>
-            <td>${r.hours > 0 ? r.hours + 'h' : '-'}</td>
+            <td>${r.hours}h</td>
             <td style="color: ${prodColor}; font-weight: bold;">${prodDisplay}</td>
         </tr>`;
     });
@@ -1408,8 +1390,6 @@ export function getAverageProductivity() {
         const currentDate = new Date(`${dateKey}T00:00:00`);
 
         for (const agent of agents) {
-            if (agent.isActive === false) continue;
-
             const normalizedName = normalizeName(agent.fullName || agent.username || '');
 
             let items = 0;
@@ -1496,8 +1476,6 @@ export function getProductivityTrendData(targetYear, targetMonth) {
         }
 
         for (const agent of agents) {
-            if (agent.isActive === false) continue;
-
             teamNames.forEach(team => {
                 teamHours[team] += getEligibleHoursForTeamInRange(agent, currentDate, currentDate, team);
             });

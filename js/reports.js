@@ -1,7 +1,7 @@
 // js/reports.js
 import { getPlannerData } from './planner.js';
 import { getUsersData } from './users.js';
-import { translations, isNonWorkingCode, normalizeTeamForDisplay, TEAM_DISPLAY_NAMES, parseShiftEntry, getMonthKey, getAgentDaysForMonth } from './config.js';
+import { translations, isNonWorkingCode, normalizeTeamForDisplay, TEAM_DISPLAY_NAMES, parseShiftEntry, getEffectiveAgentDayValue } from './config.js';
 
 function getLang() { return localStorage.getItem('language') || 'ro'; }
 function t(key) { const l = getLang(); return (translations[l] && translations[l][key]) || key; }
@@ -55,8 +55,6 @@ function calculateReportData(start, end) {
     const shopData = {};
 
     for (const agent of agents) {
-        if (agent.isActive === false) continue;
-
         const agentPrimaryTeamCode = teamCodeFromPrimaryTeam(agent.primaryTeam);
         const agentName = agent.fullName || agent.username || 'Unknown';
 
@@ -66,28 +64,23 @@ function calculateReportData(start, end) {
         endDate.setHours(23, 59, 59, 999);
 
         while (current <= endDate) {
-            const dayIndex = current.getDate() - 1;
-            const monthKey = getMonthKey(current);
-            const daysArray = getAgentDaysForMonth(agent, monthKey);
-            if (dayIndex >= 0 && dayIndex < daysArray.length) {
-                const dayValue = daysArray[dayIndex];
-                const teamHours = parseTeamHours(dayValue);
+            const dayValue = getEffectiveAgentDayValue(agent, current);
+            const teamHours = parseTeamHours(dayValue);
 
-                for (const [teamCode, hours] of Object.entries(teamHours)) {
-                    let resolvedCode = teamCode;
-                    if (teamCode === '_noTeam') {
-                        // Assign to agent's primary team
-                        resolvedCode = agentPrimaryTeamCode;
-                    }
-
-                    const displayName = TEAM_DISPLAY[resolvedCode] || resolvedCode;
-                    if (!shopData[displayName]) {
-                        shopData[displayName] = { totalHours: 0, agents: new Map() };
-                    }
-                    shopData[displayName].totalHours += hours;
-                    const prev = shopData[displayName].agents.get(agentName) || 0;
-                    shopData[displayName].agents.set(agentName, prev + hours);
+            for (const [teamCode, hours] of Object.entries(teamHours)) {
+                let resolvedCode = teamCode;
+                if (teamCode === '_noTeam') {
+                    // Assign to agent's primary team
+                    resolvedCode = agentPrimaryTeamCode;
                 }
+
+                const displayName = TEAM_DISPLAY[resolvedCode] || resolvedCode;
+                if (!shopData[displayName]) {
+                    shopData[displayName] = { totalHours: 0, agents: new Map() };
+                }
+                shopData[displayName].totalHours += hours;
+                const prev = shopData[displayName].agents.get(agentName) || 0;
+                shopData[displayName].agents.set(agentName, prev + hours);
             }
             current.setDate(current.getDate() + 1);
         }

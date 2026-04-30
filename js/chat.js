@@ -4,7 +4,7 @@ import { getUsersData } from './users.js';
 import { getAverageProductivity, getProductivityTrendData } from './productivity.js';
 import { showSection } from './ui.js';
 import { showTemporaryMessage } from './ui.js';
-import { translations, extractHoursFromDay, getMonthKey, getAgentDaysForMonth, isNonWorkingCode, normalizeTeamForDisplay, parseShiftEntry } from './config.js';
+import { translations, extractHoursFromDay, getMonthKey, getAgentDaysForMonth, getEffectiveAgentDayValue, isNonWorkingCode, normalizeTeamForDisplay, parseShiftEntry } from './config.js';
 import { db } from './firebase-config.js';
 import { logActivity } from './logs.js';
 import { doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore.js";
@@ -384,15 +384,17 @@ function isValidScheduleValue(value) {
 }
 
 function buildDayStatus(agents, dayNum) {
-    const active = agents.filter(a => a.isActive !== false);
     const schedule = { working: [], holiday: [], sick: [], dayOff: [], unplanned: [] };
     let totalHours = 0;
     const teamHours = {};
-    const monthKey = getMonthKey(new Date());
+    const now = new Date();
+    const targetYear = now.getFullYear();
+    const targetMonth = now.getMonth();
+    const daysInMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
 
-    active.forEach(a => {
-        const daysArray = getAgentDaysForMonth(a, monthKey);
-        const val = daysArray[dayNum - 1] || '';
+    agents.forEach(a => {
+        const targetDate = new Date(targetYear, targetMonth, dayNum);
+        const val = dayNum > daysInMonth ? '' : (getEffectiveAgentDayValue(a, targetDate) || '');
         const trimmed = val.trim();
         if (!trimmed) { schedule.unplanned.push(a.fullName); return; }
         if (trimmed === 'Co') { schedule.holiday.push(a.fullName); return; }
@@ -442,7 +444,12 @@ function executeToolCall(name, args) {
             const agent = findAgent(args.agent_name);
             if (!agent) return { error: `Agent "${args.agent_name}" not found` };
             const schedMonthKey = getMonthKey(new Date());
-            const schedDaysArray = getAgentDaysForMonth(agent, schedMonthKey);
+            const [year, month] = schedMonthKey.split('-').map(Number);
+            const daysInMonth = new Date(year, month, 0).getDate();
+            const schedDaysArray = Array.from({ length: 31 }, (_, index) => {
+                if (index + 1 > daysInMonth) return '';
+                return getEffectiveAgentDayValue(agent, new Date(year, month - 1, index + 1));
+            });
             const scheduledDays = schedDaysArray
                 .map((v, i) => ({ day: i + 1, value: v || '' }))
                 .filter(d => d.value);

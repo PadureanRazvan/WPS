@@ -331,7 +331,8 @@ export const translations = {
         'avg-prod-last-days': 'Ultimele {n} zile cu date',
         'avg-prod-no-data': 'Nicio dată de productivitate',
         'error-loading-users': 'Eroare la încărcarea utilizatorilor.',
-        'confirm-delete-user': 'Ești sigur că vrei să ștergi {name}?',
+'confirm-delete-user': 'Ești sigur că vrei să ștergi {name}?',
+'confirm-delete-user-impact': 'Ștergerea va opri potrivirea viitoare în Productivitate pentru această persoană. Pentru plecări, folosește Inactiv în loc de ștergere.',
         'fill-required-fields': 'Completează toate câmpurile obligatorii.',
         'pt-hours-range': 'Orele part-time trebuie să fie între 4 și 7.',
         'user-created': '{name} creat cu program {hours}h/{team}.',
@@ -684,7 +685,8 @@ export const translations = {
         'avg-prod-last-days': 'Last {n} days with data',
         'avg-prod-no-data': 'No productivity data',
         'error-loading-users': 'Error loading users. Data may be stale.',
-        'confirm-delete-user': 'Are you sure you want to delete {name}?',
+'confirm-delete-user': 'Are you sure you want to delete {name}?',
+'confirm-delete-user-impact': 'Deleting will stop future Productivity matching for this person. For leavers, use Inactive instead of delete.',
         'fill-required-fields': 'Please fill all required fields.',
         'pt-hours-range': 'Part-time hours must be between 4 and 7.',
         'user-created': '{name} created with {hours}h/{team} schedule.',
@@ -1037,7 +1039,8 @@ export const translations = {
         'avg-prod-last-days': 'Ultimi {n} giorni con dati',
         'avg-prod-no-data': 'Nessun dato di produttività',
         'error-loading-users': 'Errore nel caricamento degli utenti.',
-        'confirm-delete-user': 'Sei sicuro di voler eliminare {name}?',
+'confirm-delete-user': 'Sei sicuro di voler eliminare {name}?',
+'confirm-delete-user-impact': 'L\'eliminazione interromperà il matching futuro in Produttività per questa persona. Per i dipendenti usciti, usa Inattivo invece di eliminare.',
         'fill-required-fields': 'Compila tutti i campi obbligatori.',
         'pt-hours-range': 'Le ore part-time devono essere tra 4 e 7.',
         'user-created': '{name} creato con programma {hours}h/{team}.',
@@ -1180,6 +1183,25 @@ function normalizeScheduleBoundaryDate(value) {
     return date;
 }
 
+function isDateBeforeAgentHire(agent, date) {
+    const normalizedDate = normalizeScheduleBoundaryDate(date);
+    const hireDate = normalizeScheduleBoundaryDate(agent?.hireDate);
+
+    if (!normalizedDate || !hireDate) return false;
+    return normalizedDate < hireDate;
+}
+
+function isAgentInactiveOnDate(agent, date) {
+    if (!agent?.inactiveFrom || agent?.isActive !== false) return false;
+
+    const normalizedDate = normalizeScheduleBoundaryDate(date);
+    const inactiveFrom = normalizeScheduleBoundaryDate(agent.inactiveFrom);
+    const inactiveTo = agent.inactiveTo ? normalizeScheduleBoundaryDate(agent.inactiveTo) : null;
+
+    if (!normalizedDate || !inactiveFrom) return false;
+    return normalizedDate >= inactiveFrom && (!inactiveTo || normalizedDate <= inactiveTo);
+}
+
 function applyHireDateBoundaryToDays(agent, monthKey, sourceDays = []) {
     const hireDate = normalizeScheduleBoundaryDate(agent?.hireDate);
     if (!hireDate) return [...sourceDays];
@@ -1272,6 +1294,22 @@ export function getAgentDaysForMonth(agent, monthKey) {
     }
     // 3. Fully unmigrated agent — legacy flat array
     return applyHireDateBoundaryToDays(agent, monthKey, agent.days || []);
+}
+
+/** Returns the planner value that should be visible/effective for a given date. */
+export function getEffectiveAgentDayValue(agent, date) {
+    if (isDateBeforeAgentHire(agent, date)) {
+        return '';
+    }
+
+    if (isAgentInactiveOnDate(agent, date)) {
+        return 'DZ';
+    }
+
+    const monthKey = getMonthKey(date);
+    const dayIndex = date.getDate() - 1;
+    const daysArray = getAgentDaysForMonth(agent, monthKey);
+    return daysArray[dayIndex] || '';
 }
 
 /** Returns the notes object for a specific month, with backward-compat fallback. */

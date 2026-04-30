@@ -180,7 +180,8 @@ function setupTableEventDelegation() {
         if (e.target.classList.contains('delete-btn')) {
             const id = e.target.dataset.id;
             const userName = usersData.find(u => u.id === id)?.fullName || t('unknown-agent');
-            if (confirm(t('confirm-delete-user').replace('{name}', userName))) {
+            const confirmMessage = `${t('confirm-delete-user').replace('{name}', userName)}\n\n${t('confirm-delete-user-impact')}`;
+            if (confirm(confirmMessage)) {
                 deleteAgent(id);
             }
         }
