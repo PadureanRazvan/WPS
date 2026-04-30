@@ -4,7 +4,7 @@ import { collection, doc, setDoc, deleteDoc, getDocs } from "https://www.gstatic
 import { getPlannerData } from './planner.js';
 import { getUsersData } from './users.js';
 import { showTemporaryMessage } from './ui.js';
-import { translations, isNonWorkingCode, normalizeTeamForDisplay, PRODUCTIVITY_TEAMS, parseShiftEntry, extractHoursFromDay, getMonthKey, getEffectiveAgentDayValue } from './config.js';
+import { translations, formatPlannerHoursValue, isNonWorkingCode, normalizeTeamForDisplay, PRODUCTIVITY_TEAMS, parseShiftEntry, extractHoursFromDay, getMonthKey, getEffectiveAgentDayValue } from './config.js';
 
 function getLang() { return localStorage.getItem('language') || 'ro'; }
 function t(key) { const l = getLang(); return (translations[l] && translations[l][key]) || key; }
@@ -716,7 +716,7 @@ function renderProductivity() {
             <td>${r.tickets}</td>
             <td>${r.calls}</td>
             <td style="font-weight: bold;">${r.total}</td>
-            <td>${r.hours}h</td>
+            <td>${formatPlannerHoursValue(r.hours)}h</td>
             <td style="color: ${prodColor}; font-weight: bold;">${prodDisplay}</td>
         </tr>`;
     });
@@ -933,7 +933,7 @@ function renderDetailView() {
             <td>${r.calls || '-'}</td>
             <td style="font-weight: bold;">${r.total || '-'}</td>
             <td style="font-size: 0.85rem; color: var(--text-secondary);">${r.dayValue || '-'}</td>
-            <td>${r.hours}h</td>
+            <td>${formatPlannerHoursValue(r.hours)}h</td>
             <td style="color: ${prodColor}; font-weight: bold;">${prodDisplay}</td>
         </tr>`;
     });

@@ -1,7 +1,7 @@
 // js/reports.js
 import { getPlannerData } from './planner.js';
 import { getUsersData } from './users.js';
-import { translations, isNonWorkingCode, normalizeTeamForDisplay, TEAM_DISPLAY_NAMES, parseShiftEntry, getEffectiveAgentDayValue } from './config.js';
+import { translations, formatPlannerHoursValue, isNonWorkingCode, normalizeTeamForDisplay, TEAM_DISPLAY_NAMES, parseShiftEntry, getEffectiveAgentDayValue } from './config.js';
 
 function getLang() { return localStorage.getItem('language') || 'ro'; }
 function t(key) { const l = getLang(); return (translations[l] && translations[l][key]) || key; }
@@ -130,14 +130,14 @@ function renderReports() {
         hoursTableRows += `
             <tr>
                 <td>${shopName}</td>
-                <td style="color: var(--accent); font-weight: bold;">${data.totalHours.toLocaleString()}</td>
-                <td>${agentCount}</td>
-            </tr>`;
+            <td style="color: var(--accent); font-weight: bold;">${formatPlannerHoursValue(data.totalHours)}</td>
+            <td>${agentCount}</td>
+        </tr>`;
     }
     hoursTableRows += `
         <tr style="border-top: 2px solid var(--border); font-weight: bold;">
             <td>TOTAL</td>
-            <td style="color: var(--accent);">${grandTotal.toLocaleString()}</td>
+            <td style="color: var(--accent);">${formatPlannerHoursValue(grandTotal)}</td>
             <td></td>
         </tr>`;
 
@@ -150,14 +150,14 @@ function renderReports() {
             agentRows += `
                 <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid var(--border);">
                     <span>${name}</span>
-                    <span style="color: var(--text-secondary)">${hours}h</span>
+                    <span style="color: var(--text-secondary)">${formatPlannerHoursValue(hours)}h</span>
                 </div>`;
         }
         agentCards += `
             <div class="stat-card">
                 <h4 style="color: var(--accent); margin-bottom: 0.5rem;">${shopName}</h4>
                 <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.75rem;">
-                    ${data.agents.size} ${t('reports-agents-hours')} · ${data.totalHours} ${t('reports-hours-unit')}
+                    ${data.agents.size} ${t('reports-agents-hours')} · ${formatPlannerHoursValue(data.totalHours)} ${t('reports-hours-unit')}
                 </div>
                 <div style="max-height: 250px; overflow-y: auto; padding-right: 0.75rem;">
                     ${agentRows}

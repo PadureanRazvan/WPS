@@ -1,6 +1,6 @@
 // js/dashboard.js
 import { getAverageProductivity } from './productivity.js';
-import { translations, isNonWorkingCode, normalizeTeamForDisplay, parseShiftEntry, getEffectiveAgentDayValue } from './config.js';
+import { translations, formatPlannerHoursValue, isNonWorkingCode, normalizeTeamForDisplay, parseShiftEntry, getEffectiveAgentDayValue } from './config.js';
 
 let cachedPlannerData = null;
 let currentSelectedDate = null; // null means "today"
@@ -164,7 +164,7 @@ function updatePlannedHoursCard(dailyStats) {
     const detailEl = document.getElementById('plannedHoursDetail');
 
     if (valueEl) {
-        valueEl.textContent = dailyStats.totalHours;
+        valueEl.textContent = formatPlannerHoursValue(dailyStats.totalHours);
         valueEl.style.transform = 'scale(1.05)';
         setTimeout(() => { valueEl.style.transform = 'scale(1)'; }, 200);
     }
@@ -197,7 +197,7 @@ function updateTeamHoursTable(dailyStats, dateLabel) {
         row.innerHTML = `
             <td>${teamCode} zooplus</td>
             <td>${teamData.agentIds.size}</td>
-            <td>${teamData.hours}</td>
+            <td>${formatPlannerHoursValue(teamData.hours)}</td>
         `;
         tableBody.appendChild(row);
     });

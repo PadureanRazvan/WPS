@@ -168,6 +168,7 @@ export const translations = {
         'edit-select-cells': 'Selectează cel puțin o celulă pentru editare.',
         'edit-select-type': 'Selectează un tip de modificare.',
         'edit-over-12': 'Totalul orelor nu poate depăși 12 ore pe zi.',
+        'edit-half-hour-only': 'Folosește doar ore întregi sau incrementări de 0.5.',
         'edit-selection': 'Selecție:',
         'edit-cells-selected': 'celule selectate',
         'edit-total-hours': 'Total ore:',
@@ -521,6 +522,7 @@ export const translations = {
         'edit-select-cells': 'Select at least one cell to edit.',
         'edit-select-type': 'Select an edit type.',
         'edit-over-12': 'Total hours cannot exceed 12 hours per day.',
+        'edit-half-hour-only': 'Use only whole hours or 0.5 increments.',
         'edit-selection': 'Selection:',
         'edit-cells-selected': 'cells selected',
         'edit-total-hours': 'Total hours:',
@@ -875,6 +877,7 @@ export const translations = {
         'edit-select-cells': 'Seleziona almeno una cella da modificare.',
         'edit-select-type': 'Seleziona un tipo di modifica.',
         'edit-over-12': 'Il totale delle ore non può superare le 12 ore al giorno.',
+        'edit-half-hour-only': 'Usa solo ore intere o incrementi di 0.5.',
         'edit-selection': 'Selezione:',
         'edit-cells-selected': 'celle selezionate',
         'edit-total-hours': 'Ore totali:',
@@ -1114,19 +1117,34 @@ export function normalizeTeamForDisplay(code) {
     return code;
 }
 
+export function isValidPlannerHoursValue(value) {
+    const numericValue = typeof value === 'number' ? value : parseFloat(String(value || '').trim());
+    if (!Number.isFinite(numericValue) || numericValue < 0) return false;
+    return Math.abs((numericValue * 2) - Math.round(numericValue * 2)) < 1e-9;
+}
+
+export function formatPlannerHoursValue(value) {
+    const numericValue = typeof value === 'number' ? value : parseFloat(String(value || '').trim());
+    if (!Number.isFinite(numericValue)) return '';
+
+    const normalizedValue = Math.round(numericValue * 2) / 2;
+    return Number.isInteger(normalizedValue) ? String(normalizedValue) : normalizedValue.toFixed(1);
+}
+
 // Parse a single shift entry (e.g. "8RO", "42L", "4CS") into { hours, team }
 // Handles team codes starting with digits like "2L" (2nd Level)
 export function parseShiftEntry(entry) {
     const p = entry.trim();
+    const plannerHoursPattern = '\\d+(?:\\.5)?';
     // Try matching team codes that start with a digit (e.g. "42L" = 4h + 2L)
-    const match2L = p.match(/^(\d+)(2L)$/i);
+    const match2L = p.match(new RegExp(`^(${plannerHoursPattern})(2L)$`, 'i'));
     if (match2L) {
-        return { hours: parseInt(match2L[1], 10), team: match2L[2].toUpperCase() };
+        return { hours: parseFloat(match2L[1]), team: match2L[2].toUpperCase() };
     }
     // Standard: digits followed by optional letters (e.g. "8RO", "4HU", "8")
-    const match = p.match(/^(\d+)\s*([A-Za-z-]+)?$/);
+    const match = p.match(new RegExp(`^(${plannerHoursPattern})\\s*([A-Za-z-]+)?$`));
     if (match) {
-        return { hours: parseInt(match[1], 10), team: match[2] ? match[2].toUpperCase() : null };
+        return { hours: parseFloat(match[1]), team: match[2] ? match[2].toUpperCase() : null };
     }
     return null;
 }

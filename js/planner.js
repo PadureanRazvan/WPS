@@ -5,7 +5,7 @@ import { db } from './firebase-config.js';
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, Timestamp } from "https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore.js";
 import { showTemporaryMessage } from './ui.js';
 import { updateDashboard } from './dashboard.js';
-import { translations, PLANNER_TEAMS, UPLOAD_VALID_TEAMS, extractHoursFromDay, getMonthKey, getAgentDaysForMonth, getAgentNotesForMonth, getEffectiveAgentDayValue } from './config.js';
+import { translations, PLANNER_TEAMS, UPLOAD_VALID_TEAMS, extractHoursFromDay, formatPlannerHoursValue, getMonthKey, getAgentDaysForMonth, getAgentNotesForMonth, getEffectiveAgentDayValue } from './config.js';
 import { logActivity } from './logs.js';
 function getLang() { return localStorage.getItem('language') || 'ro'; }
 function t(key) { const l = getLang(); return (translations[l] && translations[l][key]) || key; }
@@ -1025,6 +1025,7 @@ function renderAgentRow(agent, dates) {
         cell.dataset.month = monthKey;
 
         const dayValue = getEffectivePlannerDayValue(agent, date);
+        cell.dataset.rawValue = dayValue || '';
 
         const formattedContent = formatCellContent(dayValue);
         
@@ -1083,7 +1084,7 @@ function renderAgentRow(agent, dates) {
             if (date.getDay() === 0) {
                 const weeklyCell = document.createElement('td');
                 weeklyCell.className = 'week-total-cell';
-                weeklyCell.textContent = `${weeklyHours}h`;
+                weeklyCell.textContent = `${formatPlannerHoursValue(weeklyHours)}h`;
                 dayCells.push(weeklyCell);
                 weeklyHours = 0; // Reset for the next week
             }
@@ -1125,10 +1126,10 @@ function getCellClass(day, date) { // <-- Changed to accept 'date' object
         classes.push('bereavement-leave');
     } else if (day === 'DZ') {
         classes.push('deactivated');
-    } else if (day.match(/\d+\s*(RO|HU|IT|NL|CS|SK|SV-SE|BRO|2L|QA|TL)/i)) {
+    } else if (day.match(/\d+(?:\.5)?\s*(RO|HU|IT|NL|CS|SK|SV-SE|BRO|2L|QA|TL)/i)) {
         classes.push('working');
         // Check if it's a multi-team day (contains + or multiple teams)
-        if (day.includes('+') || day.match(/(\d+\s*(RO|HU|IT|NL|CS|SK|SV-SE|BRO|2L|QA|TL).*){2,}/i)) {
+        if (day.includes('+') || day.match(/(\d+(?:\.5)?\s*(RO|HU|IT|NL|CS|SK|SV-SE|BRO|2L|QA|TL).*){2,}/i)) {
             classes.push('multi-team');
         }
     }
@@ -1161,7 +1162,7 @@ function formatCellContent(day) {
         
         // Check if all parts are valid team allocations (any number + team code)
         const allAreValidTeams = cleanedParts.every(part => {
-            const pattern = new RegExp(`^\\d+(${teamPattern})$`);
+            const pattern = new RegExp(`^\\d+(?:\\.5)?(${teamPattern})$`);
             return pattern.test(part);
         });
         
@@ -1241,7 +1242,7 @@ function calculateAgentTotalHours(agent, dates) {
             totalHours += extractHoursFromDay(day);
         });
     }
-    return `${totalHours}h`;
+    return `${formatPlannerHoursValue(totalHours)}h`;
 }
 
 // Cell Selection Logic (Refactored to use Firestore Document ID)

@@ -1,7 +1,7 @@
 // js/ui.js
 
 // === THEME AND LANGUAGE FUNCTIONALITY ===
-import { languageConfig, translations, PLANNER_TEAMS, TEAM_DISPLAY_NAMES, getMonthKey, getAgentNotesForMonth } from './config.js';
+import { languageConfig, translations, PLANNER_TEAMS, TEAM_DISPLAY_NAMES, extractHoursFromDay, formatPlannerHoursValue, getMonthKey, getAgentNotesForMonth, isValidPlannerHoursValue } from './config.js';
 function getLang() { return localStorage.getItem('language') || 'ro'; }
 export function t(key) { const l = getLang(); return (translations[l] && translations[l][key]) || key; }
 // Import the new Firestore functions from planner.js
@@ -346,7 +346,7 @@ export function populateSelectionInfo() {
         
         details.innerHTML = `
             <strong>${t('edit-selection')}</strong> ${selectedCells.length} ${t('edit-cells-selected')}<br>
-            <strong>${t('edit-total-hours')}</strong> ${totalHours}h
+            <strong>${t('edit-total-hours')}</strong> ${formatPlannerHoursValue(totalHours)}h
         `;
     }
 }
@@ -356,14 +356,8 @@ function calculateSelectedCellsTotal(selectedCells) {
     let totalHours = 0;
     
     selectedCells.forEach(cell => {
-        const cellContent = cell.textContent || cell.innerText || '';
-        
-        // Extract numbers from cell content (handles formats like "8RO", "4DE+4IT", etc.)
-        const hoursMatches = cellContent.match(/\d+/g);
-        if (hoursMatches) {
-            const cellTotal = hoursMatches.reduce((sum, hours) => sum + parseInt(hours, 10), 0);
-            totalHours += cellTotal;
-        }
+        const rawValue = cell.dataset.rawValue || (cell.textContent || cell.innerText || '').replace(/\s+/g, '').replace(/\n/g, '+');
+        totalHours += extractHoursFromDay(rawValue);
     });
     
     return totalHours;
@@ -415,6 +409,7 @@ export function showWorkingHoursSection() {
                    data-team="${team}" 
                    min="0" 
                    max="12" 
+                   step="0.5"
                    value="0">
         </div>
     `).join('');
@@ -431,15 +426,30 @@ export function showWorkingHoursSection() {
 export function updateTotalHours() {
     const teamInputs = document.querySelectorAll('.team-input');
     let totalHours = 0;
+    let hasInvalidStep = false;
     
     teamInputs.forEach(input => {
-        const hours = parseInt(input.value) || 0;
+        const rawValue = input.value.trim();
+        if (!rawValue) return;
+
+        const hours = parseFloat(rawValue);
+        if (!Number.isFinite(hours) || !isValidPlannerHoursValue(hours)) {
+            hasInvalidStep = true;
+            return;
+        }
+
         totalHours += hours;
     });
     
     const totalDisplay = document.getElementById('totalHoursDisplay');
     if (totalDisplay) {
-        totalDisplay.textContent = `${t('edit-total')} ${totalHours} ${t('edit-hours-unit')}`;
+        totalDisplay.textContent = `${t('edit-total')} ${formatPlannerHoursValue(totalHours)} ${t('edit-hours-unit')}`;
+
+        if (hasInvalidStep) {
+            totalDisplay.style.color = 'var(--error)';
+            totalDisplay.textContent += ` (${t('edit-half-hour-only')})`;
+            return;
+        }
 
         // Add warning if over 12 hours
         if (totalHours > 12) {
@@ -481,13 +491,27 @@ export function saveModalChanges() {
         const teamInputs = document.querySelectorAll('.team-input');
         let totalHours = 0;
         const allocations = [];
+        let hasInvalidInput = false;
         teamInputs.forEach(input => {
-            const hours = parseInt(input.value) || 0;
+            const rawValue = input.value.trim();
+            if (!rawValue) return;
+
+            const hours = parseFloat(rawValue);
+            if (!Number.isFinite(hours) || !isValidPlannerHoursValue(hours) || hours < 0 || hours > 12) {
+                hasInvalidInput = true;
+                return;
+            }
+
             if (hours > 0) {
                 totalHours += hours;
-                allocations.push(`${hours}${input.dataset.team}`); // Format as "8RO"
+                allocations.push(`${formatPlannerHoursValue(hours)}${input.dataset.team}`);
             }
         });
+
+        if (hasInvalidInput) {
+            alert(t('edit-half-hour-only'));
+            return;
+        }
 
         if (totalHours > 12) {
             alert(t('edit-over-12'));
@@ -665,4 +689,4 @@ document.addEventListener('click', function(event) {
             cal.classList.remove('active');
         });
     }
-}); 
+});
