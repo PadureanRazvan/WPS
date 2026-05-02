@@ -289,6 +289,27 @@
     background: rgba(255, 215, 0, 0.05);
 }
 
+.btn-danger {
+    background: rgba(244, 67, 54, 0.12);
+    color: var(--error);
+    border: 1px solid rgba(244, 67, 54, 0.35);
+    padding: 0.75rem 1.5rem;
+    font-weight: 600;
+}
+
+.btn-danger:hover:not(:disabled) {
+    background: rgba(244, 67, 54, 0.2);
+    border-color: var(--error);
+}
+
+.btn:disabled,
+.btn-secondary:disabled,
+.btn-danger:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    transform: none;
+}
+
 .btn-ghost {
     padding: 0.5rem 1rem;
     background: transparent;
@@ -698,6 +719,218 @@ input:focus, select:focus, textarea:focus {
     height: 48px;
     margin: 0 auto 1rem;
     fill: var(--text-secondary);
+}
+
+.productivity-refresh-btn {
+    width: 40px;
+    height: 38px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 40px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--primary-dark);
+    color: var(--text-secondary);
+    font-size: 1.2rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: border-color var(--transition-fast), color var(--transition-fast), background var(--transition-fast);
+}
+
+.productivity-refresh-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(255, 215, 0, 0.06);
+}
+
+.productivity-refresh-btn.is-loading {
+    animation: spin 0.8s linear infinite;
+}
+
+.upload-calendar-panel {
+    flex: 1;
+    min-width: 320px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: rgba(10, 10, 10, 0.22);
+    padding: 1rem;
+}
+
+.upload-calendar-toolbar {
+    display: grid;
+    grid-template-columns: 38px 1fr 38px;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.9rem;
+}
+
+.upload-calendar-title {
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.upload-calendar-month {
+    color: var(--text-primary);
+    font-size: 1.05rem;
+    font-weight: 700;
+}
+
+.upload-calendar-nav {
+    width: 38px;
+    height: 34px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--primary-dark);
+    color: var(--text-secondary);
+    cursor: pointer;
+}
+
+.upload-calendar-nav:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+}
+
+.upload-calendar-weekdays,
+.upload-calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 0.35rem;
+}
+
+.upload-calendar-weekdays {
+    margin-bottom: 0.35rem;
+}
+
+.upload-calendar-weekdays span {
+    color: var(--text-secondary);
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-align: center;
+    text-transform: uppercase;
+}
+
+.upload-calendar-day {
+    min-height: 72px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.02);
+    color: var(--text-primary);
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: 0.45rem;
+    transition: border-color var(--transition-fast), background var(--transition-fast), transform var(--transition-fast);
+}
+
+.upload-calendar-day:hover {
+    border-color: var(--accent);
+    background: rgba(255, 215, 0, 0.06);
+}
+
+.upload-calendar-day.selected {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(255, 215, 0, 0.18);
+}
+
+.upload-calendar-day.today .upload-calendar-day-number {
+    color: var(--accent);
+}
+
+.upload-calendar-day.other-month {
+    opacity: 0.42;
+}
+
+.upload-calendar-day.complete {
+    background: rgba(76, 175, 80, 0.06);
+}
+
+.upload-calendar-day-number {
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+
+.upload-calendar-markers {
+    min-height: 34px;
+    display: flex;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+}
+
+.upload-calendar-marker,
+.upload-calendar-pill {
+    border-radius: 999px;
+    padding: 0.12rem 0.38rem;
+    font-size: 0.64rem;
+    font-weight: 800;
+    line-height: 1.3;
+}
+
+.marker-xlsx {
+    color: #35d98a;
+    background: rgba(53, 217, 138, 0.14);
+    border: 1px solid rgba(53, 217, 138, 0.28);
+}
+
+.marker-csv {
+    color: var(--accent);
+    background: rgba(255, 179, 71, 0.14);
+    border: 1px solid rgba(255, 179, 71, 0.28);
+}
+
+.upload-calendar-pill.empty {
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+}
+
+.upload-calendar-detail {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+}
+
+.upload-calendar-detail-label {
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.upload-calendar-detail-date {
+    color: var(--text-primary);
+    font-size: 1rem;
+    font-weight: 700;
+    margin-top: 0.2rem;
+}
+
+.upload-calendar-detail-status,
+.upload-calendar-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    margin-top: 0.55rem;
+}
+
+.upload-calendar-actions {
+    justify-content: flex-end;
+    align-content: flex-start;
+}
+
+.upload-calendar-actions .btn {
+    padding: 0.55rem 0.75rem;
+    font-size: 0.78rem;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
 }
 
 /* Alert */
@@ -1959,4 +2192,4 @@ input:focus, select:focus, textarea:focus {
 #usersTable td, #usersTable th {
     text-align: left;
     padding: 0.8rem 1rem;
-} 
+}

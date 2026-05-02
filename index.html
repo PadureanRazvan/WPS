@@ -408,6 +408,7 @@
                             <button type="button" id="viewOverview" data-translate="prod-summary" style="padding: 0.6rem 1rem; border: none; cursor: pointer; font-size: 0.85rem; background: var(--accent); color: #000; font-weight: 600; transition: all 0.2s; outline: none;">Sumar</button>
                             <button type="button" id="viewDetail" data-translate="prod-per-agent" style="padding: 0.6rem 1rem; border: none; cursor: pointer; font-size: 0.85rem; background: var(--primary-dark); color: var(--text-secondary); transition: all 0.2s; outline: none;">Per Agent</button>
                         </div>
+                        <button type="button" id="productivityRefreshBtn" class="productivity-refresh-btn" title="Refresh productivity data" aria-label="Refresh productivity data">&#8635;</button>
                     </div>
                 </header>
                 <div class="content">
@@ -448,12 +449,13 @@
                 <div class="content">
                     <!-- Step 1: Select date -->
                     <div class="chart-container" style="margin-bottom: 1.5rem;">
-                        <div style="display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;">
-                            <div style="flex: 1; min-width: 200px;">
+                        <div style="display: flex; align-items: flex-start; gap: 1.5rem; flex-wrap: wrap;">
+                            <div style="flex: 0 0 260px; min-width: 220px;">
                                 <h3 class="chart-title" style="margin-bottom: 0.5rem;" data-translate="select-date">1. Selectează data fișierelor</h3>
                                 <p style="color: var(--text-secondary); font-size: 0.85rem;" data-translate="date-question">Pentru ce zi sunt datele de productivitate?</p>
                             </div>
-                            <input type="text" id="uploadDate" class="inline-input" readonly placeholder="Selectează data" style="padding: 0.7rem 1.2rem; background: var(--primary-dark); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary); font-size: 1rem; cursor: pointer; min-width: 200px;">
+                            <input type="text" id="uploadDate" class="inline-input" readonly placeholder="Selectează data" style="display: none;">
+                            <div id="uploadCalendarPanel" class="upload-calendar-panel"></div>
                         </div>
                         <div id="uploadDateStatus" style="margin-top: 0.75rem; display: none;"></div>
                     </div>
@@ -482,11 +484,6 @@
                         </div>
                     </div>
 
-                    <!-- Loaded dates summary -->
-                    <div id="loadedDatesSummary" class="chart-container" style="margin-top: 1.5rem; display: none;">
-                        <h3 class="chart-title" style="margin-bottom: 0.75rem;" data-translate="uploaded-data">Date Încărcate</h3>
-                        <div id="loadedDatesList"></div>
-                    </div>
                 </div>
             </section>
 
@@ -900,6 +897,27 @@
                 <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 0.5rem;">
                     <button class="btn btn-secondary" id="contractChangeCancelBtn">Anulează</button>
                     <button class="btn btn-primary" id="contractChangeSaveBtn">Aplică</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Primary Team Change Modal -->
+    <div id="teamChangeModal" class="edit-modal">
+        <div class="edit-modal-content" style="max-width: 420px;">
+            <div class="edit-modal-header">
+                <h3 class="edit-modal-title" id="teamChangeTitle">Schimbare Echipă</h3>
+                <button class="edit-modal-close" id="teamChangeClose">&times;</button>
+            </div>
+            <div style="padding: 1.5rem; display: flex; flex-direction: column; gap: 1.25rem;">
+                <div id="teamChangeSummary" style="color: var(--text-secondary); font-size: 0.95rem;"></div>
+                <div class="form-group">
+                    <label for="teamChangeDate" data-translate="team-change-date">Din data de</label>
+                    <input type="date" id="teamChangeDate" class="inline-input" style="width: 100%; padding: 0.75rem;">
+                </div>
+                <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 0.5rem;">
+                    <button class="btn btn-secondary" id="teamChangeCancelBtn" data-translate="edit-cancel">Anulează</button>
+                    <button class="btn btn-primary" id="teamChangeSaveBtn" data-translate="deactivate-apply">Aplică</button>
                 </div>
             </div>
         </div>

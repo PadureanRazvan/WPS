@@ -1,10 +1,12 @@
 // js/productivity.js
 import { db } from './firebase-config.js';
-import { collection, doc, setDoc, deleteDoc, getDocs } from "https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore.js";
+import { collection, doc, setDoc, deleteDoc, getDocs, onSnapshot } from "https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore.js";
 import { getPlannerData } from './planner.js';
 import { getUsersData } from './users.js';
 import { showTemporaryMessage } from './ui.js';
-import { translations, formatPlannerHoursValue, isNonWorkingCode, normalizeTeamForDisplay, PRODUCTIVITY_TEAMS, parseShiftEntry, extractHoursFromDay, getMonthKey, getEffectiveAgentDayValue } from './config.js';
+import { translations, formatPlannerHoursValue, isNonWorkingCode, normalizeTeamForDisplay, PRODUCTIVITY_TEAMS, parseShiftEntry, extractHoursFromDay, getMonthKey, getEffectiveAgentDayValue, getEffectivePrimaryTeamCode } from './config.js';
+import { calculateMatchedTeamTrendPoint, findProductivityAgent, normalizeProductivityName } from './productivity-metrics.js';
+import { buildProductivityExportCsv, getProductivityDateStatus } from './productivity-upload-calendar.js';
 
 function getLang() { return localStorage.getItem('language') || 'ro'; }
 function t(key) { const l = getLang(); return (translations[l] && translations[l][key]) || key; }
@@ -19,36 +21,18 @@ let currentTeamFilter = 'all';
 let productivityPicker = null;
 let currentView = 'overview'; // 'overview' or 'detail'
 let selectedAgents = new Set(); // normalized names of selected agents
+let uploadCalendarMonth = new Date();
+let unsubscribeFromProductivity = null;
 const PRODUCTIVITY_HOURS_EXCLUDED_PRIMARY_TEAM_CODES = new Set(['TL', 'QA']);
 
 // --- Name Normalization & Matching ---
 
 function normalizeName(name) {
-    if (!name) return '';
-    return name
-        .replace(/[._]fsp$/i, '')
-        .replace(/[._]/g, ' ')
-        .trim()
-        .toLowerCase()
-        .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    return normalizeProductivityName(name);
 }
 
 function matchAgent(fileName) {
-    const normalizedFile = normalizeName(fileName);
-    if (!normalizedFile) return null;
-    const users = getUsersData();
-
-    let match = users.find(u => normalizeName(u.fullName) === normalizedFile);
-    if (match) return match;
-
-    match = users.find(u => normalizeName(u.username) === normalizedFile);
-    if (match) return match;
-
-    match = users.find(u => {
-        const nu = normalizeName(u.fullName);
-        return nu && (normalizedFile.includes(nu) || nu.includes(normalizedFile));
-    });
-    return match || null;
+    return findProductivityAgent(fileName, getUsersData());
 }
 
 // --- Queue/Language to Team Mapping ---
@@ -226,12 +210,16 @@ function parseHoursFromDayValue(dayValue) {
     return extractHoursFromDay(dayValue);
 }
 
-function getPrimaryTeamCode(agent) {
+function getPrimaryTeamCode(agent, date = null) {
+    if (date) {
+        return normalizeTeamForDisplay(getEffectivePrimaryTeamCode(agent, date));
+    }
+
     return normalizeTeamForDisplay(agent.primaryTeam?.split(' ')[0]?.toUpperCase() || '');
 }
 
-function hasExcludedProductivityHours(agent) {
-    return PRODUCTIVITY_HOURS_EXCLUDED_PRIMARY_TEAM_CODES.has(getPrimaryTeamCode(agent));
+function hasExcludedProductivityHours(agent, date = null) {
+    return PRODUCTIVITY_HOURS_EXCLUDED_PRIMARY_TEAM_CODES.has(getPrimaryTeamCode(agent, date));
 }
 
 function pruneSelectedAgents() {
@@ -260,13 +248,45 @@ function parsePlannerDayEntries(dayValue) {
 }
 
 function getEligibleHoursForRange(agent, start, end) {
-    if (hasExcludedProductivityHours(agent)) return 0;
-    return getHoursForRange(agent, start, end);
+    let totalHours = 0;
+    const current = new Date(start);
+    current.setHours(0, 0, 0, 0);
+    const endDate = new Date(end);
+    endDate.setHours(23, 59, 59, 999);
+
+    while (current <= endDate) {
+        if (!hasExcludedProductivityHours(agent, current)) {
+            totalHours += parseHoursFromDayValue(getEffectiveAgentDayValue(agent, current));
+        }
+        current.setDate(current.getDate() + 1);
+    }
+
+    return totalHours;
 }
 
 function getEligibleHoursForTeamInRange(agent, start, end, teamFilter) {
-    if (hasExcludedProductivityHours(agent)) return 0;
-    return getHoursForTeamInRange(agent, start, end, teamFilter);
+    let totalHours = 0;
+    const current = new Date(start);
+    current.setHours(0, 0, 0, 0);
+    const endDate = new Date(end);
+    endDate.setHours(23, 59, 59, 999);
+    const filterUpper = normalizeTeamForDisplay(teamFilter.toUpperCase());
+
+    while (current <= endDate) {
+        if (!hasExcludedProductivityHours(agent, current)) {
+            const dayValue = getEffectiveAgentDayValue(agent, current);
+            const primaryCode = getPrimaryTeamCode(agent, current);
+            for (const entry of parsePlannerDayEntries(dayValue)) {
+                const teamCode = entry.team || primaryCode;
+                if (teamCode === filterUpper) {
+                    totalHours += entry.hours;
+                }
+            }
+        }
+        current.setDate(current.getDate() + 1);
+    }
+
+    return totalHours;
 }
 
 function entryHasTeamData(entry, teamCode) {
@@ -343,10 +363,10 @@ function getHoursForTeamInRange(agent, start, end, teamFilter) {
     const endDate = new Date(end);
     endDate.setHours(23, 59, 59, 999);
     const filterUpper = normalizeTeamForDisplay(teamFilter.toUpperCase());
-    const primaryCode = getPrimaryTeamCode(agent);
 
     while (current <= endDate) {
         const dayValue = getEffectiveAgentDayValue(agent, current);
+        const primaryCode = getPrimaryTeamCode(agent, current);
         for (const entry of parsePlannerDayEntries(dayValue)) {
             const teamCode = entry.team || primaryCode;
             if (teamCode === filterUpper) {
@@ -453,21 +473,54 @@ async function deleteFromFirestore(dateKey) {
     }
 }
 
+function applyProductivitySnapshot(snapshot) {
+    dataByDate.clear();
+    snapshot.forEach(docSnap => {
+        const dateKey = docSnap.id;
+        const data = docSnap.data();
+        dataByDate.set(dateKey, {
+            ticketsData: deserializeAgentMap(data.ticketsData),
+            callsData: deserializeAgentMap(data.callsData)
+        });
+    });
+}
+
 async function loadAllFromFirestore() {
     try {
         const snapshot = await getDocs(collection(db, 'productivity'));
-        snapshot.forEach(docSnap => {
-            const dateKey = docSnap.id;
-            const data = docSnap.data();
-            dataByDate.set(dateKey, {
-                ticketsData: deserializeAgentMap(data.ticketsData),
-                callsData: deserializeAgentMap(data.callsData)
-            });
-        });
+        applyProductivitySnapshot(snapshot);
         console.log(`[Productivity] Loaded ${snapshot.size} dates from Firestore.`);
     } catch (err) {
         console.error('[Productivity] Firestore load error:', err);
     }
+}
+
+function subscribeToProductivityData() {
+    if (unsubscribeFromProductivity) {
+        unsubscribeFromProductivity();
+        unsubscribeFromProductivity = null;
+    }
+
+    return new Promise(resolve => {
+        let resolved = false;
+        unsubscribeFromProductivity = onSnapshot(collection(db, 'productivity'), (snapshot) => {
+            applyProductivitySnapshot(snapshot);
+            console.log(`[Productivity] Synced ${snapshot.size} dates from Firestore.`);
+            refreshProductivityViews({ source: 'snapshot' });
+            if (!resolved) {
+                resolved = true;
+                resolve();
+            }
+        }, async (err) => {
+            console.error('[Productivity] Firestore listener error:', err);
+            await loadAllFromFirestore();
+            refreshProductivityViews({ source: 'fallback-load' });
+            if (!resolved) {
+                resolved = true;
+                resolve();
+            }
+        });
+    });
 }
 
 // --- Per-date data helpers ---
@@ -1068,6 +1121,19 @@ function setView(view) {
     renderCurrentView();
 }
 
+function refreshProductivityViews({ source = 'manual' } = {}) {
+    renderUploadCalendar();
+    updateUploadDateStatus();
+    if (currentView === 'detail') renderAgentChips();
+    renderCurrentView();
+    document.dispatchEvent(new CustomEvent('productivity-data-updated', { detail: { source } }));
+}
+
+export async function refreshProductivityData() {
+    await loadAllFromFirestore();
+    refreshProductivityViews({ source: 'manual-refresh' });
+}
+
 // --- Upload date UI ---
 
 function updateUploadDateStatus() {
@@ -1112,57 +1178,242 @@ function showUploadSuccess() {
     statusEl.innerHTML = `<p style="color: var(--success); margin: 0; font-size: 0.9rem;">${t('prod-data-uploaded-for')} <strong>${formatDateDisplay(uploadDate)}</strong>: ${parts.join(', ')}. ${t('prod-can-add-file')}</p>`;
 }
 
-function renderLoadedDates() {
-    const summaryEl = document.getElementById('loadedDatesSummary');
-    const listEl = document.getElementById('loadedDatesList');
-    if (!summaryEl || !listEl) return;
+function getUploadText(key) {
+    const lang = getLang();
+    const labels = {
+        ro: {
+            title: 'Calendar incarcari',
+            today: 'Azi',
+            noFiles: 'Fara fisiere',
+            tickets: 'Tickete',
+            calls: 'Apeluri',
+            both: 'XLSX si CSV incarcate',
+            uploadXlsx: 'Incarca XLSX',
+            uploadCsv: 'Incarca CSV',
+            exportCsv: 'Export CSV',
+            deleteDay: 'Sterge ziua',
+            selected: 'Data selectata',
+            previous: 'Luna anterioara',
+            next: 'Luna urmatoare',
+            weekdays: ['lun.', 'mar.', 'mie.', 'joi', 'vin.', 'sam.', 'dum.']
+        },
+        en: {
+            title: 'Upload calendar',
+            today: 'Today',
+            noFiles: 'No files',
+            tickets: 'Tickets',
+            calls: 'Calls',
+            both: 'XLSX and CSV uploaded',
+            uploadXlsx: 'Upload XLSX',
+            uploadCsv: 'Upload CSV',
+            exportCsv: 'Export CSV',
+            deleteDay: 'Delete day',
+            selected: 'Selected date',
+            previous: 'Previous month',
+            next: 'Next month',
+            weekdays: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+        },
+        it: {
+            title: 'Calendario caricamenti',
+            today: 'Oggi',
+            noFiles: 'Nessun file',
+            tickets: 'Ticket',
+            calls: 'Chiamate',
+            both: 'XLSX e CSV caricati',
+            uploadXlsx: 'Carica XLSX',
+            uploadCsv: 'Carica CSV',
+            exportCsv: 'Esporta CSV',
+            deleteDay: 'Elimina giorno',
+            selected: 'Data selezionata',
+            previous: 'Mese precedente',
+            next: 'Mese successivo',
+            weekdays: ['lun', 'mar', 'mer', 'gio', 'ven', 'sab', 'dom']
+        }
+    };
 
-    if (dataByDate.size === 0) {
-        summaryEl.style.display = 'none';
+    return (labels[lang] || labels.en)[key] || labels.en[key] || key;
+}
+
+function getCalendarLocale() {
+    return ({ ro: 'ro-RO', en: 'en-US', it: 'it-IT' })[getLang()] || 'en-US';
+}
+
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function setUploadDate(dateKey) {
+    uploadDate = dateKey;
+    const selectedDate = new Date(`${dateKey}T00:00:00`);
+    if (!Number.isNaN(selectedDate.getTime())) {
+        uploadCalendarMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
+    }
+
+    const dateInput = document.getElementById('uploadDate');
+    if (dateInput) dateInput.value = formatDateDisplay(dateKey);
+
+    const tf = document.getElementById('ticketsFileName');
+    const cf = document.getElementById('callsFileName');
+    if (tf) tf.textContent = '';
+    if (cf) cf.textContent = '';
+
+    renderUploadCalendar();
+    updateUploadDateStatus();
+}
+
+function getCalendarDays(monthDate) {
+    const year = monthDate.getFullYear();
+    const month = monthDate.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const start = new Date(firstDay);
+    const mondayOffset = (firstDay.getDay() + 6) % 7;
+    start.setDate(firstDay.getDate() - mondayOffset);
+
+    const days = [];
+    for (let i = 0; i < 42; i++) {
+        const date = new Date(start);
+        date.setDate(start.getDate() + i);
+        days.push(date);
+    }
+    return days;
+}
+
+function getStatusLabel(status) {
+    if (status.hasTickets && status.hasCalls) return getUploadText('both');
+    if (status.hasTickets) return 'XLSX';
+    if (status.hasCalls) return 'CSV';
+    return getUploadText('noFiles');
+}
+
+function getStatusMarkers(status) {
+    return `
+        ${status.hasTickets ? '<span class="upload-calendar-marker marker-xlsx">XLSX</span>' : ''}
+        ${status.hasCalls ? '<span class="upload-calendar-marker marker-csv">CSV</span>' : ''}
+    `;
+}
+
+function renderUploadCalendar() {
+    const panel = document.getElementById('uploadCalendarPanel');
+    if (!panel) return;
+
+    const selectedStatus = getProductivityDateStatus(dataByDate.get(uploadDate));
+    const todayKey = formatDateKey(new Date());
+    const monthLabel = uploadCalendarMonth.toLocaleDateString(getCalendarLocale(), { month: 'long', year: 'numeric' });
+    const weekdays = getUploadText('weekdays');
+    const days = getCalendarDays(uploadCalendarMonth);
+
+    const dayButtons = days.map(date => {
+        const dateKey = formatDateKey(date);
+        const status = getProductivityDateStatus(dataByDate.get(dateKey));
+        const isSelected = dateKey === uploadDate;
+        const isToday = dateKey === todayKey;
+        const isOtherMonth = date.getMonth() !== uploadCalendarMonth.getMonth();
+        const classes = [
+            'upload-calendar-day',
+            isSelected ? 'selected' : '',
+            isToday ? 'today' : '',
+            isOtherMonth ? 'other-month' : '',
+            status.hasTickets ? 'has-tickets' : '',
+            status.hasCalls ? 'has-calls' : '',
+            status.isComplete ? 'complete' : ''
+        ].filter(Boolean).join(' ');
+
+        return `
+            <button type="button" class="${classes}" data-date="${dateKey}" title="${escapeHtml(formatDateDisplay(dateKey))}: ${escapeHtml(getStatusLabel(status))}">
+                <span class="upload-calendar-day-number">${date.getDate()}</span>
+                <span class="upload-calendar-markers">${getStatusMarkers(status)}</span>
+            </button>
+        `;
+    }).join('');
+
+    panel.innerHTML = `
+        <div class="upload-calendar-toolbar">
+            <button type="button" class="upload-calendar-nav" id="uploadCalendarPrev" title="${escapeHtml(getUploadText('previous'))}">&#9664;</button>
+            <div>
+                <div class="upload-calendar-title">${escapeHtml(getUploadText('title'))}</div>
+                <div class="upload-calendar-month">${escapeHtml(monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1))}</div>
+            </div>
+            <button type="button" class="upload-calendar-nav" id="uploadCalendarNext" title="${escapeHtml(getUploadText('next'))}">&#9654;</button>
+        </div>
+        <div class="upload-calendar-weekdays">
+            ${weekdays.map(day => `<span>${escapeHtml(day)}</span>`).join('')}
+        </div>
+        <div class="upload-calendar-grid">
+            ${dayButtons}
+        </div>
+        <div class="upload-calendar-detail">
+            <div>
+                <div class="upload-calendar-detail-label">${escapeHtml(getUploadText('selected'))}</div>
+                <div class="upload-calendar-detail-date">${escapeHtml(formatDateDisplay(uploadDate))}</div>
+                <div class="upload-calendar-detail-status">
+                    ${selectedStatus.hasTickets ? `<span class="upload-calendar-pill marker-xlsx">XLSX · ${selectedStatus.ticketAgents}</span>` : ''}
+                    ${selectedStatus.hasCalls ? `<span class="upload-calendar-pill marker-csv">CSV · ${selectedStatus.callAgents}</span>` : ''}
+                    ${!selectedStatus.hasAnyData ? `<span class="upload-calendar-pill empty">${escapeHtml(getUploadText('noFiles'))}</span>` : ''}
+                </div>
+            </div>
+            <div class="upload-calendar-actions">
+                <button type="button" class="btn btn-secondary" id="uploadCalendarTickets">${escapeHtml(getUploadText('uploadXlsx'))}</button>
+                <button type="button" class="btn btn-secondary" id="uploadCalendarCalls">${escapeHtml(getUploadText('uploadCsv'))}</button>
+                <button type="button" class="btn btn-secondary" id="uploadCalendarExport" ${selectedStatus.hasAnyData ? '' : 'disabled'}>${escapeHtml(getUploadText('exportCsv'))}</button>
+                <button type="button" class="btn btn-danger" id="uploadCalendarDelete" ${selectedStatus.hasAnyData ? '' : 'disabled'}>${escapeHtml(getUploadText('deleteDay'))}</button>
+            </div>
+        </div>
+    `;
+
+    panel.querySelectorAll('[data-date]').forEach(button => {
+        button.addEventListener('click', () => setUploadDate(button.dataset.date));
+    });
+    panel.querySelector('#uploadCalendarPrev')?.addEventListener('click', () => {
+        uploadCalendarMonth = new Date(uploadCalendarMonth.getFullYear(), uploadCalendarMonth.getMonth() - 1, 1);
+        renderUploadCalendar();
+    });
+    panel.querySelector('#uploadCalendarNext')?.addEventListener('click', () => {
+        uploadCalendarMonth = new Date(uploadCalendarMonth.getFullYear(), uploadCalendarMonth.getMonth() + 1, 1);
+        renderUploadCalendar();
+    });
+    panel.querySelector('#uploadCalendarTickets')?.addEventListener('click', () => document.getElementById('ticketsFileInput')?.click());
+    panel.querySelector('#uploadCalendarCalls')?.addEventListener('click', () => document.getElementById('callsFileInput')?.click());
+    panel.querySelector('#uploadCalendarExport')?.addEventListener('click', () => exportProductivityDate(uploadDate));
+    panel.querySelector('#uploadCalendarDelete')?.addEventListener('click', () => removeProductivityDate(uploadDate));
+}
+
+function downloadTextFile(filename, content, mimeType = 'text/csv;charset=utf-8') {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+}
+
+function exportProductivityDate(dateKey) {
+    const entry = dataByDate.get(dateKey);
+    const status = getProductivityDateStatus(entry);
+    if (!status.hasAnyData) {
+        showTemporaryMessage(t('prod-no-results'), 'error');
         return;
     }
 
-    summaryEl.style.display = 'block';
-    const sortedDates = [...dataByDate.keys()].sort();
-
-    let html = '<div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">';
-    sortedDates.forEach(dateKey => {
-        const entry = dataByDate.get(dateKey);
-        const hasTickets = entry.ticketsData && entry.ticketsData.size > 0;
-        const hasCalls = entry.callsData && entry.callsData.size > 0;
-        const parts = [];
-        if (hasTickets) parts.push(`${entry.ticketsData.size} ${t('prod-agents-tickets')}`);
-        if (hasCalls) parts.push(`${entry.callsData.size} ${t('prod-agents-calls')}`);
-        const tooltip = parts.join(', ') || t('prod-no-data-tooltip');
-
-        html += `<div title="${tooltip}" style="
-            display: inline-flex; align-items: center; gap: 0.5rem;
-            padding: 0.4rem 0.8rem; border-radius: 6px;
-            background: rgba(99,102,241,0.12); border: 1px solid rgba(99,102,241,0.25);
-            font-size: 0.85rem; color: var(--text-primary);
-        ">
-            <span>${formatDateDisplay(dateKey)}</span>
-            ${hasTickets ? '<span style="color: var(--success); font-size: 0.75rem;">XLSX</span>' : ''}
-            ${hasCalls ? '<span style="color: var(--accent); font-size: 0.75rem;">CSV</span>' : ''}
-            <button onclick="window.__removeProductivityDate('${dateKey}')" style="
-                background: none; border: none; color: var(--text-secondary); cursor: pointer;
-                padding: 0 0.2rem; font-size: 1rem; line-height: 1;
-            " title="${t('prod-delete-btn')}">&times;</button>
-        </div>`;
-    });
-    html += '</div>';
-    listEl.innerHTML = html;
+    const csv = buildProductivityExportCsv(dateKey, entry);
+    downloadTextFile(`productivity-${dateKey}.csv`, csv);
 }
 
-// Expose remove function globally for the inline onclick
-window.__removeProductivityDate = async function(dateKey) {
+async function removeProductivityDate(dateKey) {
     dataByDate.delete(dateKey);
     await deleteFromFirestore(dateKey);
-    renderLoadedDates();
-    updateUploadDateStatus();
-    renderProductivity();
+    refreshProductivityViews({ source: 'delete' });
     showTemporaryMessage(t('prod-deleted').replace('{date}', formatDateDisplay(dateKey)), 'success', 2000);
-};
+}
+
+window.__removeProductivityDate = removeProductivityDate;
 
 // --- Upload Handlers ---
 
@@ -1224,10 +1475,8 @@ async function handleFile(file, fileNameEl, fileType, onParsed) {
         } else {
             showTemporaryMessage(t('file-processed').replace('{name}', file.name).replace('{date}', formatDateDisplay(uploadDate)), 'success');
         }
-        renderLoadedDates();
+        refreshProductivityViews({ source: 'upload' });
         showUploadSuccess();
-        if (currentView === 'detail') renderAgentChips();
-        renderCurrentView();
     } catch (err) {
         console.error('File parse error:', err);
         showTemporaryMessage(t('error-generic').replace('{msg}', err.message), 'error');
@@ -1241,38 +1490,20 @@ async function handleFile(file, fileNameEl, fileType, onParsed) {
 // --- Initialization ---
 
 export async function initializeProductivity() {
-    // Load persisted data from Firestore
-    await loadAllFromFirestore();
-
-    // Upload date selector — Litepicker calendar
+    // Upload date selector — inline calendar
     const dateInput = document.getElementById('uploadDate');
-    if (dateInput) {
+    if (dateInput && !uploadDate) {
         const today = new Date();
-        const todayKey = today.toISOString().split('T')[0];
-        uploadDate = todayKey;
-        updateUploadDateStatus();
+        uploadCalendarMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+        uploadDate = formatDateKey(today);
+        dateInput.value = formatDateDisplay(uploadDate);
+    }
 
-        const uploadPicker = new Litepicker({
-            element: dateInput,
-            singleMode: true,
-            lang: 'ro-RO',
-            startDate: today,
-            format: 'DD MMM YYYY',
-            dropdowns: { minYear: 2024, maxYear: 2030, months: true, years: true },
-            setup: (picker) => {
-                picker.on('selected', (date) => {
-                    const d = date.dateInstance;
-                    const mm = String(d.getMonth() + 1).padStart(2, '0');
-                    const dd = String(d.getDate()).padStart(2, '0');
-                    uploadDate = `${d.getFullYear()}-${mm}-${dd}`;
-                    updateUploadDateStatus();
-                    const tf = document.getElementById('ticketsFileName');
-                    const cf = document.getElementById('callsFileName');
-                    if (tf) tf.textContent = '';
-                    if (cf) cf.textContent = '';
-                });
-            }
-        });
+    // Load persisted data from Firestore and keep it fresh across sessions.
+    await subscribeToProductivityData();
+
+    if (dateInput) {
+        setUploadDate(uploadDate);
     }
 
     // Setup uploads
@@ -1349,12 +1580,24 @@ export async function initializeProductivity() {
         });
     }
 
-    renderLoadedDates();
+    document.getElementById('productivityRefreshBtn')?.addEventListener('click', async () => {
+        const button = document.getElementById('productivityRefreshBtn');
+        if (button) button.classList.add('is-loading');
+        await refreshProductivityData();
+        if (button) button.classList.remove('is-loading');
+        showTemporaryMessage('Productivity data refreshed.', 'success', 1500);
+    });
+
+    renderUploadCalendar();
     updateUploadDateStatus();
     if (hasAnyData()) renderCurrentView();
 }
 
 export function cleanupProductivity() {
+    if (unsubscribeFromProductivity) {
+        unsubscribeFromProductivity();
+        unsubscribeFromProductivity = null;
+    }
     dataByDate.clear();
 }
 
@@ -1416,7 +1659,7 @@ export function getAverageProductivity() {
 }
 
 export function getProductivityTrendData(targetYear, targetMonth) {
-    const agents = getPlannerData();
+    const agents = getUsersData().length > 0 ? getUsersData() : getPlannerData();
     const datesWithData = new Set(
         [...dataByDate.keys()].filter(dk => {
             const e = dataByDate.get(dk);
@@ -1463,30 +1706,17 @@ export function getProductivityTrendData(targetYear, targetMonth) {
         const entry = dataByDate.get(dateKey);
         const currentDate = new Date(`${dateKey}T00:00:00`);
 
-        // Aggregate uploaded items per customer team, and eligible planner hours per team.
-        const teamItems = {};
-        const teamHours = {};
-        teamNames.forEach(t => { teamItems[t] = 0; teamHours[t] = 0; });
-
-        if (entry.ticketsData) {
-            entry.ticketsData.forEach(val => addUploadedEntryCounts(teamItems, val));
-        }
-        if (entry.callsData) {
-            entry.callsData.forEach(val => addUploadedEntryCounts(teamItems, val));
-        }
-
-        for (const agent of agents) {
-            teamNames.forEach(team => {
-                teamHours[team] += getEligibleHoursForTeamInRange(agent, currentDate, currentDate, team);
-            });
-        }
-
-        // Calculate productivity per team
+        // Match the Productivity page: count only uploaded work that maps to Sherpa users,
+        // then divide by eligible team hours for those same matched users.
         for (const team of teamNames) {
-            const prod = teamHours[team] > 0 && teamItems[team] > 0
-                ? teamItems[team] / teamHours[team]
-                : null;
-            teamSeries[team].push(prod);
+            const point = calculateMatchedTeamTrendPoint({
+                agents,
+                team,
+                ticketEntries: entry.ticketsData,
+                callEntries: entry.callsData,
+                getEligibleHoursForTeam: agent => getEligibleHoursForTeamInRange(agent, currentDate, currentDate, team)
+            });
+            teamSeries[team].push(point.productivity);
         }
     }
 

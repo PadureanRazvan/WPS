@@ -5,7 +5,7 @@ import { initializePlanner, cleanupPlanner, clearSelection, undoLastChange } fro
 import { initializeUsers, cleanupUsers } from './users.js';
 import { initializeProductivity, cleanupProductivity } from './productivity.js';
 import { initializeReports, cleanupReports } from './reports.js';
-import { initializeCharts } from './charts.js';
+import { initializeCharts, initializeProductivityChart } from './charts.js';
 import { updateAverageProductivityCard } from './dashboard.js';
 import { setTheme, updateLanguageUI, showSection, openEditModal, translatePage, selectEditType, saveModalChanges, closeEditModal, toggleSidebar } from './ui.js';
 import { initLogoAnimation } from './logo-animation.js';
@@ -128,6 +128,10 @@ async function initializeApp() {
     await initializeProductivity();
     updateAverageProductivityCard(); // Update after productivity data is loaded
     initializeCharts(); // After productivity so chart has real data
+    document.addEventListener('productivity-data-updated', () => {
+        updateAverageProductivityCard();
+        initializeProductivityChart();
+    });
     initializeReports();
     initializeLogs();
 
@@ -355,4 +359,4 @@ window.addEventListener('beforeunload', () => {
     cleanupUsers();
     cleanupProductivity();
     cleanupReports();
-}); 
+});

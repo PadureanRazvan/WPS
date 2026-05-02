@@ -4,7 +4,7 @@ import { collection, onSnapshot, Timestamp } from "https://www.gstatic.com/fireb
 import { addAgent, updateAgent, deleteAgent } from './planner.js';
 import { showTemporaryMessage, t } from './ui.js';
 import { logActivity } from './logs.js';
-import { getMonthKey, getAgentDaysForMonth, generateDefaultSchedule } from './config.js';
+import { getMonthKey, getAgentDaysForMonth, generateDefaultSchedule, getDateKey, buildPrimaryTeamHistoryForChange, rewriteMonthlyDaysForPrimaryTeamChange } from './config.js';
 
 let usersData = [];
 
@@ -531,6 +531,80 @@ function openContractChangeModal(userId, newContractType) {
     });
 }
 
+function openPrimaryTeamChangeModal(userId, newPrimaryTeam) {
+    const modal = document.getElementById('teamChangeModal');
+    const title = document.getElementById('teamChangeTitle');
+    const summary = document.getElementById('teamChangeSummary');
+    const dateInput = document.getElementById('teamChangeDate');
+    const saveBtn = document.getElementById('teamChangeSaveBtn');
+    const cancelBtn = document.getElementById('teamChangeCancelBtn');
+    const closeBtn = document.getElementById('teamChangeClose');
+    const user = usersData.find(u => u.id === userId);
+
+    if (!modal || !title || !summary || !dateInput || !saveBtn || !cancelBtn || !closeBtn || !user) return;
+
+    const oldTeam = user.primaryTeam || '';
+    title.textContent = `${user.fullName} — ${t('team-change-title')}`;
+    summary.textContent = `${oldTeam || '-'} → ${newPrimaryTeam}`;
+    dateInput.value = getDateKey(new Date());
+
+    modal.classList.add('active');
+
+    const newSaveBtn = saveBtn.cloneNode(true);
+    saveBtn.parentNode.replaceChild(newSaveBtn, saveBtn);
+    const newCancelBtn = cancelBtn.cloneNode(true);
+    cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+    const newCloseBtn = closeBtn.cloneNode(true);
+    closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
+
+    const closeModal = () => {
+        modal.classList.remove('active');
+        renderUsersTable();
+    };
+
+    newCancelBtn.addEventListener('click', closeModal);
+    newCloseBtn.addEventListener('click', closeModal);
+
+    newSaveBtn.addEventListener('click', async () => {
+        const fromDateStr = dateInput.value;
+        if (!fromDateStr) {
+            showTemporaryMessage(t('select-start-date'), "error");
+            return;
+        }
+
+        const fromDate = new Date(`${fromDateStr}T00:00:00`);
+        const hireDate = normalizePlannerDate(user.hireDate);
+        const normalizedFrom = normalizePlannerDate(fromDate);
+        if (hireDate && normalizedFrom && normalizedFrom < hireDate) {
+            showTemporaryMessage(t('team-date-before-hire'), "error");
+            return;
+        }
+
+        const teamCode = String(newPrimaryTeam).trim().split(' ')[0];
+        const primaryTeamHistory = buildPrimaryTeamHistoryForChange(user, newPrimaryTeam, fromDate);
+        const monthlyDayUpdates = rewriteMonthlyDaysForPrimaryTeamChange(user, newPrimaryTeam, fromDate);
+        const updatePayload = {
+            primaryTeam: newPrimaryTeam,
+            teams: teamCode ? [teamCode] : [],
+            primaryTeamHistory
+        };
+
+        for (const [monthKey, days] of Object.entries(monthlyDayUpdates)) {
+            updatePayload[`monthlyDays.${monthKey}`] = days;
+        }
+
+        await updateAgent(userId, updatePayload);
+        logActivity('portal', 'change_primary_team', {
+            name: user.fullName,
+            from: fromDateStr,
+            oldTeam,
+            newTeam: newPrimaryTeam
+        });
+        modal.classList.remove('active');
+        showTemporaryMessage(t('team-updated').replace('{name}', user.fullName).replace('{team}', teamCode).replace('{date}', fromDateStr), "success");
+    });
+}
+
 // Litepicker instances for deactivation modal (cleaned up on each open)
 let deactivatePickerFrom = null;
 let deactivatePickerTo = null;
@@ -731,6 +805,16 @@ async function handleInlineEdit(e) {
         return;
     }
 
+    if (field === 'primaryTeam') {
+        if (e.type !== 'change') return;
+        const newTeam = target.value;
+        const currentState = getComparableInlineFieldState(user, field);
+        const nextState = getComparableInlineDraftState(field, newTeam);
+        if (nextState === currentState) return;
+        openPrimaryTeamChangeModal(id, newTeam);
+        return;
+    }
+
     // Determine value based on input type
     if (target.isContentEditable) {
         value = target.textContent.trim();
@@ -772,12 +856,6 @@ async function handleInlineEdit(e) {
 
     let updatePayload = { [field]: value };
     const logDetails = { field, agentId: id };
-
-    if (field === 'primaryTeam') {
-        const teamCode = String(value).trim().split(' ')[0];
-        updatePayload = { primaryTeam: value, teams: teamCode ? [teamCode] : [] };
-        logDetails.value = value;
-    }
 
     await updateAgent(id, updatePayload);
     target.dataset.initialValue = nextState;

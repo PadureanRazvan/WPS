@@ -123,6 +123,8 @@ export const translations = {
         // Reports
         'reports-hours-per-shop': 'Ore Planificate per Shop',
         'reports-distribution': 'Distribuție Agenți per Shop',
+        'reports-role-hours': 'Ore Planificate TL/QA',
+        'reports-role-distribution': 'Distribuție Agenți TL/QA',
         'reports-shop': 'Shop',
         'reports-total-hours': 'Total Ore',
         'reports-nr-agents': 'Nr. Agenți',
@@ -343,6 +345,10 @@ export const translations = {
         'deactivation-title': 'Dezactivare',
         'agent-deactivated': '{name} dezactivat: {from} — {to}',
         'contract-updated': 'Contract {name} actualizat: {type} ({hours}h) din {date}',
+        'team-change-title': 'Schimbare Echipă',
+        'team-change-date': 'Din data de',
+        'team-date-before-hire': 'Data schimbării trebuie să fie după data angajării.',
+        'team-updated': '{name} mutat pe {team} din {date}.',
         'hours-range-error': 'Orele de contract trebuie să fie între 4 și 8.',
         'hire-date-empty': 'Data de angajare nu poate fi goală.',
         'user-updated': 'Utilizator actualizat.',
@@ -477,6 +483,8 @@ export const translations = {
         // Reports
         'reports-hours-per-shop': 'Planned Hours per Shop',
         'reports-distribution': 'Agent Distribution per Shop',
+        'reports-role-hours': 'Planned TL/QA Hours',
+        'reports-role-distribution': 'TL/QA Agent Distribution',
         'reports-shop': 'Shop',
         'reports-total-hours': 'Total Hours',
         'reports-nr-agents': 'Nr. Agents',
@@ -698,6 +706,10 @@ export const translations = {
         'deactivation-title': 'Deactivation',
         'agent-deactivated': '{name} deactivated: {from} — {to}',
         'contract-updated': 'Contract {name} updated: {type} ({hours}h) from {date}',
+        'team-change-title': 'Primary Team Change',
+        'team-change-date': 'From date',
+        'team-date-before-hire': 'The change date must be after the hire date.',
+        'team-updated': '{name} moved to {team} from {date}.',
         'hours-range-error': 'Contract hours must be between 4 and 8.',
         'hire-date-empty': 'Hire date cannot be empty.',
         'user-updated': 'User updated.',
@@ -832,6 +844,8 @@ export const translations = {
         // Reports
         'reports-hours-per-shop': 'Ore Pianificate per Shop',
         'reports-distribution': 'Distribuzione Agenti per Shop',
+        'reports-role-hours': 'Ore Pianificate TL/QA',
+        'reports-role-distribution': 'Distribuzione Agenti TL/QA',
         'reports-shop': 'Shop',
         'reports-total-hours': 'Ore Totali',
         'reports-nr-agents': 'Nr. Agenti',
@@ -1053,6 +1067,10 @@ export const translations = {
         'deactivation-title': 'Disattivazione',
         'agent-deactivated': '{name} disattivato: {from} — {to}',
         'contract-updated': 'Contratto {name} aggiornato: {type} ({hours}h) dal {date}',
+        'team-change-title': 'Cambio Team Primario',
+        'team-change-date': 'Dalla data',
+        'team-date-before-hire': 'La data del cambio deve essere successiva alla data di assunzione.',
+        'team-updated': '{name} spostato su {team} dal {date}.',
         'hours-range-error': 'Le ore di contratto devono essere tra 4 e 8.',
         'hire-date-empty': 'La data di assunzione non può essere vuota.',
         'user-updated': 'Utente aggiornato.',
@@ -1180,6 +1198,8 @@ export const TEAM_DISPLAY_NAMES = {
     '2L': '2nd Level', 'QA': 'QA', 'TL': 'Team Lead'
 };
 
+export const REPORT_ROLE_TEAM_CODES = ['TL', 'QA'];
+
 // --- Month-keyed data helpers (for multi-month planner support) ---
 
 /** Returns "YYYY-MM" from a Date object */
@@ -1190,6 +1210,13 @@ export function getMonthKey(date) {
 function normalizeScheduleBoundaryDate(value) {
     if (!value) return null;
 
+    if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        const [year, month, day] = value.split('-').map(Number);
+        const localDate = new Date(year, month - 1, day);
+        localDate.setHours(0, 0, 0, 0);
+        return localDate;
+    }
+
     const date = value instanceof Date
         ? new Date(value)
         : value?.toDate
@@ -1199,6 +1226,206 @@ function normalizeScheduleBoundaryDate(value) {
     if (Number.isNaN(date.getTime())) return null;
     date.setHours(0, 0, 0, 0);
     return date;
+}
+
+export function getDateKey(date) {
+    const normalized = normalizeScheduleBoundaryDate(date);
+    if (!normalized) return '';
+
+    const year = normalized.getFullYear();
+    const month = String(normalized.getMonth() + 1).padStart(2, '0');
+    const day = String(normalized.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+function normalizePrimaryTeamHistoryEntry(entry) {
+    const fromDate = normalizeScheduleBoundaryDate(entry?.from);
+    const primaryTeam = String(entry?.primaryTeam || '').trim();
+
+    if (!fromDate || !primaryTeam) return null;
+    return {
+        from: getDateKey(fromDate),
+        primaryTeam
+    };
+}
+
+function getNormalizedPrimaryTeamHistory(agent) {
+    return Array.isArray(agent?.primaryTeamHistory)
+        ? agent.primaryTeamHistory
+            .map(normalizePrimaryTeamHistoryEntry)
+            .filter(Boolean)
+            .sort((a, b) => a.from.localeCompare(b.from))
+        : [];
+}
+
+export function getEffectivePrimaryTeam(agent, date) {
+    const targetDateKey = getDateKey(date);
+    const history = getNormalizedPrimaryTeamHistory(agent);
+    let effectiveTeam = '';
+
+    for (const entry of history) {
+        if (entry.from <= targetDateKey) {
+            effectiveTeam = entry.primaryTeam;
+        } else {
+            break;
+        }
+    }
+
+    return effectiveTeam || String(agent?.primaryTeam || '').trim();
+}
+
+export function getEffectivePrimaryTeamCode(agent, date) {
+    return getEffectivePrimaryTeam(agent, date).split(' ')[0]?.toUpperCase() || '';
+}
+
+export function buildPrimaryTeamHistoryForChange(agent, newPrimaryTeam, fromDate) {
+    const fromKey = getDateKey(fromDate);
+    const nextTeam = String(newPrimaryTeam || '').trim();
+    if (!fromKey || !nextTeam) return getNormalizedPrimaryTeamHistory(agent);
+
+    const history = getNormalizedPrimaryTeamHistory(agent);
+    const seededHistory = history.length > 0
+        ? history
+        : [{
+            from: getDateKey(agent?.hireDate) || fromKey,
+            primaryTeam: String(agent?.primaryTeam || '').trim()
+        }].filter(entry => entry.primaryTeam);
+
+    const nextHistory = seededHistory.filter(entry => entry.from < fromKey);
+    const previousEntry = nextHistory[nextHistory.length - 1];
+
+    if (!previousEntry || previousEntry.primaryTeam !== nextTeam) {
+        nextHistory.push({ from: fromKey, primaryTeam: nextTeam });
+    }
+
+    return nextHistory;
+}
+
+function getMonthStartFromKey(monthKey) {
+    const [yearStr, monthStr] = String(monthKey || '').split('-');
+    const year = parseInt(yearStr, 10);
+    const month = parseInt(monthStr, 10);
+
+    if (!year || !month) return null;
+    return new Date(year, month - 1, 1);
+}
+
+function parsePlannerDayEntries(dayValue) {
+    if (!dayValue || typeof dayValue !== 'string') return [];
+
+    const trimmed = dayValue.trim();
+    if (isNonWorkingCode(trimmed)) return [];
+
+    return trimmed
+        .split('+')
+        .map(part => parseShiftEntry(part))
+        .filter(Boolean)
+        .map(parsed => ({
+            hours: parsed.hours,
+            team: parsed.team ? normalizeTeamForDisplay(parsed.team) : null
+        }));
+}
+
+export function rewriteMonthlyDaysForPrimaryTeamChange(agent, newPrimaryTeam, fromDate) {
+    const from = normalizeScheduleBoundaryDate(fromDate);
+    if (!from || !agent?.monthlyDays) return {};
+
+    const fromMonthKey = getMonthKey(from);
+    const newTeamCode = String(newPrimaryTeam || '').trim().split(' ')[0]?.toUpperCase() || '';
+    if (!newTeamCode) return {};
+
+    const updates = {};
+
+    Object.keys(agent.monthlyDays)
+        .filter(monthKey => monthKey >= fromMonthKey)
+        .sort()
+        .forEach(monthKey => {
+            const monthStart = getMonthStartFromKey(monthKey);
+            if (!monthStart) return;
+
+            const year = monthStart.getFullYear();
+            const month = monthStart.getMonth();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const nextDays = [...(agent.monthlyDays[monthKey] || [])];
+            while (nextDays.length < 31) nextDays.push('');
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                const cellDate = new Date(year, month, day);
+                cellDate.setHours(0, 0, 0, 0);
+                if (cellDate < from) continue;
+
+                const dayIndex = day - 1;
+                const currentValue = String(nextDays[dayIndex] || '').trim();
+                if (!currentValue || currentValue.includes('+') || isNonWorkingCode(currentValue)) continue;
+
+                const parsed = parseShiftEntry(currentValue);
+                if (!parsed) continue;
+
+                const oldTeamCode = normalizeTeamForDisplay(getEffectivePrimaryTeamCode(agent, cellDate));
+                const parsedTeamCode = parsed.team ? normalizeTeamForDisplay(parsed.team) : null;
+                if (parsedTeamCode && parsedTeamCode !== oldTeamCode) continue;
+
+                nextDays[dayIndex] = `${formatPlannerHoursValue(parsed.hours)}${newTeamCode}`;
+            }
+
+            updates[monthKey] = nextDays;
+        });
+
+    return updates;
+}
+
+function addReportHours(bucketGroup, displayName, agentName, hours) {
+    if (!bucketGroup[displayName]) {
+        bucketGroup[displayName] = { totalHours: 0, agents: new Map() };
+    }
+
+    bucketGroup[displayName].totalHours += hours;
+    bucketGroup[displayName].agents.set(
+        agentName,
+        (bucketGroup[displayName].agents.get(agentName) || 0) + hours
+    );
+}
+
+export function isReportRoleTeamCode(teamCode) {
+    return REPORT_ROLE_TEAM_CODES.includes(normalizeTeamForDisplay(String(teamCode || '').toUpperCase()));
+}
+
+export function calculatePlannerReportData(agents, start, end) {
+    if (!Array.isArray(agents) || agents.length === 0) return null;
+
+    const shopData = {};
+    const roleData = {};
+    let shopGrandTotal = 0;
+    let roleGrandTotal = 0;
+
+    for (const agent of agents) {
+        const agentName = agent.fullName || agent.username || 'Unknown';
+        const current = normalizeScheduleBoundaryDate(start);
+        const endDate = normalizeScheduleBoundaryDate(end);
+
+        if (!current || !endDate) continue;
+
+        while (current <= endDate) {
+            const dayValue = getEffectiveAgentDayValue(agent, current);
+
+            for (const entry of parsePlannerDayEntries(dayValue)) {
+                const resolvedCode = entry.team || getEffectivePrimaryTeamCode(agent, current);
+                const displayName = TEAM_DISPLAY_NAMES[resolvedCode] || resolvedCode;
+
+                if (isReportRoleTeamCode(resolvedCode)) {
+                    addReportHours(roleData, displayName, agentName, entry.hours);
+                    roleGrandTotal += entry.hours;
+                } else {
+                    addReportHours(shopData, displayName, agentName, entry.hours);
+                    shopGrandTotal += entry.hours;
+                }
+            }
+
+            current.setDate(current.getDate() + 1);
+        }
+    }
+
+    return { shopData, roleData, shopGrandTotal, roleGrandTotal };
 }
 
 function isDateBeforeAgentHire(agent, date) {
@@ -1264,12 +1491,10 @@ function applyHireDateBoundaryToDays(agent, monthKey, sourceDays = []) {
  */
 export function generateDefaultSchedule(agent, monthKey) {
     const hours = agent.contractHours || 8;
-    const teamCode = agent.primaryTeam ? agent.primaryTeam.split(' ')[0] : '';
     const [yearStr, monthStr] = monthKey.split('-');
     const year = parseInt(yearStr, 10);
     const month = parseInt(monthStr, 10) - 1; // 0-indexed
     const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const entry = teamCode ? `${hours}${teamCode}` : `${hours}`;
     const days = [];
     const hireDate = normalizeScheduleBoundaryDate(agent?.hireDate);
 
@@ -1281,6 +1506,8 @@ export function generateDefaultSchedule(agent, monthKey) {
                 continue;
             }
             const dayOfWeek = new Date(year, month, d).getDay();
+            const teamCode = getEffectivePrimaryTeamCode(agent, cellDate);
+            const entry = teamCode ? `${hours}${teamCode}` : `${hours}`;
             days.push(dayOfWeek >= 1 && dayOfWeek <= 5 ? entry : '');
         } else {
             days.push('');

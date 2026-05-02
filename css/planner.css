@@ -1043,12 +1043,16 @@
 .few-days-view {
     display: flex;
     justify-content: center;
+    align-items: flex-start;
+    align-content: flex-start;
 }
 
 .few-days-view .unified-planner-table {
     width: auto; /* Let the table shrink to its content */
     min-width: 50%;
     max-width: 95%;
+    height: auto;
+    align-self: flex-start;
 } 
 
 
