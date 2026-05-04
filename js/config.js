@@ -130,6 +130,7 @@ export const translations = {
         'reports-nr-agents': 'Nr. Agenți',
         'reports-agents-hours': 'agenți',
         'reports-hours-unit': 'ore',
+        'reports-refresh': 'Reîmprospătează',
         'reports-select-range': 'Selectează un interval de date pentru a genera rapoartele.',
         'reports-no-data': 'Nu există date planificate pentru intervalul selectat.',
 
@@ -229,7 +230,7 @@ export const translations = {
         'info-prod-summary': 'Sumar — vedere agregată per agent pe întreaga perioadă selectată',
         'info-prod-agent': 'Per Agent — vedere detaliată zi cu zi, per agent. Selectează agenții folosind chipurile sau căutarea',
         'info-prod-teams': 'Echipe (coloana) — arată echipele pentru care agentul a lucrat efectiv, bazat pe fișierele încărcate',
-        'info-prod-formula': 'Formula — Productivitate = (Tickete + Apeluri) / Ore Lucrate eligibile. Ticketele și apelurile QA/TL rămân incluse, dar orele lor nu intră în denominator; 2L rămâne inclus',
+        'info-prod-formula': 'Formula — Productivitate = (Tickete + Apeluri) / Ore Lucrate eligibile. Utilizatorii QA/TL sunt excluși din productivitatea per agent; 2L rămâne inclus',
         'info-upload-title': '5. Upload File',
         'info-upload-desc': 'Încărcarea fișierelor de productivitate zilnică:',
         'info-upload-step1': 'Pasul 1: Selectează data — alege data din calendar pentru care încarci datele. Sistemul avertizează dacă data are deja date încărcate',
@@ -490,6 +491,7 @@ export const translations = {
         'reports-nr-agents': 'Nr. Agents',
         'reports-agents-hours': 'agents',
         'reports-hours-unit': 'hours',
+        'reports-refresh': 'Refresh',
         'reports-select-range': 'Select a date range to generate reports.',
         'reports-no-data': 'No planned data for the selected range.',
 
@@ -589,7 +591,7 @@ export const translations = {
         'info-prod-summary': 'Summary — aggregated view per agent for the entire selected period',
         'info-prod-agent': 'Per Agent — detailed day-by-day view per agent. Select agents using chips or search',
         'info-prod-teams': 'Teams (column) — shows the teams the agent actually worked for, based on uploaded files',
-        'info-prod-formula': 'Formula — Productivity = (Tickets + Calls) / Eligible hours worked. QA and TL tickets/calls stay included, but their hours are excluded from the denominator; 2L remains included',
+        'info-prod-formula': 'Formula — Productivity = (Tickets + Calls) / Eligible hours worked. QA/TL users are excluded from per-agent productivity; 2L remains included',
         'info-upload-title': '5. File Upload',
         'info-upload-desc': 'Upload daily productivity files:',
         'info-upload-step1': 'Step 1: Select date — choose the date for which you\'re uploading data. The system warns if data already exists for that date',
@@ -851,6 +853,7 @@ export const translations = {
         'reports-nr-agents': 'Nr. Agenti',
         'reports-agents-hours': 'agenti',
         'reports-hours-unit': 'ore',
+        'reports-refresh': 'Aggiorna',
         'reports-select-range': 'Seleziona un intervallo di date per generare i rapporti.',
         'reports-no-data': 'Nessun dato pianificato per l\'intervallo selezionato.',
 
@@ -950,7 +953,7 @@ export const translations = {
         'info-prod-summary': 'Riepilogo — vista aggregata per agente sull\'intero periodo selezionato',
         'info-prod-agent': 'Per Agente — vista dettagliata giorno per giorno, per agente. Seleziona gli agenti usando i chip o la ricerca',
         'info-prod-teams': 'Team (colonna) — mostra i team per cui l\'agente ha effettivamente lavorato, basato sui file caricati',
-        'info-prod-formula': 'Formula — Produttività = (Ticket + Chiamate) / Ore Lavorate eleggibili. I ticket e le chiamate QA/TL restano inclusi, ma le loro ore sono escluse dal denominatore; 2L resta incluso',
+        'info-prod-formula': 'Formula — Produttività = (Ticket + Chiamate) / Ore Lavorate eleggibili. Gli utenti QA/TL sono esclusi dalla produttività per agente; 2L resta incluso',
         'info-upload-title': '5. Carica File',
         'info-upload-desc': 'Caricamento dei file di produttività giornaliera:',
         'info-upload-step1': 'Passo 1: Seleziona data — scegli la data per cui carichi i dati. Il sistema avvisa se esistono già dati per quella data',
@@ -1390,6 +1393,11 @@ export function isReportRoleTeamCode(teamCode) {
     return REPORT_ROLE_TEAM_CODES.includes(normalizeTeamForDisplay(String(teamCode || '').toUpperCase()));
 }
 
+export function getEffectiveReportRoleCode(agent, date) {
+    const effectiveCode = normalizeTeamForDisplay(getEffectivePrimaryTeamCode(agent, date));
+    return isReportRoleTeamCode(effectiveCode) ? effectiveCode : null;
+}
+
 export function calculatePlannerReportData(agents, start, end) {
     if (!Array.isArray(agents) || agents.length === 0) return null;
 
@@ -1407,9 +1415,11 @@ export function calculatePlannerReportData(agents, start, end) {
 
         while (current <= endDate) {
             const dayValue = getEffectiveAgentDayValue(agent, current);
+            const reportRoleCode = getEffectiveReportRoleCode(agent, current);
+            const primaryTeamCode = reportRoleCode || getEffectivePrimaryTeamCode(agent, current);
 
             for (const entry of parsePlannerDayEntries(dayValue)) {
-                const resolvedCode = entry.team || getEffectivePrimaryTeamCode(agent, current);
+                const resolvedCode = reportRoleCode || entry.team || primaryTeamCode;
                 const displayName = TEAM_DISPLAY_NAMES[resolvedCode] || resolvedCode;
 
                 if (isReportRoleTeamCode(resolvedCode)) {

@@ -5,7 +5,7 @@ import { getPlannerData } from './planner.js';
 import { getUsersData } from './users.js';
 import { showTemporaryMessage } from './ui.js';
 import { translations, formatPlannerHoursValue, isNonWorkingCode, normalizeTeamForDisplay, PRODUCTIVITY_TEAMS, parseShiftEntry, extractHoursFromDay, getMonthKey, getEffectiveAgentDayValue, getEffectivePrimaryTeamCode } from './config.js';
-import { calculateMatchedTeamTrendPoint, findProductivityAgent, normalizeProductivityName } from './productivity-metrics.js';
+import { calculateMatchedTeamTrendPoint, findProductivityAgent, hasPerAgentProductivityEligibleDate, isPerAgentProductivityRoleExcluded, normalizeProductivityName } from './productivity-metrics.js';
 import { buildProductivityExportCsv, getProductivityDateStatus } from './productivity-upload-calendar.js';
 
 function getLang() { return localStorage.getItem('language') || 'ro'; }
@@ -304,7 +304,7 @@ function entryHasTeamData(entry, teamCode) {
 function getAgentsWithUploadedTeamData(teamCode, start = dateStart, end = dateEnd) {
     const matchingAgents = new Set();
     const normalizedTeamCode = normalizeTeamForDisplay(teamCode);
-    const { mergedTickets, mergedCalls } = getMergedDataForRange(start, end);
+    const { mergedTickets, mergedCalls } = getMergedDataForRange(start, end, { excludePerAgentRoles: true });
 
     const addMatchedAgent = (entry) => {
         if (!entryHasTeamData(entry, normalizedTeamCode)) return;
@@ -549,7 +549,7 @@ function hasAnyData() {
 
 // --- Merge data across date range for productivity ---
 
-function getMergedDataForRange(start, end) {
+function getMergedDataForRange(start, end, { excludePerAgentRoles = false } = {}) {
     // Collect all date keys that fall within the range
     const mergedTickets = new Map();
     const mergedCalls = new Map();
@@ -566,8 +566,15 @@ function getMergedDataForRange(start, end) {
         if (entry) {
             if (entry.ticketsData || entry.callsData) datesWithData++;
 
+            const shouldSkipForPerAgent = (val) => {
+                if (!excludePerAgentRoles) return false;
+                const agent = matchAgent(val.originalName);
+                return !agent || isPerAgentProductivityRoleExcluded(agent, current);
+            };
+
             if (entry.ticketsData) {
                 entry.ticketsData.forEach((val, key) => {
+                    if (shouldSkipForPerAgent(val)) return;
                     if (!mergedTickets.has(key)) {
                         mergedTickets.set(key, { originalName: val.originalName, tickets: 0, teams: new Map() });
                     }
@@ -581,6 +588,7 @@ function getMergedDataForRange(start, end) {
 
             if (entry.callsData) {
                 entry.callsData.forEach((val, key) => {
+                    if (shouldSkipForPerAgent(val)) return;
                     if (!mergedCalls.has(key)) {
                         mergedCalls.set(key, { originalName: val.originalName, calls: 0, teams: new Map() });
                     }
@@ -603,7 +611,7 @@ function getMergedDataForRange(start, end) {
 function calculateProductivity() {
     if (!hasAnyData()) return [];
 
-    const { mergedTickets, mergedCalls, datesWithData } = getMergedDataForRange(dateStart, dateEnd);
+    const { mergedTickets, mergedCalls, datesWithData } = getMergedDataForRange(dateStart, dateEnd, { excludePerAgentRoles: true });
     if (mergedTickets.size === 0 && mergedCalls.size === 0) return [];
 
     const results = [];
@@ -844,6 +852,7 @@ function renderDetailView() {
         selectedAgents.forEach(normalizedName => {
             const agent = users.find(u => normalizeName(u.fullName) === normalizedName || normalizeName(u.username) === normalizedName);
             if (!agent) return;
+            if (isPerAgentProductivityRoleExcluded(agent, current)) return;
 
             const dayValue = getEffectiveAgentDayValue(agent, current);
 
@@ -1007,7 +1016,7 @@ function getFilteredAgents() {
                 if (agent) {
                     const agentKey = normalizeName(agent.fullName);
                     if (agentNames.has(agentKey)) return;
-                    agentNames.set(agentKey, { fullName: agent.fullName, primaryTeam: agent.primaryTeam });
+                    agentNames.set(agentKey, { fullName: agent.fullName, primaryTeam: agent.primaryTeam, agent });
                 }
             });
         };
@@ -1018,11 +1027,13 @@ function getFilteredAgents() {
     getUsersData().forEach(u => {
         const key = normalizeName(u.fullName);
         if (!agentNames.has(key)) {
-            agentNames.set(key, { fullName: u.fullName, primaryTeam: u.primaryTeam });
+            agentNames.set(key, { fullName: u.fullName, primaryTeam: u.primaryTeam, agent: u });
         }
     });
 
-    let agents = [...agentNames.entries()];
+    let agents = [...agentNames.entries()].filter(([, info]) =>
+        hasPerAgentProductivityEligibleDate(info.agent, dateStart, dateEnd)
+    );
     if (currentTeamFilter !== 'all') {
         const matchingAgents = getAgentsWithUploadedTeamData(currentTeamFilter);
         agents = agents.filter(([normalizedName]) => matchingAgents.has(normalizedName));

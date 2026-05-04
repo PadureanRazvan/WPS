@@ -491,9 +491,10 @@
             <section id="reports" class="section">
                 <header class="header">
                     <h2 class="header-title" data-translate="reports-title">Rapoarte</h2>
-                    <div class="header-actions">
+                    <div class="header-actions" style="display: flex; align-items: center; gap: 0.75rem;">
                         <input type="text" id="reportsDateRange" placeholder="Selectează interval..."
                             style="padding: 0.6rem 1rem; background: var(--primary-dark); border: 1px solid var(--border); border-radius: 6px; color: white; cursor: pointer; min-width: 240px; font-size: 0.9rem;">
+                        <button type="button" id="reportsRefreshBtn" class="reports-refresh-btn" title="Reîmprospătează" aria-label="Reîmprospătează">&#8635;</button>
                     </div>
                 </header>
                 <div class="content" id="reportsContent">
@@ -616,7 +617,7 @@
                             <li data-translate="info-prod-summary"><strong style="color: var(--text-primary);">Sumar</strong> — vedere agregată per agent pe întreaga perioadă selectată</li>
                             <li data-translate="info-prod-agent"><strong style="color: var(--text-primary);">Per Agent</strong> — vedere detaliată zi cu zi, per agent. Selectează agenții folosind chipurile sau căutarea</li>
                             <li data-translate="info-prod-teams"><strong style="color: var(--text-primary);">Echipe (coloana)</strong> — arată echipele pentru care agentul a lucrat efectiv, bazat pe fișierele încărcate</li>
-                            <li data-translate="info-prod-formula"><strong style="color: var(--text-primary);">Formula</strong> — Productivitate = (Tickete + Apeluri) / Ore Lucrate eligibile. Ticketele și apelurile QA/TL rămân incluse, dar orele lor nu intră în denominator; 2L rămâne inclus</li>
+                            <li data-translate="info-prod-formula"><strong style="color: var(--text-primary);">Formula</strong> — Productivitate = (Tickete + Apeluri) / Ore Lucrate eligibile. Utilizatorii QA/TL sunt excluși din productivitatea per agent; 2L rămâne inclus</li>
                         </ul>
                     </div>
 

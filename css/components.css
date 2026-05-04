@@ -721,7 +721,8 @@ input:focus, select:focus, textarea:focus {
     fill: var(--text-secondary);
 }
 
-.productivity-refresh-btn {
+.productivity-refresh-btn,
+.reports-refresh-btn {
     width: 40px;
     height: 38px;
     display: inline-flex;
@@ -738,13 +739,15 @@ input:focus, select:focus, textarea:focus {
     transition: border-color var(--transition-fast), color var(--transition-fast), background var(--transition-fast);
 }
 
-.productivity-refresh-btn:hover {
+.productivity-refresh-btn:hover,
+.reports-refresh-btn:hover {
     border-color: var(--accent);
     color: var(--accent);
     background: rgba(255, 215, 0, 0.06);
 }
 
-.productivity-refresh-btn.is-loading {
+.productivity-refresh-btn.is-loading,
+.reports-refresh-btn.is-loading {
     animation: spin 0.8s linear infinite;
 }
 
