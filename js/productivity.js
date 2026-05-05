@@ -30,6 +30,8 @@ import {
     calculateProductivityOverview,
     formatProductivityDateKey,
     getProductivityDaysInRange,
+    getProductivityEligibleHoursForRange,
+    getProductivityEligibleHoursForTeamInRange,
     hasAnyProductivityData,
     mergeProductivityDataForRange
 } from './productivity-calculation.js';
@@ -610,7 +612,7 @@ export function getAverageProductivity() {
     return buildAverageProductivitySummary({
         dataByDate,
         agents: getPlannerData(),
-        getEligibleHoursForRange
+        getEligibleHoursForRange: getProductivityEligibleHoursForRange
     });
 }
 
@@ -620,6 +622,6 @@ export function getProductivityTrendData(targetYear, targetMonth) {
         agents: getUsersData().length > 0 ? getUsersData() : getPlannerData(),
         targetYear,
         targetMonth,
-        getEligibleHoursForTeamInRange
+        getEligibleHoursForTeamInRange: getProductivityEligibleHoursForTeamInRange
     });
 }

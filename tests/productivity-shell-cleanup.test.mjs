@@ -11,7 +11,9 @@ test('productivity shell has no legacy globals or shallow pass-through helpers',
     /function getEligibleHoursForRange\(/,
     /function getEligibleHoursForTeamInRange\(/,
     /function getDaysInRange\(/,
-    /function formatDateKey\(/
+    /function formatDateKey\(/,
+    /\bgetEligibleHoursForRange\b(?!\s*:)/,
+    /\bgetEligibleHoursForTeamInRange\b(?!\s*:)/,
   ].forEach(pattern => {
     assert.doesNotMatch(productivitySource, pattern);
   });
