@@ -4,9 +4,35 @@ import { collection, doc, setDoc, deleteDoc, getDocs, onSnapshot } from "https:/
 import { getPlannerData } from './planner.js';
 import { getUsersData } from './users.js';
 import { showTemporaryMessage } from './ui.js';
-import { translations, formatPlannerHoursValue, isNonWorkingCode, normalizeTeamForDisplay, PRODUCTIVITY_TEAMS, parseShiftEntry, extractHoursFromDay, getMonthKey, getEffectiveAgentDayValue, getEffectivePrimaryTeamCode } from './config.js';
-import { calculateMatchedTeamTrendPoint, findProductivityAgent, hasPerAgentProductivityEligibleDate, isPerAgentProductivityRoleExcluded, normalizeProductivityName } from './productivity-metrics.js';
+import { translations, normalizeTeamForDisplay, getMonthKey } from './config.js';
+import { findProductivityAgent, hasPerAgentProductivityEligibleDate, normalizeProductivityName } from './productivity-metrics.js';
 import { buildProductivityExportCsv, getProductivityDateStatus } from './productivity-upload-calendar.js';
+import { createProductivityDateCommands } from './productivity-date-commands.js';
+import { buildProductivityUploadCalendarView, buildProductivityUploadDateStatusView, buildProductivityUploadSuccessView } from './productivity-upload-calendar-view.js';
+import { bindProductivityUploadCalendarActions } from './productivity-upload-calendar-actions.js';
+import { bindProductivityUploadArea } from './productivity-upload-area.js';
+import { processProductivityUploadFile } from './productivity-upload-flow.js';
+import { parseCallsCSV, parseTicketsXLSX } from './productivity-upload-parsing.js';
+import { createProductivityFirestoreStore } from './productivity-persistence.js';
+import { buildAverageProductivitySummary, buildProductivityTrendData } from './productivity-dashboard-metrics.js';
+import { buildProductivityDetailView, buildProductivityOverviewView } from './productivity-view.js';
+import { buildProductivityDetailRows } from './productivity-detail-rows.js';
+import { bindProductivityDateRangePicker } from './productivity-date-range-picker.js';
+import { bindProductivityControls } from './productivity-controls.js';
+import { bindProductivityAgentActions, createProductivityAgentActions } from './productivity-agent-actions.js';
+import {
+    buildProductivityAgentSelectionView,
+    clearProductivityAgentSelection,
+    selectAllProductivityAgents,
+    toggleProductivityAgentSelection
+} from './productivity-agent-selection-view.js';
+import {
+    calculateProductivityOverview,
+    formatProductivityDateKey,
+    getProductivityDaysInRange,
+    hasAnyProductivityData,
+    mergeProductivityDataForRange
+} from './productivity-calculation.js';
 
 function getLang() { return localStorage.getItem('language') || 'ro'; }
 function t(key) { const l = getLang(); return (translations[l] && translations[l][key]) || key; }
@@ -23,203 +49,39 @@ let currentView = 'overview'; // 'overview' or 'detail'
 let selectedAgents = new Set(); // normalized names of selected agents
 let uploadCalendarMonth = new Date();
 let unsubscribeFromProductivity = null;
-const PRODUCTIVITY_HOURS_EXCLUDED_PRIMARY_TEAM_CODES = new Set(['TL', 'QA']);
+const productivityStore = createProductivityFirestoreStore({
+    db,
+    firestore: { collection, doc, setDoc, deleteDoc, getDocs, onSnapshot }
+});
+const dateCommands = createProductivityDateCommands({
+    getDateEntry: dateKey => dataByDate.get(dateKey),
+    deleteDateEntry: dateKey => dataByDate.delete(dateKey),
+    getDateStatus: getProductivityDateStatus,
+    buildExportCsv: buildProductivityExportCsv,
+    deletePersistedDate: deleteFromFirestore,
+    refreshProductivityViews,
+    showTemporaryMessage,
+    formatDateDisplay,
+    t
+});
+const agentActions = createProductivityAgentActions({
+    getSelectedAgents: () => selectedAgents,
+    setSelectedAgents: value => {
+        selectedAgents = value;
+    },
+    getFilteredAgents,
+    getAgentSearchTerm: () => document.getElementById('prodAgentSearch')?.value || '',
+    toggleSelection: toggleProductivityAgentSelection,
+    selectAllSelection: selectAllProductivityAgents,
+    clearSelection: clearProductivityAgentSelection,
+    renderAgentChips,
+    renderCurrentView
+});
 
 // --- Name Normalization & Matching ---
 
-function normalizeName(name) {
-    return normalizeProductivityName(name);
-}
-
 function matchAgent(fileName) {
     return findProductivityAgent(fileName, getUsersData());
-}
-
-// --- Queue/Language to Team Mapping ---
-
-const QUEUE_TO_TEAM = {
-    'ro zooplus': 'RO', 'ro bitiba': 'RO',
-    'hu zooplus': 'HU', 'hu bitiba': 'HU',
-    'it zooplus': 'IT', 'it bitiba': 'IT',
-    'nl zooplus': 'NL', 'nl bitiba': 'NL',
-    'cs zooplus': 'CS', 'cs bitiba': 'CS',
-    'sk zooplus': 'SK', 'sk bitiba': 'SK',
-    'sv-se zooplus': 'SV-SE', 'sv-se bitiba': 'SV-SE',
-    'de zooplus': 'DE', 'de bitiba': 'DE',
-};
-
-function queueToTeam(queueName) {
-    if (!queueName) return 'OTHER';
-    const lower = queueName.toLowerCase().trim();
-    for (const [key, team] of Object.entries(QUEUE_TO_TEAM)) {
-        if (lower.startsWith(key)) return team;
-    }
-    return 'OTHER';
-}
-
-const LANGUAGE_TO_TEAM = {
-    'ro': 'RO', 'hu': 'HU', 'it': 'IT', 'nl': 'NL',
-    'cs': 'CS', 'sk': 'SK', 'sv-se': 'SV-SE', 'de': 'DE',
-    'en': 'EN', 'en-gb': 'EN', 'bg': 'BG', 'da': 'DA',
-    'el': 'EL', 'es': 'ES', 'fi': 'FI', 'fr': 'FR',
-    'hr': 'HR', 'nb-no': 'NO', 'pl': 'PL', 'pt-pt': 'OTHER',
-    'ru-ru': 'RU', 'sl': 'SL',
-};
-
-function languageToTeam(lang) {
-    if (!lang) return 'OTHER';
-    return LANGUAGE_TO_TEAM[lang.toLowerCase().trim()] || 'OTHER';
-}
-
-// --- XLSX Parser (Tickets) ---
-
-async function parseTicketsXLSX(file) {
-    const arrayBuffer = await file.arrayBuffer();
-    const zip = await JSZip.loadAsync(arrayBuffer);
-
-    const strings = [];
-    const sstFile = zip.file('xl/sharedStrings.xml');
-    if (sstFile) {
-        const sstXml = await sstFile.async('string');
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(sstXml, 'text/xml');
-        const siElements = doc.getElementsByTagName('si');
-        for (let i = 0; i < siElements.length; i++) {
-            const tElements = siElements[i].getElementsByTagName('t');
-            let text = '';
-            for (let j = 0; j < tElements.length; j++) {
-                text += tElements[j].textContent || '';
-            }
-            strings.push(text);
-        }
-    }
-
-    const sheetFile = zip.file('xl/worksheets/sheet1.xml');
-    if (!sheetFile) throw new Error('Could not find sheet1.xml in XLSX');
-
-    const sheetXml = await sheetFile.async('string');
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(sheetXml, 'text/xml');
-    const rows = doc.getElementsByTagName('row');
-
-    const result = new Map();
-    let skippedHeader = false;
-
-    for (let i = 0; i < rows.length; i++) {
-        const cells = rows[i].getElementsByTagName('c');
-        const rowData = {};
-        for (let j = 0; j < cells.length; j++) {
-            const cell = cells[j];
-            const ref = cell.getAttribute('r') || '';
-            const col = ref.replace(/\d+/g, '');
-            const type = cell.getAttribute('t');
-            const vEl = cell.getElementsByTagName('v')[0];
-            const rawVal = vEl ? vEl.textContent : '';
-            rowData[col] = type === 's' ? (strings[parseInt(rawVal)] || '') : rawVal;
-        }
-
-        if (!skippedHeader) {
-            if (rowData['A'] === 'Agent name') skippedHeader = true;
-            continue;
-        }
-
-        const agentName = rowData['A'] || '';
-        const language = rowData['B'] || '';
-        const ticketsResolved = parseFloat(rowData['D']) || 0;
-
-        if (!agentName || agentName === '---') continue;
-        if (ticketsResolved === 0) continue;
-
-        const normalized = normalizeName(agentName);
-        const teamCode = languageToTeam(language);
-
-        if (!result.has(normalized)) {
-            result.set(normalized, { originalName: agentName, tickets: 0, teams: new Map() });
-        }
-        const entry = result.get(normalized);
-        entry.tickets += ticketsResolved;
-        entry.teams.set(teamCode, (entry.teams.get(teamCode) || 0) + ticketsResolved);
-    }
-
-    return result;
-}
-
-// --- CSV Parser (Calls) ---
-
-function parseCallsCSV(text) {
-    const lines = text.split(/\r?\n/);
-    if (lines.length < 2) throw new Error('CSV file is empty or has no data rows');
-
-    const headers = parseCSVLine(lines[0]);
-    const agentIdx = headers.findIndex(h => h.trim().toLowerCase() === 'agent name');
-    const queueIdx = headers.findIndex(h => h.trim().toLowerCase() === 'call queue name');
-    const statusIdx = headers.findIndex(h => h.trim().toLowerCase() === 'call status');
-
-    if (agentIdx === -1 || statusIdx === -1) {
-        throw new Error('Could not find required columns: Agent Name, Call Status');
-    }
-
-    const result = new Map();
-    for (let i = 1; i < lines.length; i++) {
-        const line = lines[i].trim();
-        if (!line) continue;
-
-        const cols = parseCSVLine(line);
-        const agentName = cols[agentIdx]?.trim() || '';
-        const queueName = queueIdx >= 0 ? (cols[queueIdx]?.trim() || '') : '';
-        const status = cols[statusIdx]?.trim() || '';
-
-        if (status !== 'Answered' || !agentName) continue;
-
-        const normalized = normalizeName(agentName);
-        const teamCode = queueToTeam(queueName);
-
-        if (!result.has(normalized)) {
-            result.set(normalized, { originalName: agentName, calls: 0, teams: new Map() });
-        }
-        const entry = result.get(normalized);
-        entry.calls += 1;
-        entry.teams.set(teamCode, (entry.teams.get(teamCode) || 0) + 1);
-    }
-    return result;
-}
-
-function parseCSVLine(line) {
-    const result = [];
-    let current = '';
-    let inQuotes = false;
-    for (let i = 0; i < line.length; i++) {
-        const ch = line[i];
-        if (inQuotes) {
-            if (ch === '"' && line[i + 1] === '"') { current += '"'; i++; }
-            else if (ch === '"') { inQuotes = false; }
-            else { current += ch; }
-        } else {
-            if (ch === '"') { inQuotes = true; }
-            else if (ch === ',') { result.push(current); current = ''; }
-            else { current += ch; }
-        }
-    }
-    result.push(current);
-    return result;
-}
-
-// --- Hours Parser ---
-
-function parseHoursFromDayValue(dayValue) {
-    return extractHoursFromDay(dayValue);
-}
-
-function getPrimaryTeamCode(agent, date = null) {
-    if (date) {
-        return normalizeTeamForDisplay(getEffectivePrimaryTeamCode(agent, date));
-    }
-
-    return normalizeTeamForDisplay(agent.primaryTeam?.split(' ')[0]?.toUpperCase() || '');
-}
-
-function hasExcludedProductivityHours(agent, date = null) {
-    return PRODUCTIVITY_HOURS_EXCLUDED_PRIMARY_TEAM_CODES.has(getPrimaryTeamCode(agent, date));
 }
 
 function pruneSelectedAgents() {
@@ -229,64 +91,6 @@ function pruneSelectedAgents() {
             selectedAgents.delete(normalizedName);
         }
     });
-}
-
-function parsePlannerDayEntries(dayValue) {
-    if (!dayValue || typeof dayValue !== 'string') return [];
-
-    const trimmed = dayValue.trim();
-    if (isNonWorkingCode(trimmed)) return [];
-
-    return trimmed
-        .split('+')
-        .map(part => parseShiftEntry(part))
-        .filter(Boolean)
-        .map(parsed => ({
-            hours: parsed.hours,
-            team: parsed.team ? normalizeTeamForDisplay(parsed.team) : null
-        }));
-}
-
-function getEligibleHoursForRange(agent, start, end) {
-    let totalHours = 0;
-    const current = new Date(start);
-    current.setHours(0, 0, 0, 0);
-    const endDate = new Date(end);
-    endDate.setHours(23, 59, 59, 999);
-
-    while (current <= endDate) {
-        if (!hasExcludedProductivityHours(agent, current)) {
-            totalHours += parseHoursFromDayValue(getEffectiveAgentDayValue(agent, current));
-        }
-        current.setDate(current.getDate() + 1);
-    }
-
-    return totalHours;
-}
-
-function getEligibleHoursForTeamInRange(agent, start, end, teamFilter) {
-    let totalHours = 0;
-    const current = new Date(start);
-    current.setHours(0, 0, 0, 0);
-    const endDate = new Date(end);
-    endDate.setHours(23, 59, 59, 999);
-    const filterUpper = normalizeTeamForDisplay(teamFilter.toUpperCase());
-
-    while (current <= endDate) {
-        if (!hasExcludedProductivityHours(agent, current)) {
-            const dayValue = getEffectiveAgentDayValue(agent, current);
-            const primaryCode = getPrimaryTeamCode(agent, current);
-            for (const entry of parsePlannerDayEntries(dayValue)) {
-                const teamCode = entry.team || primaryCode;
-                if (teamCode === filterUpper) {
-                    totalHours += entry.hours;
-                }
-            }
-        }
-        current.setDate(current.getDate() + 1);
-    }
-
-    return totalHours;
 }
 
 function entryHasTeamData(entry, teamCode) {
@@ -310,7 +114,7 @@ function getAgentsWithUploadedTeamData(teamCode, start = dateStart, end = dateEn
         if (!entryHasTeamData(entry, normalizedTeamCode)) return;
         const agent = matchAgent(entry.originalName);
         if (!agent) return;
-        matchingAgents.add(normalizeName(agent.fullName));
+        matchingAgents.add(normalizeProductivityName(agent.fullName));
     };
 
     mergedTickets.forEach(addMatchedAgent);
@@ -318,145 +122,25 @@ function getAgentsWithUploadedTeamData(teamCode, start = dateStart, end = dateEn
     return matchingAgents;
 }
 
-function addUploadedEntryTeams(teamSet, entry) {
-    if (!entry?.teams) return;
-
-    entry.teams.forEach((count, team) => {
-        const normalizedTeam = normalizeTeamForDisplay(team);
-        if (count > 0 && PRODUCTIVITY_TEAMS.includes(normalizedTeam)) {
-            teamSet.add(normalizedTeam);
-        }
-    });
-}
-
-function addUploadedEntryCounts(teamItems, entry) {
-    if (!entry?.teams) return;
-
-    entry.teams.forEach((count, team) => {
-        const normalizedTeam = normalizeTeamForDisplay(team);
-        if (!PRODUCTIVITY_TEAMS.includes(normalizedTeam)) return;
-        teamItems[normalizedTeam] = (teamItems[normalizedTeam] || 0) + count;
-    });
-}
-
-// --- Get hours for a date range from planner ---
-
-function getHoursForRange(agent, start, end) {
-    let totalHours = 0;
-    const current = new Date(start);
-    current.setHours(0, 0, 0, 0);
-    const endDate = new Date(end);
-    endDate.setHours(23, 59, 59, 999);
-
-    while (current <= endDate) {
-        totalHours += parseHoursFromDayValue(getEffectiveAgentDayValue(agent, current));
-        current.setDate(current.getDate() + 1);
-    }
-    return totalHours;
-}
-
-// Get hours for a SPECIFIC team from planner (e.g., from "4RO+4IT" only count RO hours)
-function getHoursForTeamInRange(agent, start, end, teamFilter) {
-    let totalHours = 0;
-    const current = new Date(start);
-    current.setHours(0, 0, 0, 0);
-    const endDate = new Date(end);
-    endDate.setHours(23, 59, 59, 999);
-    const filterUpper = normalizeTeamForDisplay(teamFilter.toUpperCase());
-
-    while (current <= endDate) {
-        const dayValue = getEffectiveAgentDayValue(agent, current);
-        const primaryCode = getPrimaryTeamCode(agent, current);
-        for (const entry of parsePlannerDayEntries(dayValue)) {
-            const teamCode = entry.team || primaryCode;
-            if (teamCode === filterUpper) {
-                totalHours += entry.hours;
-            }
-        }
-        current.setDate(current.getDate() + 1);
-    }
-    return totalHours;
-}
-
-// Extract unique team codes from planner day values across a date range
-function getTeamsFromPlanner(agent, start, end) {
-    const teams = new Set();
-    const current = new Date(start);
-    current.setHours(0, 0, 0, 0);
-    const endDate = new Date(end);
-    endDate.setHours(23, 59, 59, 999);
-
-    while (current <= endDate) {
-        const dayValue = getEffectiveAgentDayValue(agent, current);
-        for (const entry of parsePlannerDayEntries(dayValue)) {
-            if (entry.team) {
-                teams.add(entry.team);
-            }
-        }
-        current.setDate(current.getDate() + 1);
-    }
-
-    return [...teams].sort();
-}
-
-function getDaysInRange(start, end) {
-    const s = new Date(start); s.setHours(0, 0, 0, 0);
-    const e = new Date(end); e.setHours(0, 0, 0, 0);
-    return Math.round((e - s) / (1000 * 60 * 60 * 24)) + 1;
-}
-
-function formatDateKey(date) {
-    if (typeof date === 'string') return date;
-    // Use local date, not UTC (toISOString is UTC and shifts dates in non-UTC timezones)
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, '0');
-    const d = String(date.getDate()).padStart(2, '0');
-    return `${y}-${m}-${d}`;
-}
-
 function formatDateDisplay(dateKey) {
     const d = new Date(dateKey + 'T00:00:00');
     return d.toLocaleDateString('ro-RO', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-// --- Firestore Serialization ---
+// --- Firestore Persistence ---
 
-function serializeAgentMap(map) {
-    if (!map) return null;
-    const obj = {};
-    map.forEach((val, key) => {
-        const teams = {};
-        if (val.teams) val.teams.forEach((count, team) => { teams[team] = count; });
-        obj[key] = { ...val, teams };
+function replaceProductivityData(nextDataByDate) {
+    dataByDate.clear();
+    nextDataByDate.forEach((entry, dateKey) => {
+        dataByDate.set(dateKey, entry);
     });
-    return obj;
-}
-
-function deserializeAgentMap(obj, dataField) {
-    if (!obj) return null;
-    const map = new Map();
-    for (const [key, val] of Object.entries(obj)) {
-        const teams = new Map();
-        if (val.teams) {
-            for (const [t, c] of Object.entries(val.teams)) {
-                teams.set(t, c);
-            }
-        }
-        map.set(key, { ...val, teams });
-    }
-    return map.size > 0 ? map : null;
 }
 
 async function saveToFirestore(dateKey) {
     const entry = dataByDate.get(dateKey);
     if (!entry) return;
     try {
-        const docData = {
-            ticketsData: serializeAgentMap(entry.ticketsData),
-            callsData: serializeAgentMap(entry.callsData),
-            updatedAt: new Date().toISOString()
-        };
-        await setDoc(doc(db, 'productivity', dateKey), docData);
+        await productivityStore.saveDate(dateKey, entry);
         console.log(`[Productivity] Saved data for ${dateKey} to Firestore.`);
     } catch (err) {
         console.error('[Productivity] Firestore save error:', err);
@@ -466,30 +150,18 @@ async function saveToFirestore(dateKey) {
 
 async function deleteFromFirestore(dateKey) {
     try {
-        await deleteDoc(doc(db, 'productivity', dateKey));
+        await productivityStore.deleteDate(dateKey);
         console.log(`[Productivity] Deleted data for ${dateKey} from Firestore.`);
     } catch (err) {
         console.error('[Productivity] Firestore delete error:', err);
     }
 }
 
-function applyProductivitySnapshot(snapshot) {
-    dataByDate.clear();
-    snapshot.forEach(docSnap => {
-        const dateKey = docSnap.id;
-        const data = docSnap.data();
-        dataByDate.set(dateKey, {
-            ticketsData: deserializeAgentMap(data.ticketsData),
-            callsData: deserializeAgentMap(data.callsData)
-        });
-    });
-}
-
 async function loadAllFromFirestore() {
     try {
-        const snapshot = await getDocs(collection(db, 'productivity'));
-        applyProductivitySnapshot(snapshot);
-        console.log(`[Productivity] Loaded ${snapshot.size} dates from Firestore.`);
+        const result = await productivityStore.loadAll();
+        replaceProductivityData(result.dataByDate);
+        console.log(`[Productivity] Loaded ${result.size} dates from Firestore.`);
     } catch (err) {
         console.error('[Productivity] Firestore load error:', err);
     }
@@ -503,21 +175,24 @@ function subscribeToProductivityData() {
 
     return new Promise(resolve => {
         let resolved = false;
-        unsubscribeFromProductivity = onSnapshot(collection(db, 'productivity'), (snapshot) => {
-            applyProductivitySnapshot(snapshot);
-            console.log(`[Productivity] Synced ${snapshot.size} dates from Firestore.`);
-            refreshProductivityViews({ source: 'snapshot' });
-            if (!resolved) {
-                resolved = true;
-                resolve();
-            }
-        }, async (err) => {
-            console.error('[Productivity] Firestore listener error:', err);
-            await loadAllFromFirestore();
-            refreshProductivityViews({ source: 'fallback-load' });
-            if (!resolved) {
-                resolved = true;
-                resolve();
+        unsubscribeFromProductivity = productivityStore.subscribe({
+            onData(result) {
+                replaceProductivityData(result.dataByDate);
+                console.log(`[Productivity] Synced ${result.size} dates from Firestore.`);
+                refreshProductivityViews({ source: 'snapshot' });
+                if (!resolved) {
+                    resolved = true;
+                    resolve();
+                }
+            },
+            async onError(err) {
+                console.error('[Productivity] Firestore listener error:', err);
+                await loadAllFromFirestore();
+                refreshProductivityViews({ source: 'fallback-load' });
+                if (!resolved) {
+                    resolved = true;
+                    resolve();
+                }
             }
         });
     });
@@ -532,165 +207,32 @@ function getOrCreateDateEntry(dateKey) {
     return dataByDate.get(dateKey);
 }
 
-function hasDataForDate(dateKey) {
-    const entry = dataByDate.get(dateKey);
-    if (!entry) return false;
-    const hasTickets = entry.ticketsData && entry.ticketsData.size > 0;
-    const hasCalls = entry.callsData && entry.callsData.size > 0;
-    return hasTickets || hasCalls;
-}
-
 function hasAnyData() {
-    for (const [, entry] of dataByDate) {
-        if ((entry.ticketsData && entry.ticketsData.size > 0) || (entry.callsData && entry.callsData.size > 0)) return true;
-    }
-    return false;
+    return hasAnyProductivityData(dataByDate);
 }
 
 // --- Merge data across date range for productivity ---
 
 function getMergedDataForRange(start, end, { excludePerAgentRoles = false } = {}) {
-    // Collect all date keys that fall within the range
-    const mergedTickets = new Map();
-    const mergedCalls = new Map();
-    let datesWithData = 0;
-
-    const current = new Date(start);
-    current.setHours(0, 0, 0, 0);
-    const endDate = new Date(end);
-    endDate.setHours(0, 0, 0, 0);
-
-    while (current <= endDate) {
-        const dateKey = formatDateKey(current);
-        const entry = dataByDate.get(dateKey);
-        if (entry) {
-            if (entry.ticketsData || entry.callsData) datesWithData++;
-
-            const shouldSkipForPerAgent = (val) => {
-                if (!excludePerAgentRoles) return false;
-                const agent = matchAgent(val.originalName);
-                return !agent || isPerAgentProductivityRoleExcluded(agent, current);
-            };
-
-            if (entry.ticketsData) {
-                entry.ticketsData.forEach((val, key) => {
-                    if (shouldSkipForPerAgent(val)) return;
-                    if (!mergedTickets.has(key)) {
-                        mergedTickets.set(key, { originalName: val.originalName, tickets: 0, teams: new Map() });
-                    }
-                    const m = mergedTickets.get(key);
-                    m.tickets += val.tickets;
-                    val.teams.forEach((count, team) => {
-                        m.teams.set(team, (m.teams.get(team) || 0) + count);
-                    });
-                });
-            }
-
-            if (entry.callsData) {
-                entry.callsData.forEach((val, key) => {
-                    if (shouldSkipForPerAgent(val)) return;
-                    if (!mergedCalls.has(key)) {
-                        mergedCalls.set(key, { originalName: val.originalName, calls: 0, teams: new Map() });
-                    }
-                    const m = mergedCalls.get(key);
-                    m.calls += val.calls;
-                    val.teams.forEach((count, team) => {
-                        m.teams.set(team, (m.teams.get(team) || 0) + count);
-                    });
-                });
-            }
-        }
-        current.setDate(current.getDate() + 1);
-    }
-
-    return { mergedTickets, mergedCalls, datesWithData };
+    return mergeProductivityDataForRange({
+        dataByDate,
+        agents: getUsersData(),
+        start,
+        end,
+        excludePerAgentRoles
+    });
 }
 
 // --- Productivity Calculation ---
 
 function calculateProductivity() {
-    if (!hasAnyData()) return [];
-
-    const { mergedTickets, mergedCalls, datesWithData } = getMergedDataForRange(dateStart, dateEnd, { excludePerAgentRoles: true });
-    if (mergedTickets.size === 0 && mergedCalls.size === 0) return [];
-
-    const results = [];
-    const allNames = new Set();
-    mergedTickets.forEach((_, k) => allNames.add(k));
-    mergedCalls.forEach((_, k) => allNames.add(k));
-
-    allNames.forEach(normalizedName => {
-        const tEntry = mergedTickets.get(normalizedName);
-        const cEntry = mergedCalls.get(normalizedName);
-        const originalName = tEntry?.originalName || cEntry?.originalName || normalizedName;
-
-        const agent = matchAgent(originalName);
-        if (!agent) return;
-
-        // Build full team breakdown from uploaded files
-        const MAIN_TEAMS = PRODUCTIVITY_TEAMS;
-        const ticketsByTeam = new Map();
-        const callsByTeam = new Map();
-        if (tEntry?.teams) {
-            tEntry.teams.forEach((count, team) => {
-                const normalized = normalizeTeamForDisplay(team);
-                ticketsByTeam.set(normalized, (ticketsByTeam.get(normalized) || 0) + count);
-            });
-        }
-        if (cEntry?.teams) {
-            cEntry.teams.forEach((count, team) => {
-                const normalized = normalizeTeamForDisplay(team);
-                callsByTeam.set(normalized, (callsByTeam.get(normalized) || 0) + count);
-            });
-        }
-
-        // When team filter is active, show only that team's data
-        let tickets, calls, hours;
-        if (currentTeamFilter !== 'all') {
-            tickets = ticketsByTeam.get(currentTeamFilter) || 0;
-            calls = callsByTeam.get(currentTeamFilter) || 0;
-            // Only include agent if they have data for this team
-            if (tickets === 0 && calls === 0) return;
-            hours = getEligibleHoursForTeamInRange(agent, dateStart, dateEnd, currentTeamFilter);
-        } else {
-            tickets = tEntry?.tickets || 0;
-            calls = cEntry?.calls || 0;
-            hours = getEligibleHoursForRange(agent, dateStart, dateEnd);
-        }
-        const total = tickets + calls;
-
-        // Teams display: uploaded file data takes priority, planner as fallback
-        const teamBreakdown = new Map();
-        ticketsByTeam.forEach((count, team) => teamBreakdown.set(team, (teamBreakdown.get(team) || 0) + count));
-        callsByTeam.forEach((count, team) => teamBreakdown.set(team, (teamBreakdown.get(team) || 0) + count));
-        const fileTeams = [...teamBreakdown.keys()].filter(t => MAIN_TEAMS.includes(t)).sort();
-
-        let teamsDisplay;
-        if (currentTeamFilter !== 'all') {
-            teamsDisplay = currentTeamFilter;
-        } else if (fileTeams.length > 0) {
-            teamsDisplay = fileTeams.join('/');
-        } else {
-            const plannerTeams = getTeamsFromPlanner(agent, dateStart, dateEnd);
-            teamsDisplay = plannerTeams.length > 0 ? plannerTeams.join('/') : (agent.primaryTeam?.split(' ')[0] || '-');
-        }
-
-        const productivity = hours > 0 ? (total / hours) : 0;
-
-        results.push({
-            name: agent.fullName,
-            primaryTeam: agent.primaryTeam || '',
-            teamsDisplay,
-            teams: teamBreakdown,
-            tickets,
-            calls,
-            total,
-            hours,
-            productivity
-        });
-    });
-
-    return results.sort((a, b) => b.productivity - a.productivity);
+    return calculateProductivityOverview({
+        dataByDate,
+        agents: getUsersData(),
+        start: dateStart,
+        end: dateEnd,
+        teamFilter: currentTeamFilter
+    }).rows;
 }
 
 // --- Rendering ---
@@ -710,108 +252,19 @@ function renderProductivity() {
     const filtered = results; // filtering is now done inside calculateProductivity
 
     const statsContainer = document.getElementById('productivityStats');
-    if (statsContainer) {
-        const totalAgents = filtered.length;
-        const totalTickets = filtered.reduce((s, r) => s + r.tickets, 0);
-        const totalCalls = filtered.reduce((s, r) => s + r.calls, 0);
-        const totalAll = filtered.reduce((s, r) => s + r.total, 0);
-        const totalHours = filtered.reduce((s, r) => s + r.hours, 0);
-        const avgProd = totalHours > 0 ? (totalAll / totalHours).toFixed(2) : 'N/A';
-        const numDays = getDaysInRange(dateStart, dateEnd);
-        const { datesWithData } = getMergedDataForRange(dateStart, dateEnd);
-        const rangeLabel = numDays === 1 ? `1 ${t('prod-day')}` : `${numDays} ${t('prod-days')}`;
-
-        statsContainer.innerHTML = `
-            <div class="stat-card">
-                <div class="stat-label">${t('prod-agents-processed')}</div>
-                <div class="stat-value">${totalAgents}</div>
-                <div class="stat-detail">${rangeLabel} (${datesWithData} ${t('prod-with-data')})</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">${t('prod-tickets-resolved')}</div>
-                <div class="stat-value">${totalTickets}</div>
-                <div class="stat-detail">${t('prod-from-xlsx')}</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">${t('prod-calls-answered')}</div>
-                <div class="stat-value">${totalCalls}</div>
-                <div class="stat-detail">${t('prod-from-csv')}</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">${t('prod-average')}</div>
-                <div class="stat-value" style="color: ${avgProd !== 'N/A' && avgProd >= 5 ? 'var(--success)' : avgProd !== 'N/A' && avgProd >= 3 ? 'var(--warning)' : 'var(--error)'}">${avgProd}</div>
-                <div class="stat-detail">${t('prod-formula')}</div>
-            </div>
-        `;
-    }
-
-    if (filtered.length === 0) {
-        container.innerHTML = `<p style="color: var(--text-secondary); text-align: center; padding: 2rem;">${t('prod-no-agents')}</p>`;
-        return;
-    }
-
-    let html = `<table>
-        <thead>
-            <tr>
-                <th>#</th>
-                <th>${t('th-agent')}</th>
-                <th>${t('th-teams')}</th>
-                <th>${t('th-tickets')}</th>
-                <th>${t('th-calls')}</th>
-                <th>${t('th-total')}</th>
-                <th>${t('th-hours-worked')}</th>
-                <th>${t('th-productivity')}</th>
-            </tr>
-        </thead>
-        <tbody>`;
-
-    filtered.forEach((r, idx) => {
-        const prodColor = r.hours === 0 ? 'var(--text-secondary)' : r.productivity >= 5 ? 'var(--success)' : r.productivity >= 3 ? 'var(--warning)' : 'var(--error)';
-        const prodDisplay = r.hours > 0 ? r.productivity.toFixed(2) : 'N/A';
-        const teamTooltip = [...r.teams.entries()].map(([t, c]) => `${t}: ${c}`).join(', ');
-
-        html += `<tr>
-            <td style="color: var(--text-secondary);">${idx + 1}</td>
-            <td style="font-weight: 500;">${r.name}</td>
-            <td title="${teamTooltip}"><span style="background: rgba(99,102,241,0.15); padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8rem; letter-spacing: 0.5px;">${r.teamsDisplay}</span></td>
-            <td>${r.tickets}</td>
-            <td>${r.calls}</td>
-            <td style="font-weight: bold;">${r.total}</td>
-            <td>${formatPlannerHoursValue(r.hours)}h</td>
-            <td style="color: ${prodColor}; font-weight: bold;">${prodDisplay}</td>
-        </tr>`;
+    const { datesWithData } = getMergedDataForRange(dateStart, dateEnd);
+    const view = buildProductivityOverviewView({
+        rows: filtered,
+        daysInRange: getProductivityDaysInRange(dateStart, dateEnd),
+        datesWithData,
+        t
     });
 
-    html += '</tbody></table>';
-    container.innerHTML = html;
+    if (statsContainer) statsContainer.innerHTML = view.statsHtml;
+    container.innerHTML = view.contentHtml;
 }
 
 // --- Detail View (Per Agent Per Day) ---
-
-function getDataForSingleDate(dateKey, normalizedName) {
-    const entry = dataByDate.get(dateKey);
-    if (!entry) return { tickets: 0, calls: 0, teams: new Map() };
-
-    let tickets = 0, calls = 0;
-    const teams = new Map();
-
-    if (entry.ticketsData) {
-        const t = entry.ticketsData.get(normalizedName);
-        if (t) {
-            tickets = t.tickets || 0;
-            if (t.teams) t.teams.forEach((c, tm) => { const n = normalizeTeamForDisplay(tm); teams.set(n, (teams.get(n) || 0) + c); });
-        }
-    }
-    if (entry.callsData) {
-        const c = entry.callsData.get(normalizedName);
-        if (c) {
-            calls = c.calls || 0;
-            if (c.teams) c.teams.forEach((cnt, tm) => { const n = normalizeTeamForDisplay(tm); teams.set(n, (teams.get(n) || 0) + cnt); });
-        }
-    }
-
-    return { tickets, calls, teams };
-}
 
 function renderDetailView() {
     const container = document.getElementById('productivityTableContainer');
@@ -832,176 +285,22 @@ function renderDetailView() {
         return;
     }
 
-    const users = getUsersData();
-    const MAIN_TEAMS = PRODUCTIVITY_TEAMS;
-    const rows = [];
-
-    // Iterate each day in the range
-    const current = new Date(dateStart);
-    current.setHours(0, 0, 0, 0);
-    const endDate = new Date(dateEnd);
-    endDate.setHours(0, 0, 0, 0);
-
-    while (current <= endDate) {
-        const dateKey = formatDateKey(current);
-        const hasData = hasDataForDate(dateKey);
-        const dayOfWeek = current.toLocaleDateString('ro-RO', { weekday: 'short' });
-        const dateLabel = `${dayOfWeek} ${current.getDate()}.${String(current.getMonth() + 1).padStart(2, '0')}`;
-        const isWeekend = current.getDay() === 0 || current.getDay() === 6;
-
-        selectedAgents.forEach(normalizedName => {
-            const agent = users.find(u => normalizeName(u.fullName) === normalizedName || normalizeName(u.username) === normalizedName);
-            if (!agent) return;
-            if (isPerAgentProductivityRoleExcluded(agent, current)) return;
-
-            const dayValue = getEffectiveAgentDayValue(agent, current);
-
-            const { tickets: allTickets, calls: allCalls, teams } = hasData ? getDataForSingleDate(dateKey, normalizedName) : { tickets: 0, calls: 0, teams: new Map() };
-
-            // When team filter is active, show only that team's data
-            let tickets, calls, hours;
-            if (currentTeamFilter !== 'all') {
-                tickets = teams.get(currentTeamFilter) || 0; // items tagged to this team
-                // Split: tickets from ticketsByTeam, calls from callsByTeam — but we only have combined teams map here
-                // We need to get per-source counts from the single-date data
-                const singleEntry = hasData ? dataByDate.get(dateKey) : null;
-                let teamTickets = 0, teamCalls = 0;
-                if (singleEntry?.ticketsData) {
-                    const t = singleEntry.ticketsData.get(normalizedName);
-                    if (t?.teams) t.teams.forEach((cnt, tm) => {
-                        if (normalizeTeamForDisplay(tm) === currentTeamFilter) teamTickets += cnt;
-                    });
-                }
-                if (singleEntry?.callsData) {
-                    const c = singleEntry.callsData.get(normalizedName);
-                    if (c?.teams) c.teams.forEach((cnt, tm) => {
-                        if (normalizeTeamForDisplay(tm) === currentTeamFilter) teamCalls += cnt;
-                    });
-                }
-                tickets = teamTickets;
-                calls = teamCalls;
-                if (tickets === 0 && calls === 0) return; // skip if no data for this team
-                hours = getEligibleHoursForTeamInRange(agent, current, current, currentTeamFilter);
-            } else {
-                tickets = allTickets;
-                calls = allCalls;
-                hours = getEligibleHoursForRange(agent, current, current);
-            }
-            const total = tickets + calls;
-            const productivity = hours > 0 ? total / hours : 0;
-
-            // Teams display
-            const MAIN_TEAMS_D = PRODUCTIVITY_TEAMS;
-            let teamsDisplay;
-            if (currentTeamFilter !== 'all') {
-                teamsDisplay = currentTeamFilter;
-            } else {
-                const fileTeamsD = [...teams.keys()].filter(t => MAIN_TEAMS_D.includes(t)).sort();
-                if (fileTeamsD.length > 0) {
-                    teamsDisplay = fileTeamsD.join('/');
-                } else {
-                    const dayTeams = getTeamsFromPlanner(agent, current, current);
-                    teamsDisplay = dayTeams.length > 0 ? dayTeams.join('/') : (agent.primaryTeam?.split(' ')[0] || '-');
-                }
-            }
-
-            rows.push({
-                dateKey,
-                dateLabel,
-                isWeekend,
-                hasData,
-                name: agent.fullName,
-                teamsDisplay,
-                teams,
-                tickets,
-                calls,
-                total,
-                hours,
-                dayValue,
-                productivity
-            });
-        });
-
-        current.setDate(current.getDate() + 1);
-    }
-
-    // Stats
-    if (statsContainer) {
-        const daysWithData = new Set(rows.filter(r => r.hasData).map(r => r.dateKey)).size;
-        const totalTickets = rows.reduce((s, r) => s + r.tickets, 0);
-        const totalCalls = rows.reduce((s, r) => s + r.calls, 0);
-        const totalHours = rows.reduce((s, r) => s + r.hours, 0);
-        const totalAll = totalTickets + totalCalls;
-        const avgProd = totalHours > 0 ? (totalAll / totalHours).toFixed(2) : 'N/A';
-
-        statsContainer.innerHTML = `
-            <div class="stat-card">
-                <div class="stat-label">${t('prod-agents-selected')}</div>
-                <div class="stat-value">${selectedAgents.size}</div>
-                <div class="stat-detail">${daysWithData} ${t('prod-days-with-data')}</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">${t('prod-total-tickets')}</div>
-                <div class="stat-value">${totalTickets}</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">${t('prod-total-calls')}</div>
-                <div class="stat-value">${totalCalls}</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">${t('prod-average')}</div>
-                <div class="stat-value" style="color: ${avgProd !== 'N/A' && avgProd >= 5 ? 'var(--success)' : avgProd !== 'N/A' && avgProd >= 3 ? 'var(--warning)' : 'var(--error)'}">${avgProd}</div>
-                <div class="stat-detail">${t('prod-formula')}</div>
-            </div>
-        `;
-    }
-
-    if (rows.length === 0) {
-        container.innerHTML = `<p style="color: var(--text-secondary); text-align: center; padding: 2rem;">${t('prod-no-results')}</p>`;
-        return;
-    }
-
-    let html = `<table>
-        <thead>
-            <tr>
-                <th>${t('th-date')}</th>
-                <th>${t('th-agent')}</th>
-                <th>${t('th-teams')}</th>
-                <th>${t('th-tickets')}</th>
-                <th>${t('th-calls')}</th>
-                <th>${t('th-total')}</th>
-                <th>${t('th-schedule')}</th>
-                <th>${t('th-hours')}</th>
-                <th>${t('th-productivity')}</th>
-            </tr>
-        </thead>
-        <tbody>`;
-
-    let lastDate = '';
-    rows.forEach(r => {
-        const prodColor = r.hours === 0 ? 'var(--text-secondary)' : r.productivity >= 5 ? 'var(--success)' : r.productivity >= 3 ? 'var(--warning)' : 'var(--error)';
-        const prodDisplay = r.hours > 0 ? r.productivity.toFixed(2) : 'N/A';
-        const teamTooltip = [...r.teams.entries()].map(([t, c]) => `${t}: ${c}`).join(', ');
-        const rowBg = r.isWeekend ? 'background: rgba(255,255,255,0.03);' : '';
-        const noDataStyle = !r.hasData ? 'opacity: 0.4;' : '';
-        const showDate = r.dateKey !== lastDate;
-        lastDate = r.dateKey;
-
-        html += `<tr style="${rowBg}${noDataStyle}">
-            <td style="font-weight: ${showDate ? '500' : '300'}; color: ${r.isWeekend ? 'var(--warning)' : 'var(--text-primary)'};">${showDate ? r.dateLabel : ''}</td>
-            <td style="font-weight: 500;">${r.name}</td>
-            <td title="${teamTooltip}"><span style="background: rgba(99,102,241,0.15); padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8rem;">${r.teamsDisplay}</span></td>
-            <td>${r.tickets || '-'}</td>
-            <td>${r.calls || '-'}</td>
-            <td style="font-weight: bold;">${r.total || '-'}</td>
-            <td style="font-size: 0.85rem; color: var(--text-secondary);">${r.dayValue || '-'}</td>
-            <td>${formatPlannerHoursValue(r.hours)}h</td>
-            <td style="color: ${prodColor}; font-weight: bold;">${prodDisplay}</td>
-        </tr>`;
+    const rows = buildProductivityDetailRows({
+        dataByDate,
+        agents: getUsersData(),
+        selectedAgents,
+        start: dateStart,
+        end: dateEnd,
+        teamFilter: currentTeamFilter
     });
 
-    html += '</tbody></table>';
-    container.innerHTML = html;
+    const view = buildProductivityDetailView({
+        rows,
+        selectedCount: selectedAgents.size,
+        t
+    });
+    if (statsContainer) statsContainer.innerHTML = view.statsHtml;
+    container.innerHTML = view.contentHtml;
 }
 
 // --- Agent Chips UI ---
@@ -1014,7 +313,7 @@ function getFilteredAgents() {
             map.forEach((val, normalizedName) => {
                 const agent = matchAgent(val.originalName);
                 if (agent) {
-                    const agentKey = normalizeName(agent.fullName);
+                    const agentKey = normalizeProductivityName(agent.fullName);
                     if (agentNames.has(agentKey)) return;
                     agentNames.set(agentKey, { fullName: agent.fullName, primaryTeam: agent.primaryTeam, agent });
                 }
@@ -1025,7 +324,7 @@ function getFilteredAgents() {
     });
 
     getUsersData().forEach(u => {
-        const key = normalizeName(u.fullName);
+        const key = normalizeProductivityName(u.fullName);
         if (!agentNames.has(key)) {
             agentNames.set(key, { fullName: u.fullName, primaryTeam: u.primaryTeam, agent: u });
         }
@@ -1047,56 +346,23 @@ function renderAgentChips(searchTerm = '') {
     const countEl = document.getElementById('prodAgentCount');
     if (!container) return;
 
-    let agents = getFilteredAgents();
+    const agents = getFilteredAgents();
     pruneSelectedAgents();
 
-    // Apply search filter
-    if (searchTerm) {
-        const lower = searchTerm.toLowerCase();
-        agents = agents.filter(([, info]) => info.fullName.toLowerCase().includes(lower));
-    }
-
-    let html = '';
-    agents.forEach(([normalizedName, info]) => {
-        const isSelected = selectedAgents.has(normalizedName);
-        const teamCode = info.primaryTeam?.split(' ')[0] || '';
-        html += `<button onclick="window.__toggleAgent('${normalizedName}')" style="
-            background: ${isSelected ? 'rgba(99,102,241,0.25)' : 'rgba(255,255,255,0.05)'};
-            border: 1px solid ${isSelected ? 'var(--accent)' : 'var(--border)'};
-            color: ${isSelected ? 'var(--text-primary)' : 'var(--text-secondary)'};
-            padding: 0.3rem 0.7rem; border-radius: 4px; font-size: 0.8rem; cursor: pointer;
-            transition: all 0.15s;
-        ">${info.fullName} <span style="font-size: 0.7rem; opacity: 0.6;">${teamCode}</span></button>`;
+    const view = buildProductivityAgentSelectionView({
+        agents,
+        selectedAgents,
+        searchTerm,
+        t
     });
 
-    container.innerHTML = html;
-    if (countEl) {
-        countEl.textContent = selectedAgents.size > 0 ? `${selectedAgents.size} ${t('prod-selected')}` : '';
-    }
+    container.innerHTML = view.html;
+    bindProductivityAgentActions({
+        container,
+        toggleAgent: agentActions.toggleAgent
+    });
+    if (countEl) countEl.textContent = view.countText;
 }
-
-// Global functions for agent chip clicks
-window.__toggleAgent = function(normalizedName) {
-    if (selectedAgents.has(normalizedName)) {
-        selectedAgents.delete(normalizedName);
-    } else {
-        selectedAgents.add(normalizedName);
-    }
-    renderAgentChips();
-    renderCurrentView();
-};
-
-window.__selectAllAgents = function() {
-    getFilteredAgents().forEach(([key]) => selectedAgents.add(key));
-    renderAgentChips(document.getElementById('prodAgentSearch')?.value || '');
-    renderCurrentView();
-};
-
-window.__deselectAllAgents = function() {
-    selectedAgents.clear();
-    renderAgentChips(document.getElementById('prodAgentSearch')?.value || '');
-    renderCurrentView();
-};
 
 // --- View Management ---
 
@@ -1152,110 +418,29 @@ function updateUploadDateStatus() {
     const filesSection = document.getElementById('uploadFilesSection');
     if (!statusEl || !filesSection) return;
 
-    if (!uploadDate) {
-        statusEl.style.display = 'none';
-        filesSection.style.opacity = '0.4';
-        filesSection.style.pointerEvents = 'none';
-        return;
-    }
+    const view = buildProductivityUploadDateStatusView({
+        uploadDate,
+        entry: dataByDate.get(uploadDate),
+        formatDateDisplay,
+        t
+    });
 
-    filesSection.style.opacity = '1';
-    filesSection.style.pointerEvents = 'auto';
-
-    if (hasDataForDate(uploadDate)) {
-        statusEl.style.display = 'block';
-        statusEl.innerHTML = `<div class="alert alert-warning" style="margin: 0; padding: 0.75rem 1rem;">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink: 0;">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
-            </svg>
-            <span>${t('prod-data-for')} <strong>${formatDateDisplay(uploadDate)}</strong> ${t('prod-data-exists')}</span>
-        </div>`;
-    } else {
-        statusEl.style.display = 'block';
-        statusEl.innerHTML = `<p style="color: var(--success); margin: 0; font-size: 0.9rem;">${t('prod-date-selected')} <strong>${formatDateDisplay(uploadDate)}</strong> — ${t('prod-can-upload')}</p>`;
-    }
+    statusEl.style.display = view.statusDisplay;
+    statusEl.innerHTML = view.html;
+    filesSection.style.opacity = view.filesOpacity;
+    filesSection.style.pointerEvents = view.filesPointerEvents;
 }
 
 function showUploadSuccess() {
     const statusEl = document.getElementById('uploadDateStatus');
     if (!statusEl) return;
-    const entry = dataByDate.get(uploadDate);
-    const hasTickets = entry?.ticketsData && entry.ticketsData.size > 0;
-    const hasCalls = entry?.callsData && entry.callsData.size > 0;
-    const parts = [];
-    if (hasTickets) parts.push(`${entry.ticketsData.size} ${t('prod-agents-from-tickets')}`);
-    if (hasCalls) parts.push(`${entry.callsData.size} ${t('prod-agents-from-calls')}`);
     statusEl.style.display = 'block';
-    statusEl.innerHTML = `<p style="color: var(--success); margin: 0; font-size: 0.9rem;">${t('prod-data-uploaded-for')} <strong>${formatDateDisplay(uploadDate)}</strong>: ${parts.join(', ')}. ${t('prod-can-add-file')}</p>`;
-}
-
-function getUploadText(key) {
-    const lang = getLang();
-    const labels = {
-        ro: {
-            title: 'Calendar incarcari',
-            today: 'Azi',
-            noFiles: 'Fara fisiere',
-            tickets: 'Tickete',
-            calls: 'Apeluri',
-            both: 'XLSX si CSV incarcate',
-            uploadXlsx: 'Incarca XLSX',
-            uploadCsv: 'Incarca CSV',
-            exportCsv: 'Export CSV',
-            deleteDay: 'Sterge ziua',
-            selected: 'Data selectata',
-            previous: 'Luna anterioara',
-            next: 'Luna urmatoare',
-            weekdays: ['lun.', 'mar.', 'mie.', 'joi', 'vin.', 'sam.', 'dum.']
-        },
-        en: {
-            title: 'Upload calendar',
-            today: 'Today',
-            noFiles: 'No files',
-            tickets: 'Tickets',
-            calls: 'Calls',
-            both: 'XLSX and CSV uploaded',
-            uploadXlsx: 'Upload XLSX',
-            uploadCsv: 'Upload CSV',
-            exportCsv: 'Export CSV',
-            deleteDay: 'Delete day',
-            selected: 'Selected date',
-            previous: 'Previous month',
-            next: 'Next month',
-            weekdays: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-        },
-        it: {
-            title: 'Calendario caricamenti',
-            today: 'Oggi',
-            noFiles: 'Nessun file',
-            tickets: 'Ticket',
-            calls: 'Chiamate',
-            both: 'XLSX e CSV caricati',
-            uploadXlsx: 'Carica XLSX',
-            uploadCsv: 'Carica CSV',
-            exportCsv: 'Esporta CSV',
-            deleteDay: 'Elimina giorno',
-            selected: 'Data selezionata',
-            previous: 'Mese precedente',
-            next: 'Mese successivo',
-            weekdays: ['lun', 'mar', 'mer', 'gio', 'ven', 'sab', 'dom']
-        }
-    };
-
-    return (labels[lang] || labels.en)[key] || labels.en[key] || key;
-}
-
-function getCalendarLocale() {
-    return ({ ro: 'ro-RO', en: 'en-US', it: 'it-IT' })[getLang()] || 'en-US';
-}
-
-function escapeHtml(value) {
-    return String(value ?? '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
+    statusEl.innerHTML = buildProductivityUploadSuccessView({
+        uploadDate,
+        entry: dataByDate.get(uploadDate),
+        formatDateDisplay,
+        t
+    });
 }
 
 function setUploadDate(dateKey) {
@@ -1277,154 +462,34 @@ function setUploadDate(dateKey) {
     updateUploadDateStatus();
 }
 
-function getCalendarDays(monthDate) {
-    const year = monthDate.getFullYear();
-    const month = monthDate.getMonth();
-    const firstDay = new Date(year, month, 1);
-    const start = new Date(firstDay);
-    const mondayOffset = (firstDay.getDay() + 6) % 7;
-    start.setDate(firstDay.getDate() - mondayOffset);
-
-    const days = [];
-    for (let i = 0; i < 42; i++) {
-        const date = new Date(start);
-        date.setDate(start.getDate() + i);
-        days.push(date);
-    }
-    return days;
-}
-
-function getStatusLabel(status) {
-    if (status.hasTickets && status.hasCalls) return getUploadText('both');
-    if (status.hasTickets) return 'XLSX';
-    if (status.hasCalls) return 'CSV';
-    return getUploadText('noFiles');
-}
-
-function getStatusMarkers(status) {
-    return `
-        ${status.hasTickets ? '<span class="upload-calendar-marker marker-xlsx">XLSX</span>' : ''}
-        ${status.hasCalls ? '<span class="upload-calendar-marker marker-csv">CSV</span>' : ''}
-    `;
-}
-
 function renderUploadCalendar() {
     const panel = document.getElementById('uploadCalendarPanel');
     if (!panel) return;
 
-    const selectedStatus = getProductivityDateStatus(dataByDate.get(uploadDate));
-    const todayKey = formatDateKey(new Date());
-    const monthLabel = uploadCalendarMonth.toLocaleDateString(getCalendarLocale(), { month: 'long', year: 'numeric' });
-    const weekdays = getUploadText('weekdays');
-    const days = getCalendarDays(uploadCalendarMonth);
-
-    const dayButtons = days.map(date => {
-        const dateKey = formatDateKey(date);
-        const status = getProductivityDateStatus(dataByDate.get(dateKey));
-        const isSelected = dateKey === uploadDate;
-        const isToday = dateKey === todayKey;
-        const isOtherMonth = date.getMonth() !== uploadCalendarMonth.getMonth();
-        const classes = [
-            'upload-calendar-day',
-            isSelected ? 'selected' : '',
-            isToday ? 'today' : '',
-            isOtherMonth ? 'other-month' : '',
-            status.hasTickets ? 'has-tickets' : '',
-            status.hasCalls ? 'has-calls' : '',
-            status.isComplete ? 'complete' : ''
-        ].filter(Boolean).join(' ');
-
-        return `
-            <button type="button" class="${classes}" data-date="${dateKey}" title="${escapeHtml(formatDateDisplay(dateKey))}: ${escapeHtml(getStatusLabel(status))}">
-                <span class="upload-calendar-day-number">${date.getDate()}</span>
-                <span class="upload-calendar-markers">${getStatusMarkers(status)}</span>
-            </button>
-        `;
-    }).join('');
-
-    panel.innerHTML = `
-        <div class="upload-calendar-toolbar">
-            <button type="button" class="upload-calendar-nav" id="uploadCalendarPrev" title="${escapeHtml(getUploadText('previous'))}">&#9664;</button>
-            <div>
-                <div class="upload-calendar-title">${escapeHtml(getUploadText('title'))}</div>
-                <div class="upload-calendar-month">${escapeHtml(monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1))}</div>
-            </div>
-            <button type="button" class="upload-calendar-nav" id="uploadCalendarNext" title="${escapeHtml(getUploadText('next'))}">&#9654;</button>
-        </div>
-        <div class="upload-calendar-weekdays">
-            ${weekdays.map(day => `<span>${escapeHtml(day)}</span>`).join('')}
-        </div>
-        <div class="upload-calendar-grid">
-            ${dayButtons}
-        </div>
-        <div class="upload-calendar-detail">
-            <div>
-                <div class="upload-calendar-detail-label">${escapeHtml(getUploadText('selected'))}</div>
-                <div class="upload-calendar-detail-date">${escapeHtml(formatDateDisplay(uploadDate))}</div>
-                <div class="upload-calendar-detail-status">
-                    ${selectedStatus.hasTickets ? `<span class="upload-calendar-pill marker-xlsx">XLSX · ${selectedStatus.ticketAgents}</span>` : ''}
-                    ${selectedStatus.hasCalls ? `<span class="upload-calendar-pill marker-csv">CSV · ${selectedStatus.callAgents}</span>` : ''}
-                    ${!selectedStatus.hasAnyData ? `<span class="upload-calendar-pill empty">${escapeHtml(getUploadText('noFiles'))}</span>` : ''}
-                </div>
-            </div>
-            <div class="upload-calendar-actions">
-                <button type="button" class="btn btn-secondary" id="uploadCalendarTickets">${escapeHtml(getUploadText('uploadXlsx'))}</button>
-                <button type="button" class="btn btn-secondary" id="uploadCalendarCalls">${escapeHtml(getUploadText('uploadCsv'))}</button>
-                <button type="button" class="btn btn-secondary" id="uploadCalendarExport" ${selectedStatus.hasAnyData ? '' : 'disabled'}>${escapeHtml(getUploadText('exportCsv'))}</button>
-                <button type="button" class="btn btn-danger" id="uploadCalendarDelete" ${selectedStatus.hasAnyData ? '' : 'disabled'}>${escapeHtml(getUploadText('deleteDay'))}</button>
-            </div>
-        </div>
-    `;
-
-    panel.querySelectorAll('[data-date]').forEach(button => {
-        button.addEventListener('click', () => setUploadDate(button.dataset.date));
+    const view = buildProductivityUploadCalendarView({
+        dataByDate,
+        uploadDate,
+        monthDate: uploadCalendarMonth,
+        today: new Date(),
+        lang: getLang(),
+        formatDateDisplay
     });
-    panel.querySelector('#uploadCalendarPrev')?.addEventListener('click', () => {
-        uploadCalendarMonth = new Date(uploadCalendarMonth.getFullYear(), uploadCalendarMonth.getMonth() - 1, 1);
-        renderUploadCalendar();
+    panel.innerHTML = view.html;
+
+    bindProductivityUploadCalendarActions({
+        panel,
+        doc: document,
+        selectUploadDate: setUploadDate,
+        getUploadCalendarMonth: () => uploadCalendarMonth,
+        setUploadCalendarMonth: value => {
+            uploadCalendarMonth = value;
+        },
+        renderUploadCalendar,
+        getUploadDate: () => uploadDate,
+        exportProductivityDate: dateCommands.exportDate,
+        removeProductivityDate: dateCommands.removeDate
     });
-    panel.querySelector('#uploadCalendarNext')?.addEventListener('click', () => {
-        uploadCalendarMonth = new Date(uploadCalendarMonth.getFullYear(), uploadCalendarMonth.getMonth() + 1, 1);
-        renderUploadCalendar();
-    });
-    panel.querySelector('#uploadCalendarTickets')?.addEventListener('click', () => document.getElementById('ticketsFileInput')?.click());
-    panel.querySelector('#uploadCalendarCalls')?.addEventListener('click', () => document.getElementById('callsFileInput')?.click());
-    panel.querySelector('#uploadCalendarExport')?.addEventListener('click', () => exportProductivityDate(uploadDate));
-    panel.querySelector('#uploadCalendarDelete')?.addEventListener('click', () => removeProductivityDate(uploadDate));
 }
-
-function downloadTextFile(filename, content, mimeType = 'text/csv;charset=utf-8') {
-    const blob = new Blob([content], { type: mimeType });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
-}
-
-function exportProductivityDate(dateKey) {
-    const entry = dataByDate.get(dateKey);
-    const status = getProductivityDateStatus(entry);
-    if (!status.hasAnyData) {
-        showTemporaryMessage(t('prod-no-results'), 'error');
-        return;
-    }
-
-    const csv = buildProductivityExportCsv(dateKey, entry);
-    downloadTextFile(`productivity-${dateKey}.csv`, csv);
-}
-
-async function removeProductivityDate(dateKey) {
-    dataByDate.delete(dateKey);
-    await deleteFromFirestore(dateKey);
-    refreshProductivityViews({ source: 'delete' });
-    showTemporaryMessage(t('prod-deleted').replace('{date}', formatDateDisplay(dateKey)), 'success', 2000);
-}
-
-window.__removeProductivityDate = removeProductivityDate;
 
 // --- Upload Handlers ---
 
@@ -1432,70 +497,27 @@ function setupUploadArea(areaId, fileInputId, fileNameId, fileType, onParsed) {
     const area = document.getElementById(areaId);
     const fileInput = document.getElementById(fileInputId);
     const fileNameEl = document.getElementById(fileNameId);
-    if (!area || !fileInput) return;
-
-    area.addEventListener('click', (e) => {
-        if (e.target !== fileInput) fileInput.click();
+    bindProductivityUploadArea({
+        area,
+        fileInput,
+        fileNameEl,
+        fileType,
+        onFile: (file, nameEl, type) => processProductivityUploadFile({
+            file,
+            fileNameEl: nameEl,
+            fileType: type,
+            getUploadDate: () => uploadDate,
+            getDateEntry: dateKey => dataByDate.get(dateKey),
+            parseFile: onParsed,
+            saveDate: saveToFirestore,
+            refreshProductivityViews,
+            showUploadSuccess,
+            showTemporaryMessage,
+            t,
+            formatDateDisplay,
+            logError: (...args) => console.error(...args)
+        })
     });
-
-    area.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        area.style.borderColor = 'var(--accent)';
-        area.style.background = 'var(--hover)';
-    });
-    area.addEventListener('dragleave', () => {
-        area.style.borderColor = '';
-        area.style.background = '';
-    });
-    area.addEventListener('drop', (e) => {
-        e.preventDefault();
-        area.style.borderColor = '';
-        area.style.background = '';
-        const file = e.dataTransfer.files[0];
-        if (file) handleFile(file, fileNameEl, fileType, onParsed);
-    });
-
-    fileInput.addEventListener('change', () => {
-        const file = fileInput.files[0];
-        if (file) handleFile(file, fileNameEl, fileType, onParsed);
-    });
-}
-
-async function handleFile(file, fileNameEl, fileType, onParsed) {
-    if (!uploadDate) {
-        showTemporaryMessage(t('prod-select-date-first'), 'error');
-        return;
-    }
-
-    // Check if this specific file type already has data (not just any data for the date)
-    const entry = dataByDate.get(uploadDate);
-    const wasOverride = entry && (
-        (fileType === 'tickets' && entry.ticketsData && entry.ticketsData.size > 0) ||
-        (fileType === 'calls' && entry.callsData && entry.callsData.size > 0)
-    );
-
-    if (fileNameEl) {
-        fileNameEl.textContent = file.name;
-        fileNameEl.style.color = 'var(--accent)';
-    }
-    try {
-        await onParsed(file, uploadDate);
-        await saveToFirestore(uploadDate);
-        if (wasOverride) {
-            showTemporaryMessage(t('data-overwritten').replace('{name}', file.name).replace('{date}', formatDateDisplay(uploadDate)), 'success');
-        } else {
-            showTemporaryMessage(t('file-processed').replace('{name}', file.name).replace('{date}', formatDateDisplay(uploadDate)), 'success');
-        }
-        refreshProductivityViews({ source: 'upload' });
-        showUploadSuccess();
-    } catch (err) {
-        console.error('File parse error:', err);
-        showTemporaryMessage(t('error-generic').replace('{msg}', err.message), 'error');
-        if (fileNameEl) {
-            fileNameEl.textContent = t('error-file-processing').replace('{name}', file.name);
-            fileNameEl.style.color = 'var(--error)';
-        }
-    }
 }
 
 // --- Initialization ---
@@ -1506,7 +528,7 @@ export async function initializeProductivity() {
     if (dateInput && !uploadDate) {
         const today = new Date();
         uploadCalendarMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-        uploadDate = formatDateKey(today);
+        uploadDate = formatProductivityDateKey(today);
         dateInput.value = formatDateDisplay(uploadDate);
     }
 
@@ -1533,70 +555,33 @@ export async function initializeProductivity() {
         console.log(`[Productivity] Parsed ${callsData.size} agents from calls file for ${dateKey}.`);
     });
 
-    // Date range picker for productivity view
     const pickerInput = document.getElementById('productivityDateRange');
-    if (pickerInput) {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        dateStart = new Date(today);
-        dateEnd = new Date(today);
-
-        productivityPicker = new Litepicker({
-            element: pickerInput,
-            singleMode: false,
-            allowRepick: true,
-            lang: 'ro-RO',
-            startDate: dateStart,
-            endDate: dateEnd,
-            format: 'DD MMM YYYY',
-            numberOfMonths: 2,
-            numberOfColumns: 2,
-            setup: (picker) => {
-                picker.on('selected', (date1, date2) => {
-                    dateStart = date1.dateInstance;
-                    dateEnd = date2.dateInstance;
-                    if (hasAnyData()) renderCurrentView();
-                });
-            }
-        });
-    }
-
-    // View toggle - bind directly to buttons
-    document.getElementById('viewOverview')?.addEventListener('click', () => {
-        console.log('[Productivity] Switching to Sumar view');
-        setView('overview');
-    });
-    document.getElementById('viewDetail')?.addEventListener('click', () => {
-        console.log('[Productivity] Switching to Per Agent view');
-        setView('detail');
+    productivityPicker = bindProductivityDateRangePicker({
+        input: pickerInput,
+        LitepickerAdapter: globalThis.Litepicker,
+        setDateRange: (start, end) => {
+            dateStart = start;
+            dateEnd = end;
+        },
+        hasAnyData,
+        renderCurrentView
     });
 
-    // Agent search
-    const agentSearch = document.getElementById('prodAgentSearch');
-    if (agentSearch) {
-        agentSearch.addEventListener('input', () => renderAgentChips(agentSearch.value));
-    }
-    const selectAllBtn = document.getElementById('prodSelectAll');
-    if (selectAllBtn) selectAllBtn.addEventListener('click', () => window.__selectAllAgents());
-    const deselectAllBtn = document.getElementById('prodDeselectAll');
-    if (deselectAllBtn) deselectAllBtn.addEventListener('click', () => window.__deselectAllAgents());
-
-    // Team filter
-    const teamFilter = document.getElementById('productivityTeamFilter');
-    if (teamFilter) {
-        teamFilter.addEventListener('change', () => {
-            currentTeamFilter = teamFilter.value;
-            if (currentView === 'detail') renderAgentChips();
-            if (hasAnyData()) renderCurrentView();
-        });
-    }
-
-    document.getElementById('productivityRefreshBtn')?.addEventListener('click', async () => {
-        const button = document.getElementById('productivityRefreshBtn');
-        if (button) button.classList.add('is-loading');
-        await refreshProductivityData();
-        if (button) button.classList.remove('is-loading');
-        showTemporaryMessage('Productivity data refreshed.', 'success', 1500);
+    bindProductivityControls({
+        doc: document,
+        getCurrentView: () => currentView,
+        setView,
+        renderAgentChips,
+        selectAllAgents: agentActions.selectAllAgents,
+        deselectAllAgents: agentActions.deselectAllAgents,
+        setCurrentTeamFilter: value => {
+            currentTeamFilter = value;
+        },
+        hasAnyData,
+        renderCurrentView,
+        refreshProductivityData,
+        showTemporaryMessage,
+        log: message => console.log(message)
     });
 
     renderUploadCalendar();
@@ -1622,122 +607,19 @@ export function cleanupProductivity() {
  * Returns { average: number|null, days: number }
  */
 export function getAverageProductivity() {
-    const agents = getPlannerData();
-    if (!hasAnyData() || agents.length === 0) return { average: null, days: 0 };
-
-    // Get the last 7 days with actual uploaded data
-    const sortedDates = [...dataByDate.keys()]
-        .filter(dk => {
-            const e = dataByDate.get(dk);
-            return (e.ticketsData && e.ticketsData.size > 0) || (e.callsData && e.callsData.size > 0);
-        })
-        .sort()
-        .slice(-7);
-
-    if (sortedDates.length === 0) return { average: null, days: 0 };
-
-    let totalItems = 0;
-    let totalHours = 0;
-
-    for (const dateKey of sortedDates) {
-        const entry = dataByDate.get(dateKey);
-        const currentDate = new Date(`${dateKey}T00:00:00`);
-
-        for (const agent of agents) {
-            const normalizedName = normalizeName(agent.fullName || agent.username || '');
-
-            let items = 0;
-            if (entry.ticketsData) {
-                const t = entry.ticketsData.get(normalizedName);
-                if (t) items += t.tickets || 0;
-            }
-            if (entry.callsData) {
-                const c = entry.callsData.get(normalizedName);
-                if (c) items += c.calls || 0;
-            }
-
-            const hours = getEligibleHoursForRange(agent, currentDate, currentDate);
-
-            totalItems += items;
-            totalHours += hours;
-        }
-    }
-
-    return {
-        average: totalHours > 0 ? totalItems / totalHours : null,
-        days: sortedDates.length
-    };
+    return buildAverageProductivitySummary({
+        dataByDate,
+        agents: getPlannerData(),
+        getEligibleHoursForRange
+    });
 }
 
 export function getProductivityTrendData(targetYear, targetMonth) {
-    const agents = getUsersData().length > 0 ? getUsersData() : getPlannerData();
-    const datesWithData = new Set(
-        [...dataByDate.keys()].filter(dk => {
-            const e = dataByDate.get(dk);
-            return (e.ticketsData && e.ticketsData.size > 0) || (e.callsData && e.callsData.size > 0);
-        })
-    );
-
-    if (datesWithData.size === 0) return null;
-
-    // Build full month range (use target month if provided, else current)
-    const now = new Date();
-    const year = targetYear != null ? targetYear : now.getFullYear();
-    const month = targetMonth != null ? targetMonth : now.getMonth();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const allDates = [];
-    for (let d = 1; d <= daysInMonth; d++) {
-        const mm = String(month + 1).padStart(2, '0');
-        const dd = String(d).padStart(2, '0');
-        allDates.push(`${year}-${mm}-${dd}`);
-    }
-
-    // Discover all uploaded customer-facing teams for the selected month
-    const teamSet = new Set();
-    for (const dateKey of allDates) {
-        if (!datesWithData.has(dateKey)) continue;
-        const entry = dataByDate.get(dateKey);
-        if (!entry) continue;
-        if (entry.ticketsData) entry.ticketsData.forEach(val => addUploadedEntryTeams(teamSet, val));
-        if (entry.callsData) entry.callsData.forEach(val => addUploadedEntryTeams(teamSet, val));
-    }
-    const teamNames = [...teamSet].sort();
-    if (teamNames.length === 0) return null;
-
-    // Per-team series: { teamName: number[] }
-    const teamSeries = {};
-    teamNames.forEach(t => { teamSeries[t] = []; });
-
-    for (const dateKey of allDates) {
-        if (!datesWithData.has(dateKey)) {
-            teamNames.forEach(t => teamSeries[t].push(null));
-            continue;
-        }
-
-        const entry = dataByDate.get(dateKey);
-        const currentDate = new Date(`${dateKey}T00:00:00`);
-
-        // Match the Productivity page: count only uploaded work that maps to Sherpa users,
-        // then divide by eligible team hours for those same matched users.
-        for (const team of teamNames) {
-            const point = calculateMatchedTeamTrendPoint({
-                agents,
-                team,
-                ticketEntries: entry.ticketsData,
-                callEntries: entry.callsData,
-                getEligibleHoursForTeam: agent => getEligibleHoursForTeamInRange(agent, currentDate, currentDate, team)
-            });
-            teamSeries[team].push(point.productivity);
-        }
-    }
-
-    // Filter out teams with no data at all
-    const activeTeams = {};
-    for (const team of teamNames) {
-        if (teamSeries[team].some(v => v !== null)) {
-            activeTeams[team] = teamSeries[team];
-        }
-    }
-
-    return { dates: allDates, teams: activeTeams };
+    return buildProductivityTrendData({
+        dataByDate,
+        agents: getUsersData().length > 0 ? getUsersData() : getPlannerData(),
+        targetYear,
+        targetMonth,
+        getEligibleHoursForTeamInRange
+    });
 }

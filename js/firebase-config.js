@@ -4,17 +4,12 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.7/firebase-app.js";
 import { getFirestore } from "https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.7/firebase-auth.js";
+import { getFirebaseConfig, getFirebaseEnvironmentName } from './firebase-environments.js';
 
-// Your web app's Firebase configuration
-const firebaseConfig = {
-  apiKey: "AIzaSyCZqJeajOlCekhzXgHAhf4ZIpCMKJxW8qs",
-  authDomain: "wps-sherpa-database.firebaseapp.com",
-  projectId: "wps-sherpa-database",
-  storageBucket: "wps-sherpa-database.appspot.com",
-  messagingSenderId: "897978989234",
-  appId: "1:897978989234:web:f2869963eb261af70ce7ab",
-  measurementId: "G-NBPVK629X4"
-};
+export const firebaseEnvironment = getFirebaseEnvironmentName();
+const firebaseConfig = getFirebaseConfig(firebaseEnvironment);
+
+console.info(`[Firebase] Using ${firebaseEnvironment} project: ${firebaseConfig.projectId}`);
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
