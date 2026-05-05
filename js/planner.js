@@ -5,8 +5,9 @@ import { db } from './firebase-config.js';
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, Timestamp } from "https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore.js";
 import { showTemporaryMessage } from './ui.js';
 import { updateDashboard } from './dashboard.js';
-import { translations, PLANNER_TEAMS, UPLOAD_VALID_TEAMS, extractHoursFromDay, formatPlannerHoursValue, getMonthKey, getAgentDaysForMonth, getAgentNotesForMonth, getEffectiveAgentDayValue } from './config.js';
+import { translations, getMonthKey, getAgentDaysForMonth, getAgentNotesForMonth } from './config.js';
 import { logActivity } from './logs.js';
+import { buildPlannerReadModel, filterPlannerAgents } from './planner-read-model.js';
 function getLang() { return localStorage.getItem('language') || 'ro'; }
 function t(key) { const l = getLang(); return (translations[l] && translations[l][key]) || key; }
 
@@ -469,7 +470,7 @@ function populateAgentFilter() {
 
     } else { // 'agent'
         const searchTerm = searchInput.value.toLowerCase();
-        const filteredAgents = getFilteredAgents(); // Get agents based on selected teams
+        const filteredAgents = filterPlannerAgents(plannerData, plannerState); // Get agents based on selected teams
 
         filteredAgents
             .filter(agent => agent.fullName.toLowerCase().includes(searchTerm))
@@ -793,7 +794,7 @@ function initializeAgentSearch() {
 
 export function filterAgents() {
     // This function is now called by the reactive system
-    // The actual filtering logic is handled in getFilteredAgents()
+    // The actual filtering logic is handled by the Planner Read Model.
     // No need to call renderPlannerTable directly since it's handled by the reactive system
 }
 
@@ -816,37 +817,6 @@ function getAllTeams() {
     return Array.from(teams).sort();
 }
 
-function getFilteredAgents() {
-    // This function is now always using the most up-to-date data from Firestore
-    let filteredAgents = [...plannerData]; // Use a copy
-
-    // Agent selections take precedence over team selections.
-    if (plannerState.selectedAgents.length > 0) {
-        filteredAgents = filteredAgents.filter(agent => 
-            plannerState.selectedAgents.includes(agent.id)
-        );
-    } 
-    // If no agents are selected, use the team filter.
-    else if (plannerState.selectedTeams.length > 0 && !plannerState.selectedTeams.includes('all')) {
-        filteredAgents = filteredAgents.filter(agent => 
-            agent.teams && agent.teams.some(team => plannerState.selectedTeams.includes(team))
-        );
-    }
-
-    // Apply agent search filter ONLY when the filter type is 'agent'
-    if (plannerState.filterType === 'agent') {
-        const searchTerm = plannerState.agentSearchTerm?.toLowerCase();
-        if (searchTerm) {
-            filteredAgents = filteredAgents.filter(agent =>
-                (agent.fullName && agent.fullName.toLowerCase().includes(searchTerm)) ||
-                (agent.username && agent.username.toLowerCase().includes(searchTerm))
-            );
-        }
-    }
-
-    return filteredAgents;
-}
-
 function getMonthStartFromKey(monthKey) {
     const [yearStr, monthStr] = String(monthKey || '').split('-');
     const year = parseInt(yearStr, 10);
@@ -863,10 +833,6 @@ function formatMonthLabel(monthKey) {
     const locales = { ro: 'ro-RO', en: 'en-US', it: 'it-IT' };
     const locale = locales[getLang()] || 'ro-RO';
     return monthStart.toLocaleDateString(locale, { month: 'long', year: 'numeric' });
-}
-
-function getEffectivePlannerDayValue(agent, date) {
-    return getEffectiveAgentDayValue(agent, date);
 }
 
 async function clearAgentPlannerMonth(agentId, monthKey) {
@@ -905,11 +871,6 @@ export function renderPlannerTable(container, startDate, endDate) {
         }
     }
 
-    const days = [];
-    for (let dt = new Date(start); dt <= end; dt.setDate(dt.getDate() + 1)) {
-        days.push(new Date(dt));
-    }
-
     // Get the table container - use the enhanced table container by default
     const tableContainer = container || document.querySelector('#planner .table-container.enhanced-table');
     if (!tableContainer) {
@@ -917,12 +878,15 @@ export function renderPlannerTable(container, startDate, endDate) {
         return;
     }
 
-    // FIX: Add a class for custom styling when few days are shown
-    if (days.length > 0 && days.length < 10) {
-        tableContainer.classList.add('few-days-view');
-    } else {
-        tableContainer.classList.remove('few-days-view');
-    }
+    const readModel = buildPlannerReadModel(plannerData, start, end, {
+        filterState: plannerState,
+        viewOptions: plannerState.viewOptions,
+        dayNames: t('planner-day-names').split(','),
+        today: new Date(),
+        unknownAgentLabel: t('unknown-agent')
+    });
+
+    tableContainer.classList.toggle('few-days-view', readModel.fewDaysView);
 
     // Call the function to update the header with the date range
     updatePlannerHeader(); 
@@ -938,45 +902,18 @@ export function renderPlannerTable(container, startDate, endDate) {
     const tbody = document.createElement('tbody');
     tbody.id = 'plannerTableBody'; // Keep ID for event delegation
 
-    // Render date header row (full dates)
     const dateHeaderRow = document.createElement('tr');
     dateHeaderRow.className = 'date-header-row';
-    const dayNamesArr = t('planner-day-names').split(',');
-    dateHeaderRow.innerHTML = `
-        <th class="agent-name-header">${t('planner-agent')}</th>
-        <th class="hours-header">${t('planner-hours')}</th>
-        ${days.map((date, index) => {
-            const dayOfWeek = date.getDay();
-            const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-            const weekendClass = plannerState.viewOptions.highlightWeekends && isWeekend ? 'weekend' : '';
-            const today = new Date();
-            const isToday = date.getDate() === today.getDate() &&
-                           date.getMonth() === today.getMonth() &&
-                           date.getFullYear() === today.getFullYear();
-            const todayClass = isToday ? 'today' : '';
-
-            const dayName = dayNamesArr[dayOfWeek];
-            const dayNum = date.getDate();
-            const fullDate = `${dayName}<br/>${dayNum}`;
-
-            // Weekly total column logic
-            let extraColumn = '';
-            if (plannerState.viewOptions.showWeekTotals && dayOfWeek === 0) {
-                extraColumn = `<th class="week-total-header date-header">${t('planner-week-total')}</th>`;
-            }
-            return `<th class="date-header ${weekendClass} ${todayClass}">${fullDate}</th>${extraColumn}`;
-        }).join('')}
-        <th class="total-header">${t('planner-total')}</th>
-    `;
-
+    dateHeaderRow.appendChild(createTextHeader('agent-name-header', t('planner-agent')));
+    dateHeaderRow.appendChild(createTextHeader('hours-header', t('planner-hours')));
+    readModel.headers.forEach(header => {
+        dateHeaderRow.appendChild(renderPlannerHeader(header));
+    });
+    dateHeaderRow.appendChild(createTextHeader('total-header', t('planner-total')));
     thead.appendChild(dateHeaderRow);
 
-    // Render body
-    const filteredAgents = getFilteredAgents();
-    filteredAgents.forEach((agent) => {
-        // Pass the array of dates to renderAgentRow
-        const row = renderAgentRow(agent, days);
-        tbody.appendChild(row);
+    readModel.rows.forEach(rowModel => {
+        tbody.appendChild(renderAgentRow(rowModel));
     });
 
     // Assemble table
@@ -988,20 +925,40 @@ export function renderPlannerTable(container, startDate, endDate) {
     addCellEventListeners();
 }
 
-function renderAgentRow(agent, dates) {
+function createTextHeader(className, text) {
+    const header = document.createElement('th');
+    header.className = className;
+    header.textContent = text;
+    return header;
+}
+
+function renderPlannerHeader(headerModel) {
+    const header = document.createElement('th');
+    header.className = headerModel.classNames.join(' ');
+
+    if (headerModel.type === 'week-total') {
+        header.textContent = t('planner-week-total');
+        return header;
+    }
+
+    header.appendChild(document.createTextNode(headerModel.dayName));
+    header.appendChild(document.createElement('br'));
+    header.appendChild(document.createTextNode(headerModel.dayNumber));
+    return header;
+}
+
+function renderAgentRow(rowModel) {
     const row = document.createElement('tr');
     row.className = 'agent-row';
-    const renderedMonthKeys = [...new Set(dates.map(date => getMonthKey(date)))];
-    const deleteMonthKey = renderedMonthKeys.length === 1 ? renderedMonthKeys[0] : '';
 
     // Agent name cell
     const nameCell = document.createElement('td');
     nameCell.className = 'agent-name';
-    nameCell.title = agent.fullName || agent.name || t('unknown-agent'); // Add tooltip
+    nameCell.title = rowModel.agentName; // Add tooltip
     nameCell.innerHTML = `
         <div class="cell-content-wrapper">
-            <span>${agent.fullName || agent.name || t('unknown-agent')}</span>
-            <button class="delete-agent-btn" data-agent-id="${agent.id}" data-month-key="${deleteMonthKey}" title="${t('delete')}">
+            <span>${rowModel.agentName}</span>
+            <button class="delete-agent-btn" data-agent-id="${rowModel.agentId}" data-month-key="${rowModel.deleteMonthKey}" title="${t('delete')}">
                 <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
             </button>
         </div>
@@ -1010,220 +967,66 @@ function renderAgentRow(agent, dates) {
     // Hours cell
     const hoursCell = document.createElement('td');
     hoursCell.className = 'agent-hours';
-    hoursCell.textContent = agent.contractHours ? `${agent.contractHours}h` : '8h';
+    hoursCell.textContent = rowModel.contractHoursLabel;
 
-    // Day cells with weekly totals support
-    const dayCells = [];
-    let weeklyHours = 0;
-    
-    dates.forEach(date => {
-        const dayIndex = date.getDate() - 1;
-        const monthKey = getMonthKey(date);
-
-        const cell = document.createElement('td');
-        cell.className = 'planner-cell selectable';
-        cell.dataset.agentId = agent.id;
-        cell.dataset.day = dayIndex;
-        cell.dataset.month = monthKey;
-
-        const dayValue = getEffectivePlannerDayValue(agent, date);
-        cell.dataset.rawValue = dayValue || '';
-
-        const formattedContent = formatCellContent(dayValue);
-        
-        // FORCE CENTERING: Add inline styles to ensure proper centering
-        cell.style.textAlign = 'center';
-        cell.style.verticalAlign = 'middle';
-        cell.style.fontVariantNumeric = 'tabular-nums';
-        cell.style.fontFeatureSettings = '"tnum" 1, "kern" 1';
-        cell.style.letterSpacing = '0';
-        cell.style.wordSpacing = '0';
-        cell.style.textAlignLast = 'center';
-        
-        // Set cell content using innerHTML to properly handle newlines
-        cell.innerHTML = formattedContent.replace(/\n/g, '<br>');
-        
-        // Apply dynamic font sizing to ensure content fits properly
-        applyDynamicFontSizing(cell, formattedContent);
-        
-        // Check if it's a multi-team day (contains + symbol or newline)
-        if (formattedContent.includes('+') || formattedContent.includes('\n')) {
-            cell.classList.add('multi-team');
-        }
-        
-        cell.classList.add(...getCellClass(dayValue, date));
-
-        // Add note indicator if agent has a note for this day
-        const notesForMonth = getAgentNotesForMonth(agent, monthKey);
-        if (notesForMonth[dayIndex.toString()]) {
-            cell.classList.add('has-note');
-            cell.title = notesForMonth[dayIndex.toString()];
-        }
-        // Show deactivation note on DZ cells
-        if (dayValue === 'DZ' && agent.deactivationNote) {
-            cell.classList.add('has-note');
-            cell.title = agent.deactivationNote;
-        }
-
-        // Add today class if this is the current day
-        const today = new Date();
-        const isToday = date.getDate() === today.getDate() && 
-                       date.getMonth() === today.getMonth() && 
-                       date.getFullYear() === today.getFullYear();
-        
-        if (isToday) {
-            cell.classList.add('today');
-        }
-
-        // Add to cells array
-        dayCells.push(cell);
-        
-        // Track weekly hours for weekly totals
-        if (plannerState.viewOptions.showWeekTotals) {
-            weeklyHours += extractHoursFromDay(dayValue);
-            
-            // Add weekly total cell after Sunday
-            if (date.getDay() === 0) {
-                const weeklyCell = document.createElement('td');
-                weeklyCell.className = 'week-total-cell';
-                weeklyCell.textContent = `${formatPlannerHoursValue(weeklyHours)}h`;
-                dayCells.push(weeklyCell);
-                weeklyHours = 0; // Reset for the next week
-            }
-        }
+    row.appendChild(nameCell);
+    row.appendChild(hoursCell);
+    rowModel.cells.forEach(cellModel => {
+        row.appendChild(renderPlannerCell(cellModel));
     });
 
     // Total cell
     const totalCell = document.createElement('td');
     totalCell.className = 'agent-total';
-    totalCell.textContent = calculateAgentTotalHours(agent, dates);
-
-    // Append all cells
-    row.appendChild(nameCell);
-    row.appendChild(hoursCell);
-    dayCells.forEach(cell => row.appendChild(cell));
+    totalCell.textContent = rowModel.totalHoursLabel;
     row.appendChild(totalCell);
 
     return row;
 }
 
-function getCellClass(day, date) { // <-- Changed to accept 'date' object
-    const classes = ['day-cell'];
-
-    if (!day || day.trim() === '') {
-        classes.push('empty');
-    } else if (day === 'SL') {
-        classes.push('sick-leave');
-    } else if (day === 'Co') {
-        classes.push('holiday');
-    } else if (day === 'CM') {
-        classes.push('medical-leave');
-    } else if (day === 'LB') {
-        classes.push('day-off');
-    } else if (day === 'MA') {
-        classes.push('maternity-leave');
-    } else if (day === 'DO') {
-        classes.push('donation-leave');
-    } else if (day === 'DC') {
-        classes.push('bereavement-leave');
-    } else if (day === 'DZ') {
-        classes.push('deactivated');
-    } else if (day.match(/\d+(?:\.5)?\s*(RO|HU|IT|NL|CS|SK|SV-SE|BRO|2L|QA|TL)/i)) {
-        classes.push('working');
-        // Check if it's a multi-team day (contains + or multiple teams)
-        if (day.includes('+') || day.match(/(\d+(?:\.5)?\s*(RO|HU|IT|NL|CS|SK|SV-SE|BRO|2L|QA|TL).*){2,}/i)) {
-            classes.push('multi-team');
-        }
+function renderPlannerCell(cellModel) {
+    if (cellModel.type === 'week-total') {
+        const weeklyCell = document.createElement('td');
+        weeklyCell.className = cellModel.classNames.join(' ');
+        weeklyCell.textContent = cellModel.totalHoursLabel;
+        return weeklyCell;
     }
 
-    // Add weekend class using the passed date object
-    const dayOfWeek = date.getDay();
-    if (dayOfWeek === 0 || dayOfWeek === 6) {
-        classes.push('weekend');
+    const cell = document.createElement('td');
+    cell.className = 'planner-cell selectable';
+    cell.dataset.agentId = cellModel.agentId;
+    cell.dataset.day = cellModel.dayIndex;
+    cell.dataset.month = cellModel.monthKey;
+    cell.dataset.rawValue = cellModel.rawValue;
+    cell.classList.add(...cellModel.classNames);
+
+    appendPlannerCellText(cell, cellModel.displayLines);
+    applyPlannerCellPresentation(cell, cellModel.sizeClass);
+
+    if (cellModel.title) {
+        cell.classList.add('has-note');
+        cell.title = cellModel.title;
     }
 
-    return classes;
+    return cell;
 }
 
-function formatCellContent(day) {
-    if (!day || day.trim() === '') return '';
-    
-    // Handle special cases
-    if (['SL', 'Co', 'CM', 'LB', 'MA', 'DO', 'DC', 'DZ'].includes(day)) {
-        return day;
-    }
-    
-    // Handle multiple teams - use newlines for better formatting
-    if (day.includes('+')) {
-        const parts = day.split('+');
-        const cleanedParts = parts.map(part => part.trim().replace(/\s+/g, ''));
-        
-        // Define valid team codes (including BRO and BDE)
-        const validTeamCodes = [...new Set([...PLANNER_TEAMS, ...UPLOAD_VALID_TEAMS])];
-        const teamPattern = validTeamCodes.join('|');
-        
-        // Check if all parts are valid team allocations (any number + team code)
-        const allAreValidTeams = cleanedParts.every(part => {
-            const pattern = new RegExp(`^\\d+(?:\\.5)?(${teamPattern})$`);
-            return pattern.test(part);
-        });
-        
-        // If all parts are valid team allocations, use newlines for better formatting
-        if (allAreValidTeams) {
-            return cleanedParts.join('\n');
+function appendPlannerCellText(cell, displayLines) {
+    cell.replaceChildren();
+    displayLines.forEach((line, index) => {
+        if (index > 0) {
+            cell.appendChild(document.createElement('br'));
         }
-        
-        // For mixed or invalid allocations, keep the + symbol
-        return cleanedParts.join('+');
-    }
-    
-    // For single team entries, just clean up spaces
-    return day.trim().replace(/\s+/g, '');
+        cell.appendChild(document.createTextNode(line));
+    });
 }
 
-// Dynamic font sizing function to ensure content fits properly in cells
-function applyDynamicFontSizing(cell, content) {
-    if (!content || content.trim() === '') return;
-    
-    // Remove any existing sizing classes
-    cell.classList.remove('tiny-text', 'small-text', 'medium-text', 'super-tiny');
-    
-    // Check if content has newlines (multi-line)
-    const hasNewlines = content.includes('\n');
-    const lineCount = hasNewlines ? content.split('\n').length : 1;
-    const maxLineLength = hasNewlines ? 
-        Math.max(...content.split('\n').map(line => line.length)) : 
-        content.length;
-    
-    // Conservative approach - use larger fonts for better readability
-    let sizeClass = '';
-    
-    if (hasNewlines) {
-        // Multi-line content - be very generous
-        if (lineCount > 3 || maxLineLength > 12) {
-            sizeClass = 'small-text';
-        } else if (lineCount > 2 || maxLineLength > 9) {
-            sizeClass = 'medium-text';
-        }
-        // For most multi-line content, use default (largest) font
-    } else {
-        // Single line content - much more generous thresholds
-        if (maxLineLength > 15) {
-            sizeClass = 'tiny-text';
-        } else if (maxLineLength > 12) {
-            sizeClass = 'small-text';
-        } else if (maxLineLength > 9) {
-            sizeClass = 'medium-text';
-        }
-        // For content ≤9 chars (like "12RO"), use default (largest) font
-    }
-    
-    // Apply the calculated size class
+function applyPlannerCellPresentation(cell, sizeClass) {
     if (sizeClass) {
         cell.classList.add(sizeClass);
     }
-    
-    // FORCE CENTERING: Re-apply centering styles after font size changes
+
+    // FORCE CENTERING: keep Planner Cell contents aligned after read-model rendering.
     cell.style.textAlign = 'center';
     cell.style.verticalAlign = 'middle';
     cell.style.fontVariantNumeric = 'tabular-nums';
@@ -1231,20 +1034,6 @@ function applyDynamicFontSizing(cell, content) {
     cell.style.letterSpacing = '0';
     cell.style.wordSpacing = '0';
     cell.style.textAlignLast = 'center';
-}
-
-function calculateAgentTotalHours(agent, dates) {
-    let totalHours = 0;
-    if (dates && dates.length > 0) {
-        dates.forEach(date => {
-            totalHours += extractHoursFromDay(getEffectivePlannerDayValue(agent, date));
-        });
-    } else if (agent.days && Array.isArray(agent.days)) {
-        agent.days.forEach(day => {
-            totalHours += extractHoursFromDay(day);
-        });
-    }
-    return `${formatPlannerHoursValue(totalHours)}h`;
 }
 
 // Cell Selection Logic (Refactored to use Firestore Document ID)

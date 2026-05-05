@@ -16,6 +16,8 @@
 
 **Report Read Model** — the rules for turning Agents, Schedule Semantics, and a selected date range into report-ready shop and Report Role buckets, sorted agent distributions, totals, and range labels.
 
+**Planner Read Model** — the rules for turning Agents, Schedule Semantics, Planner filters, date ranges, and view options into table-ready Planner rows, Planner Cells, headers, totals, notes, and display classes.
+
 **Productivity Data** — uploaded ticket and call counts grouped by date, agent, and team.
 
 **Productivity Calculation** — the rules for turning Productivity Data, Agents, Schedule Semantics, date ranges, and team filters into productivity rows such as tickets, calls, worked hours, teams, and items-per-hour.
