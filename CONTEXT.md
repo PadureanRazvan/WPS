@@ -24,6 +24,10 @@
 
 **Planner Persistence Command** — the rules for turning legacy Planner data, undo snapshots, and clear-month actions into Firestore update payloads and activity metadata while keeping the browser shell responsible for actual writes.
 
+**Planner Selection State** — the rules for turning Planner Cell click, drag, stop, and clear actions into selected Planner Cell keys, selection counts, and selection drag state.
+
+**Planner View State** — the rules for turning Planner month, team, Agent, date-range, search, and view-option controls into the current Planner filter and render state.
+
 **Productivity Data** — uploaded ticket and call counts grouped by date, agent, and team.
 
 **Productivity Calculation** — the rules for turning Productivity Data, Agents, Schedule Semantics, date ranges, and team filters into productivity rows such as tickets, calls, worked hours, teams, and items-per-hour.
