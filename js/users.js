@@ -4,7 +4,15 @@ import { collection, onSnapshot, Timestamp } from "https://www.gstatic.com/fireb
 import { addAgent, updateAgent, deleteAgent } from './planner.js';
 import { showTemporaryMessage, t } from './ui.js';
 import { logActivity } from './logs.js';
-import { getMonthKey, getAgentDaysForMonth, generateDefaultSchedule, getDateKey, buildPrimaryTeamHistoryForChange, rewriteMonthlyDaysForPrimaryTeamChange } from './config.js';
+import { getMonthKey, getAgentDaysForMonth, generateDefaultSchedule, rewriteMonthlyDaysForPrimaryTeamChange } from './config.js';
+import {
+    applyInactiveCodeToMonth,
+    buildContractMonthDaysFromDate,
+    buildPrimaryTeamHistoryForChange,
+    clearInactiveCodeFromMonth,
+    getDateKey,
+    normalizeAgentLifecycleDate
+} from './agent-lifecycle.js';
 
 let usersData = [];
 
@@ -49,18 +57,6 @@ function syncPrimaryTeamSelectOptions(selectElement, selectedValue = '') {
     }
 }
 
-function normalizePlannerDate(value) {
-    const date = value instanceof Date
-        ? new Date(value)
-        : value?.toDate
-            ? value.toDate()
-            : new Date(value);
-
-    if (Number.isNaN(date.getTime())) return null;
-    date.setHours(0, 0, 0, 0);
-    return date;
-}
-
 function getMonthStartFromKey(monthKey) {
     const [yearStr, monthStr] = String(monthKey || '').split('-');
     const year = parseInt(yearStr, 10);
@@ -68,74 +64,6 @@ function getMonthStartFromKey(monthKey) {
 
     if (!year || !month) return null;
     return new Date(year, month - 1, 1);
-}
-
-function isDateWithinInclusiveRange(date, startDate, endDate) {
-    const normalizedDate = normalizePlannerDate(date);
-    const normalizedStart = normalizePlannerDate(startDate);
-    const normalizedEnd = endDate ? normalizePlannerDate(endDate) : null;
-
-    if (!normalizedDate || !normalizedStart) return false;
-    return normalizedDate >= normalizedStart && (!normalizedEnd || normalizedDate <= normalizedEnd);
-}
-
-function applyInactiveCodeToMonth(existingDays, monthDate, startDate, endDate) {
-    const monthStart = normalizePlannerDate(monthDate);
-    if (!monthStart) return [...existingDays];
-
-    const year = monthStart.getFullYear();
-    const month = monthStart.getMonth();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const nextDays = [...existingDays];
-
-    while (nextDays.length < 31) nextDays.push('');
-
-    for (let i = 0; i < nextDays.length; i++) {
-        const dayNumber = i + 1;
-        if (dayNumber > daysInMonth) {
-            nextDays[i] = nextDays[i] || '';
-            continue;
-        }
-
-        const cellDate = new Date(year, month, dayNumber);
-        if (isDateWithinInclusiveRange(cellDate, startDate, endDate)) {
-            nextDays[i] = 'DZ';
-        } else {
-            nextDays[i] = nextDays[i] || '';
-        }
-    }
-
-    return nextDays;
-}
-
-function clearInactiveCodeFromMonth(existingDays, monthDate, clearFromDate) {
-    const monthStart = normalizePlannerDate(monthDate);
-    const normalizedClearFrom = normalizePlannerDate(clearFromDate);
-    if (!monthStart || !normalizedClearFrom) return [...existingDays];
-
-    const year = monthStart.getFullYear();
-    const month = monthStart.getMonth();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const nextDays = [...existingDays];
-
-    while (nextDays.length < 31) nextDays.push('');
-
-    for (let i = 0; i < nextDays.length; i++) {
-        const dayNumber = i + 1;
-        if (dayNumber > daysInMonth) {
-            nextDays[i] = nextDays[i] || '';
-            continue;
-        }
-
-        const cellDate = new Date(year, month, dayNumber);
-        if (cellDate >= normalizedClearFrom && nextDays[i] === 'DZ') {
-            nextDays[i] = '';
-        } else {
-            nextDays[i] = nextDays[i] || '';
-        }
-    }
-
-    return nextDays;
 }
 
 export function getUsersData() { return usersData; }
@@ -412,27 +340,6 @@ function getComparableInlineDraftState(field, rawValue) {
     return normalizedValue;
 }
 
-// Generate planner days from a start date to end of month
-function generateDaysFromDate(startDay, daysInMonth, year, month, hours, teamCode) {
-    const days = [];
-    for (let d = 1; d <= 31; d++) {
-        if (d < startDay) {
-            days.push(null); // Keep existing value — marker for "don't change"
-        } else if (d <= daysInMonth) {
-            const date = new Date(year, month, d);
-            const dayOfWeek = date.getDay();
-            if (dayOfWeek >= 1 && dayOfWeek <= 5) {
-                days.push(`${hours}${teamCode}`);
-            } else {
-                days.push(''); // Weekend — leave empty
-            }
-        } else {
-            days.push('');
-        }
-    }
-    return days;
-}
-
 // Show contract change modal
 function openContractChangeModal(userId, newContractType) {
     const modal = document.getElementById('contractChangeModal');
@@ -484,7 +391,7 @@ function openContractChangeModal(userId, newContractType) {
             return;
         }
 
-        const fromDate = new Date(fromDateStr);
+        const fromDate = normalizeAgentLifecycleDate(fromDateStr);
         const now = new Date();
         const year = now.getFullYear();
         const month = now.getMonth();
@@ -495,8 +402,6 @@ function openContractChangeModal(userId, newContractType) {
             return;
         }
 
-        const startDay = fromDate.getDate();
-        const daysInMonth = new Date(year, month + 1, 0).getDate();
         const teamCode = (user.primaryTeam || 'RO zooplus').split(' ')[0];
 
         let contractHours;
@@ -508,16 +413,13 @@ function openContractChangeModal(userId, newContractType) {
 
         // Generate new days, merging with existing
         const contractMonthKey = getMonthKey(now);
-        const newDays = generateDaysFromDate(startDay, daysInMonth, year, month, contractHours, teamCode);
         const existingDays = getAgentDaysForMonth(user, contractMonthKey);
-        const mergedDays = [...existingDays];
-        while (mergedDays.length < 31) mergedDays.push('');
-        for (let i = 0; i < mergedDays.length; i++) {
-            if (i < newDays.length && newDays[i] !== null) {
-                mergedDays[i] = newDays[i];
-            }
-            mergedDays[i] = mergedDays[i] || '';
-        }
+        const mergedDays = buildContractMonthDaysFromDate({
+            existingDays,
+            fromDate,
+            contractHours,
+            teamCode
+        });
 
         await updateAgent(userId, {
             contractType: newContractType,
@@ -527,7 +429,7 @@ function openContractChangeModal(userId, newContractType) {
         logActivity('portal', 'change_contract', { name: user.fullName, type: newContractType, hours: contractHours });
 
         modal.classList.remove('active');
-        showTemporaryMessage(t('contract-updated').replace('{name}', user.fullName).replace('{type}', newContractType).replace('{hours}', contractHours).replace('{date}', `${startDay}.${month + 1}.${year}`), "success");
+        showTemporaryMessage(t('contract-updated').replace('{name}', user.fullName).replace('{type}', newContractType).replace('{hours}', contractHours).replace('{date}', `${fromDate.getDate()}.${month + 1}.${year}`), "success");
     });
 }
 
@@ -573,8 +475,8 @@ function openPrimaryTeamChangeModal(userId, newPrimaryTeam) {
         }
 
         const fromDate = new Date(`${fromDateStr}T00:00:00`);
-        const hireDate = normalizePlannerDate(user.hireDate);
-        const normalizedFrom = normalizePlannerDate(fromDate);
+        const hireDate = normalizeAgentLifecycleDate(user.hireDate);
+        const normalizedFrom = normalizeAgentLifecycleDate(fromDate);
         if (hireDate && normalizedFrom && normalizedFrom < hireDate) {
             showTemporaryMessage(t('team-date-before-hire'), "error");
             return;

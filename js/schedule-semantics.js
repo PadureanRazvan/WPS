@@ -1,3 +1,19 @@
+import {
+    getAgentLifecycleState,
+    getEffectivePrimaryTeamCode,
+    normalizeAgentLifecycleDate
+} from './agent-lifecycle.js';
+
+export {
+    REPORT_ROLE_TEAM_CODES,
+    buildPrimaryTeamHistoryForChange,
+    getDateKey,
+    getEffectivePrimaryTeam,
+    getEffectivePrimaryTeamCode,
+    getEffectiveReportRoleCode,
+    isReportRoleTeamCode
+} from './agent-lifecycle.js';
+
 // === CENTRALIZED CONSTANTS ===
 
 // Leave/absence codes — single source of truth
@@ -78,107 +94,11 @@ export const TEAM_DISPLAY_NAMES = {
     '2L': '2nd Level', 'QA': 'QA', 'TL': 'Team Lead'
 };
 
-export const REPORT_ROLE_TEAM_CODES = ['TL', 'QA'];
-
 // --- Month-keyed data helpers (for multi-month planner support) ---
 
 /** Returns "YYYY-MM" from a Date object */
 export function getMonthKey(date) {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-}
-
-function normalizeScheduleBoundaryDate(value) {
-    if (!value) return null;
-
-    if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
-        const [year, month, day] = value.split('-').map(Number);
-        const localDate = new Date(year, month - 1, day);
-        localDate.setHours(0, 0, 0, 0);
-        return localDate;
-    }
-
-    const date = value instanceof Date
-        ? new Date(value)
-        : value?.toDate
-            ? value.toDate()
-            : new Date(value);
-
-    if (Number.isNaN(date.getTime())) return null;
-    date.setHours(0, 0, 0, 0);
-    return date;
-}
-
-export function getDateKey(date) {
-    const normalized = normalizeScheduleBoundaryDate(date);
-    if (!normalized) return '';
-
-    const year = normalized.getFullYear();
-    const month = String(normalized.getMonth() + 1).padStart(2, '0');
-    const day = String(normalized.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-}
-
-function normalizePrimaryTeamHistoryEntry(entry) {
-    const fromDate = normalizeScheduleBoundaryDate(entry?.from);
-    const primaryTeam = String(entry?.primaryTeam || '').trim();
-
-    if (!fromDate || !primaryTeam) return null;
-    return {
-        from: getDateKey(fromDate),
-        primaryTeam
-    };
-}
-
-function getNormalizedPrimaryTeamHistory(agent) {
-    return Array.isArray(agent?.primaryTeamHistory)
-        ? agent.primaryTeamHistory
-            .map(normalizePrimaryTeamHistoryEntry)
-            .filter(Boolean)
-            .sort((a, b) => a.from.localeCompare(b.from))
-        : [];
-}
-
-export function getEffectivePrimaryTeam(agent, date) {
-    const targetDateKey = getDateKey(date);
-    const history = getNormalizedPrimaryTeamHistory(agent);
-    let effectiveTeam = '';
-
-    for (const entry of history) {
-        if (entry.from <= targetDateKey) {
-            effectiveTeam = entry.primaryTeam;
-        } else {
-            break;
-        }
-    }
-
-    return effectiveTeam || String(agent?.primaryTeam || '').trim();
-}
-
-export function getEffectivePrimaryTeamCode(agent, date) {
-    return getEffectivePrimaryTeam(agent, date).split(' ')[0]?.toUpperCase() || '';
-}
-
-export function buildPrimaryTeamHistoryForChange(agent, newPrimaryTeam, fromDate) {
-    const fromKey = getDateKey(fromDate);
-    const nextTeam = String(newPrimaryTeam || '').trim();
-    if (!fromKey || !nextTeam) return getNormalizedPrimaryTeamHistory(agent);
-
-    const history = getNormalizedPrimaryTeamHistory(agent);
-    const seededHistory = history.length > 0
-        ? history
-        : [{
-            from: getDateKey(agent?.hireDate) || fromKey,
-            primaryTeam: String(agent?.primaryTeam || '').trim()
-        }].filter(entry => entry.primaryTeam);
-
-    const nextHistory = seededHistory.filter(entry => entry.from < fromKey);
-    const previousEntry = nextHistory[nextHistory.length - 1];
-
-    if (!previousEntry || previousEntry.primaryTeam !== nextTeam) {
-        nextHistory.push({ from: fromKey, primaryTeam: nextTeam });
-    }
-
-    return nextHistory;
 }
 
 function getMonthStartFromKey(monthKey) {
@@ -191,7 +111,7 @@ function getMonthStartFromKey(monthKey) {
 }
 
 export function rewriteMonthlyDaysForPrimaryTeamChange(agent, newPrimaryTeam, fromDate) {
-    const from = normalizeScheduleBoundaryDate(fromDate);
+    const from = normalizeAgentLifecycleDate(fromDate);
     if (!from || !agent?.monthlyDays) return {};
 
     const fromMonthKey = getMonthKey(from);
@@ -238,36 +158,8 @@ export function rewriteMonthlyDaysForPrimaryTeamChange(agent, newPrimaryTeam, fr
     return updates;
 }
 
-export function isReportRoleTeamCode(teamCode) {
-    return REPORT_ROLE_TEAM_CODES.includes(normalizeTeamForDisplay(String(teamCode || '').toUpperCase()));
-}
-
-export function getEffectiveReportRoleCode(agent, date) {
-    const effectiveCode = normalizeTeamForDisplay(getEffectivePrimaryTeamCode(agent, date));
-    return isReportRoleTeamCode(effectiveCode) ? effectiveCode : null;
-}
-
-function isDateBeforeAgentHire(agent, date) {
-    const normalizedDate = normalizeScheduleBoundaryDate(date);
-    const hireDate = normalizeScheduleBoundaryDate(agent?.hireDate);
-
-    if (!normalizedDate || !hireDate) return false;
-    return normalizedDate < hireDate;
-}
-
-function isAgentInactiveOnDate(agent, date) {
-    if (!agent?.inactiveFrom || agent?.isActive !== false) return false;
-
-    const normalizedDate = normalizeScheduleBoundaryDate(date);
-    const inactiveFrom = normalizeScheduleBoundaryDate(agent.inactiveFrom);
-    const inactiveTo = agent.inactiveTo ? normalizeScheduleBoundaryDate(agent.inactiveTo) : null;
-
-    if (!normalizedDate || !inactiveFrom) return false;
-    return normalizedDate >= inactiveFrom && (!inactiveTo || normalizedDate <= inactiveTo);
-}
-
 function applyHireDateBoundaryToDays(agent, monthKey, sourceDays = []) {
-    const hireDate = normalizeScheduleBoundaryDate(agent?.hireDate);
+    const hireDate = normalizeAgentLifecycleDate(agent?.hireDate);
     if (!hireDate) return [...sourceDays];
 
     const [yearStr, monthStr] = String(monthKey || '').split('-');
@@ -315,7 +207,7 @@ export function generateDefaultSchedule(agent, monthKey) {
     const month = parseInt(monthStr, 10) - 1; // 0-indexed
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const days = [];
-    const hireDate = normalizeScheduleBoundaryDate(agent?.hireDate);
+    const hireDate = normalizeAgentLifecycleDate(agent?.hireDate);
 
     for (let d = 1; d <= 31; d++) {
         if (d <= daysInMonth) {
@@ -339,7 +231,7 @@ export function generateDefaultSchedule(agent, monthKey) {
  *  Priority: saved monthlyDays > legacy days > auto-generated from contract.
  *  Auto-generation only for months on/after the agent's hire date. */
 export function getAgentDaysForMonth(agent, monthKey) {
-    const hireDate = normalizeScheduleBoundaryDate(agent?.hireDate);
+    const hireDate = normalizeAgentLifecycleDate(agent?.hireDate);
     if (hireDate) {
         const hireMonthKey = getMonthKey(hireDate);
         if (monthKey < hireMonthKey) return [];
@@ -362,11 +254,12 @@ export function getAgentDaysForMonth(agent, monthKey) {
 
 /** Returns the planner value that should be visible/effective for a given date. */
 export function getEffectiveAgentDayValue(agent, date) {
-    if (isDateBeforeAgentHire(agent, date)) {
+    const lifecycleState = getAgentLifecycleState(agent, date);
+    if (lifecycleState.isBeforeStart) {
         return '';
     }
 
-    if (isAgentInactiveOnDate(agent, date)) {
+    if (lifecycleState.isInactive) {
         return 'DZ';
     }
 
