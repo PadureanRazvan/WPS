@@ -28,6 +28,8 @@
 
 **Planner View State** — the rules for turning Planner month, team, Agent, date-range, search, and view-option controls into the current Planner filter and render state.
 
+**Planner Table View** — the rules for turning a Planner Read Model and translated labels into rendered Planner table HTML, including headers, Agent rows, Planner Cells, week totals, delete-month buttons, note titles, and table display classes.
+
 **Productivity Data** — uploaded ticket and call counts grouped by date, agent, and team.
 
 **Productivity Calculation** — the rules for turning Productivity Data, Agents, Schedule Semantics, date ranges, and team filters into productivity rows such as tickets, calls, worked hours, teams, and items-per-hour.

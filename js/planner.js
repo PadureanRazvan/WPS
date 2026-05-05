@@ -10,6 +10,7 @@ import { logActivity } from './logs.js';
 import { buildPlannerEditCommand } from './planner-edit-command.js';
 import { buildPlannerMigrationCommands, buildPlannerUndoCommand, buildPlannerClearMonthCommand } from './planner-persistence-command.js';
 import { buildPlannerReadModel, filterPlannerAgents } from './planner-read-model.js';
+import { renderPlannerTableView } from './planner-table-view.js';
 import {
     addPlannerDragSelectionCell,
     clearPlannerCellSelection,
@@ -756,154 +757,19 @@ export function renderPlannerTable(container, startDate, endDate) {
         unknownAgentLabel: t('unknown-agent')
     });
 
-    tableContainer.classList.toggle('few-days-view', readModel.fewDaysView);
-
     // Call the function to update the header with the date range
     updatePlannerHeader(); 
 
-    // Clear previous content
-    tableContainer.innerHTML = '';
-
-    // Create table structure
-    const table = document.createElement('table');
-    table.className = 'unified-planner-table'; // Use the new class for sticky styles
-
-    const thead = document.createElement('thead');
-    const tbody = document.createElement('tbody');
-    tbody.id = 'plannerTableBody'; // Keep ID for event delegation
-
-    const dateHeaderRow = document.createElement('tr');
-    dateHeaderRow.className = 'date-header-row';
-    dateHeaderRow.appendChild(createTextHeader('agent-name-header', t('planner-agent')));
-    dateHeaderRow.appendChild(createTextHeader('hours-header', t('planner-hours')));
-    readModel.headers.forEach(header => {
-        dateHeaderRow.appendChild(renderPlannerHeader(header));
+    renderPlannerTableView(tableContainer, readModel, {
+        agent: t('planner-agent'),
+        hours: t('planner-hours'),
+        total: t('planner-total'),
+        weekTotal: t('planner-week-total'),
+        delete: t('delete')
     });
-    dateHeaderRow.appendChild(createTextHeader('total-header', t('planner-total')));
-    thead.appendChild(dateHeaderRow);
-
-    readModel.rows.forEach(rowModel => {
-        tbody.appendChild(renderAgentRow(rowModel));
-    });
-
-    // Assemble table
-    table.appendChild(thead);
-    table.appendChild(tbody);
-    tableContainer.appendChild(table);
 
     // Re-attach event listeners after every render
     addCellEventListeners();
-}
-
-function createTextHeader(className, text) {
-    const header = document.createElement('th');
-    header.className = className;
-    header.textContent = text;
-    return header;
-}
-
-function renderPlannerHeader(headerModel) {
-    const header = document.createElement('th');
-    header.className = headerModel.classNames.join(' ');
-
-    if (headerModel.type === 'week-total') {
-        header.textContent = t('planner-week-total');
-        return header;
-    }
-
-    header.appendChild(document.createTextNode(headerModel.dayName));
-    header.appendChild(document.createElement('br'));
-    header.appendChild(document.createTextNode(headerModel.dayNumber));
-    return header;
-}
-
-function renderAgentRow(rowModel) {
-    const row = document.createElement('tr');
-    row.className = 'agent-row';
-
-    // Agent name cell
-    const nameCell = document.createElement('td');
-    nameCell.className = 'agent-name';
-    nameCell.title = rowModel.agentName; // Add tooltip
-    nameCell.innerHTML = `
-        <div class="cell-content-wrapper">
-            <span>${rowModel.agentName}</span>
-            <button class="delete-agent-btn" data-agent-id="${rowModel.agentId}" data-month-key="${rowModel.deleteMonthKey}" title="${t('delete')}">
-                <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
-            </button>
-        </div>
-    `;
-
-    // Hours cell
-    const hoursCell = document.createElement('td');
-    hoursCell.className = 'agent-hours';
-    hoursCell.textContent = rowModel.contractHoursLabel;
-
-    row.appendChild(nameCell);
-    row.appendChild(hoursCell);
-    rowModel.cells.forEach(cellModel => {
-        row.appendChild(renderPlannerCell(cellModel));
-    });
-
-    // Total cell
-    const totalCell = document.createElement('td');
-    totalCell.className = 'agent-total';
-    totalCell.textContent = rowModel.totalHoursLabel;
-    row.appendChild(totalCell);
-
-    return row;
-}
-
-function renderPlannerCell(cellModel) {
-    if (cellModel.type === 'week-total') {
-        const weeklyCell = document.createElement('td');
-        weeklyCell.className = cellModel.classNames.join(' ');
-        weeklyCell.textContent = cellModel.totalHoursLabel;
-        return weeklyCell;
-    }
-
-    const cell = document.createElement('td');
-    cell.className = 'planner-cell selectable';
-    cell.dataset.agentId = cellModel.agentId;
-    cell.dataset.day = cellModel.dayIndex;
-    cell.dataset.month = cellModel.monthKey;
-    cell.dataset.rawValue = cellModel.rawValue;
-    cell.classList.add(...cellModel.classNames);
-
-    appendPlannerCellText(cell, cellModel.displayLines);
-    applyPlannerCellPresentation(cell, cellModel.sizeClass);
-
-    if (cellModel.title) {
-        cell.classList.add('has-note');
-        cell.title = cellModel.title;
-    }
-
-    return cell;
-}
-
-function appendPlannerCellText(cell, displayLines) {
-    cell.replaceChildren();
-    displayLines.forEach((line, index) => {
-        if (index > 0) {
-            cell.appendChild(document.createElement('br'));
-        }
-        cell.appendChild(document.createTextNode(line));
-    });
-}
-
-function applyPlannerCellPresentation(cell, sizeClass) {
-    if (sizeClass) {
-        cell.classList.add(sizeClass);
-    }
-
-    // FORCE CENTERING: keep Planner Cell contents aligned after read-model rendering.
-    cell.style.textAlign = 'center';
-    cell.style.verticalAlign = 'middle';
-    cell.style.fontVariantNumeric = 'tabular-nums';
-    cell.style.fontFeatureSettings = '"tnum" 1, "kern" 1';
-    cell.style.letterSpacing = '0';
-    cell.style.wordSpacing = '0';
-    cell.style.textAlignLast = 'center';
 }
 
 // Cell Selection Logic (Refactored to use Firestore Document ID)
