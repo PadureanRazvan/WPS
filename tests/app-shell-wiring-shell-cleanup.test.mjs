@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const mainSource = readFileSync(new URL('../js/main.js', import.meta.url), 'utf8');
+const indexSource = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 
 test('main shell delegates app visibility and DOM lifecycle wiring to App Shell Wiring', () => {
   assert.match(mainSource, /from\s+'\.\/app-shell-wiring\.js';/);
@@ -31,4 +32,11 @@ test('main shell delegates app visibility and DOM lifecycle wiring to App Shell 
   ].forEach(pattern => {
     assert.doesNotMatch(mainSource, pattern);
   });
+});
+
+test('current language display is owned by updateLanguageDisplay, not page translation', () => {
+  assert.doesNotMatch(
+    indexSource,
+    /id="currentLanguage"[^>]*\bdata-translate=/
+  );
 });
