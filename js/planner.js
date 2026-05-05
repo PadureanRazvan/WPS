@@ -10,6 +10,32 @@ import { logActivity } from './logs.js';
 import { buildPlannerEditCommand } from './planner-edit-command.js';
 import { buildPlannerMigrationCommands, buildPlannerUndoCommand, buildPlannerClearMonthCommand } from './planner-persistence-command.js';
 import { buildPlannerReadModel, filterPlannerAgents } from './planner-read-model.js';
+import {
+    addPlannerDragSelectionCell,
+    clearPlannerCellSelection,
+    createPlannerSelectionState,
+    getPlannerCellSelectionKey,
+    getPlannerSelectionCount,
+    isPlannerSelectionDragActive,
+    stopPlannerCellSelection,
+    togglePlannerCellSelection
+} from './planner-selection-state.js';
+import {
+    applyPlannerFilterSelection,
+    applyPlannerPresetRange,
+    clearPlannerAgentAndTeamSelections,
+    clearPlannerMonths,
+    createPlannerViewState,
+    resetPlannerFilters,
+    selectPlannerMonths,
+    setPlannerAgentSearchTerm,
+    setPlannerDateRange,
+    setPlannerFilterType,
+    setPlannerRangeType,
+    setPlannerViewOption,
+    togglePlannerMonth,
+    togglePlannerTeam
+} from './planner-view-state.js';
 function getLang() { return localStorage.getItem('language') || 'ro'; }
 function t(key) { const l = getLang(); return (translations[l] && translations[l][key]) || key; }
 
@@ -277,20 +303,7 @@ function updatePlannerHeader() {
 }
 
 // Enhanced Planner State
-let plannerState = {
-    selectedMonths: [],
-    selectedTeams: ['all'],
-    selectedAgents: [],
-    dateRange: { start: null, end: null },
-    rangeType: 'preset',
-    presetRange: 'current-month',
-    agentSearchTerm: '',
-    viewOptions: {
-        showWeekTotals: false,
-        highlightWeekends: true,
-        compactView: false
-    }
-};
+let plannerState = createPlannerViewState();
 
 document.addEventListener('DOMContentLoaded', () => {
     initializeDatepicker();
@@ -305,7 +318,7 @@ function initializeFilterControls() {
     filterTypeButtons.forEach(button => {
         button.addEventListener('click', () => {
             // Update state
-            plannerState.filterType = button.dataset.filterType;
+            plannerState = setPlannerFilterType(plannerState, button.dataset.filterType);
 
             // Update UI
             filterTypeButtons.forEach(btn => btn.classList.remove('active'));
@@ -336,8 +349,7 @@ function initializeDatepicker() {
     const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
 
     // Set initial state
-    plannerState.dateRange.start = startOfMonth;
-    plannerState.dateRange.end = endOfMonth;
+    plannerState = setPlannerDateRange(plannerState, startOfMonth, endOfMonth);
 
     const todayForHighlight = new Date();
     todayForHighlight.setHours(0, 0, 0, 0);
@@ -353,8 +365,7 @@ function initializeDatepicker() {
         highlightedDays: [todayForHighlight],
         setup: (picker) => {
             picker.on('selected', (date1, date2) => {
-                plannerState.dateRange.start = date1.dateInstance;
-                plannerState.dateRange.end = date2.dateInstance;
+                plannerState = setPlannerDateRange(plannerState, date1.dateInstance, date2.dateInstance);
                 renderPlannerIfActive();
                 updatePlannerHeader();
             });
@@ -377,8 +388,7 @@ function navigateMonth(picker, offset) {
     const current = plannerState.dateRange.start || new Date();
     const newMonth = new Date(current.getFullYear(), current.getMonth() + offset, 1);
     const endOfNewMonth = new Date(newMonth.getFullYear(), newMonth.getMonth() + 1, 0);
-    plannerState.dateRange.start = newMonth;
-    plannerState.dateRange.end = endOfNewMonth;
+    plannerState = setPlannerDateRange(plannerState, newMonth, endOfNewMonth);
     try { picker.setDateRange(newMonth, endOfNewMonth); } catch (e) { /* picker may not support setDateRange */ }
     applyFiltersAndRender();
     updatePlannerHeader();
@@ -465,25 +475,10 @@ function initializeAgentFilter() {
     agentList.addEventListener('change', (e) => {
         if (e.target.type === 'checkbox') {
             const value = e.target.value;
-            if (plannerState.filterType === 'team') {
-                // When a team is selected, 'all' should be removed.
-                if (e.target.checked) {
-                    plannerState.selectedTeams = plannerState.selectedTeams.filter(t => t !== 'all');
-                    plannerState.selectedTeams.push(value);
-                } else {
-                    plannerState.selectedTeams = plannerState.selectedTeams.filter(t => t !== value);
-                    // If no teams are selected, default back to 'all'.
-                    if (plannerState.selectedTeams.length === 0) {
-                        plannerState.selectedTeams.push('all');
-                    }
-                }
-            } else { // agent
-                if (e.target.checked) {
-                    plannerState.selectedAgents.push(value);
-                } else {
-                    plannerState.selectedAgents = plannerState.selectedAgents.filter(id => id !== value);
-                }
-            }
+            plannerState = applyPlannerFilterSelection(plannerState, {
+                value,
+                checked: e.target.checked
+            });
             renderPlannerIfActive();
         }
     });
@@ -513,9 +508,7 @@ function initializeAgentFilter() {
 }
 
 function clearAgentAndTeamSelections() {
-    // Reset selected agents and teams
-    plannerState.selectedAgents = [];
-    plannerState.selectedTeams = ['all']; // Default to 'all'
+    plannerState = clearPlannerAgentAndTeamSelections(plannerState);
 
     // Clear any active search term
     const searchInput = document.getElementById('agentSearchInput');
@@ -541,12 +534,7 @@ function clearAgentAndTeamSelections() {
 }
 
 // Selection state for cell editing
-const selectionState = {
-    selectedCells: new Set(),
-    selectionStarted: false,
-    currentEditType: null,
-    bulkEditMode: false
-};
+let selectionState = createPlannerSelectionState();
 
 // Month Grid Management
 function initializeMonthGrid() {
@@ -582,23 +570,18 @@ function initializeMonthGrid() {
 }
 
 export function toggleMonth(monthKey) {
-    const index = plannerState.selectedMonths.indexOf(monthKey);
-    if (index > -1) {
-        plannerState.selectedMonths.splice(index, 1);
-    } else {
-        plannerState.selectedMonths.push(monthKey);
-    }
+    plannerState = togglePlannerMonth(plannerState, monthKey);
     updateMonthDisplay();
 }
 
 export function selectAllMonths() {
     const monthCards = document.querySelectorAll('.month-card');
-    plannerState.selectedMonths = Array.from(monthCards).map(card => card.dataset.month);
+    plannerState = selectPlannerMonths(plannerState, Array.from(monthCards).map(card => card.dataset.month));
     updateMonthDisplay();
 }
 
 export function clearMonthSelection() {
-    plannerState.selectedMonths = [];
+    plannerState = clearPlannerMonths(plannerState);
     updateMonthDisplay();
 }
 
@@ -629,28 +612,7 @@ function initializeTeamChips() {
 }
 
 export function toggleTeam(teamId) {
-    if (teamId === 'all') {
-        plannerState.selectedTeams = ['all'];
-    } else {
-        // Remove 'all' if it exists
-        if (plannerState.selectedTeams.includes('all')) {
-            plannerState.selectedTeams = [];
-        }
-        
-        // Toggle this team
-        const index = plannerState.selectedTeams.indexOf(teamId);
-        if (index > -1) {
-            plannerState.selectedTeams.splice(index, 1);
-        } else {
-            plannerState.selectedTeams.push(teamId);
-        }
-        
-        // If no teams selected, default to 'all'
-        if (plannerState.selectedTeams.length === 0) {
-            plannerState.selectedTeams = ['all'];
-        }
-    }
-    
+    plannerState = togglePlannerTeam(plannerState, teamId);
     updateTeamDisplay();
     applyFiltersAndRender(); // Re-render automatically
 }
@@ -664,7 +626,7 @@ function updateTeamDisplay() {
 }
 
 export function setRangeType(type) {
-    plannerState.rangeType = type;
+    plannerState = setPlannerRangeType(plannerState, type);
     const applyBtn = document.getElementById('applyMultiMonthBtn');
     
     // Update tab display
@@ -693,31 +655,7 @@ export function applyPresetRange() {
     const presetSelect = document.getElementById('presetRange');
     if (!presetSelect) return;
     
-    plannerState.presetRange = presetSelect.value;
-    const currentDate = new Date();
-    
-    // Calculate date range based on preset
-    switch (presetSelect.value) {
-        case 'current-month':
-            plannerState.dateRange.start = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-            plannerState.dateRange.end = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
-            break;
-        case 'next-month':
-            plannerState.dateRange.start = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
-            plannerState.dateRange.end = new Date(currentDate.getFullYear(), currentDate.getMonth() + 2, 0);
-            break;
-        case 'today':
-            plannerState.dateRange.start = new Date(currentDate);
-            plannerState.dateRange.end = new Date(currentDate);
-            break;
-        case 'tomorrow':
-            const tomorrow = new Date(currentDate);
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            plannerState.dateRange.start = tomorrow;
-            plannerState.dateRange.end = tomorrow;
-            break;
-        // Add more cases as needed
-    }
+    plannerState = applyPlannerPresetRange(plannerState, presetSelect.value, new Date());
     
     applyFiltersAndRender(); // Use the new reactive function
 }
@@ -1005,16 +943,11 @@ function addCellEventListeners() {
 
 function handleCellMouseDown(e) {
     const cell = e.currentTarget;
-    const cellKey = `${cell.dataset.agentId}|${cell.dataset.month}|${cell.dataset.day}`;
-    
-    selectionState.selectionStarted = true;
-    
-    if (selectionState.selectedCells.has(cellKey)) {
-        selectionState.selectedCells.delete(cellKey);
-        cell.classList.remove('selected');
-    } else {
-        selectionState.selectedCells.add(cellKey);
-        cell.classList.add('selected');
+    const selectionResult = togglePlannerCellSelection(selectionState, getPlannerCellSelectionKey(cell.dataset));
+    selectionState = selectionResult.state;
+
+    if (selectionResult.changed) {
+        cell.classList.toggle('selected', selectionResult.isSelected);
     }
     
     updateSelectionCounter();
@@ -1022,24 +955,24 @@ function handleCellMouseDown(e) {
 }
 
 function handleCellMouseOver(e) {
-    if (!selectionState.selectionStarted) return;
+    if (!isPlannerSelectionDragActive(selectionState)) return;
 
     const cell = e.currentTarget;
-    const cellKey = `${cell.dataset.agentId}|${cell.dataset.month}|${cell.dataset.day}`;
+    const selectionResult = addPlannerDragSelectionCell(selectionState, getPlannerCellSelectionKey(cell.dataset));
+    selectionState = selectionResult.state;
     
-    if (!selectionState.selectedCells.has(cellKey)) {
-        selectionState.selectedCells.add(cellKey);
+    if (selectionResult.changed) {
         cell.classList.add('selected');
         updateSelectionCounter();
     }
 }
 
 function handleCellMouseUp() {
-    selectionState.selectionStarted = false;
+    selectionState = stopPlannerCellSelection(selectionState);
 }
 
 function handleDocumentMouseUp() {
-    selectionState.selectionStarted = false;
+    selectionState = stopPlannerCellSelection(selectionState);
 }
 
 function handleCellRightClick(e) {
@@ -1086,7 +1019,7 @@ function handleDeleteButtonClick(e) {
 }
 
 export function clearSelection() {
-    selectionState.selectedCells.clear();
+    selectionState = clearPlannerCellSelection(selectionState);
     document.querySelectorAll('.planner-cell.selected').forEach(cell => {
         cell.classList.remove('selected');
     });
@@ -1099,9 +1032,10 @@ function updateSelectionCounter() {
 
     if (!counter || !countElement) return;
 
-    if (selectionState.selectedCells.size > 0) {
+    const selectedCount = getPlannerSelectionCount(selectionState);
+    if (selectedCount > 0) {
         counter.classList.add('visible'); // FIX: Use a class to show the element
-        countElement.textContent = `${selectionState.selectedCells.size} ${t('edit-cells-selected')}`;
+        countElement.textContent = `${selectedCount} ${t('edit-cells-selected')}`;
     } else {
         counter.classList.remove('visible'); // FIX: Use a class to hide the element
     }
@@ -1110,15 +1044,13 @@ function updateSelectionCounter() {
 // Other utility functions
 export function toggleCompactView() {
     const compactViewCheckbox = document.getElementById('compactView');
-    plannerState.viewOptions.compactView = compactViewCheckbox.checked;
+    plannerState = setPlannerViewOption(plannerState, 'compactView', compactViewCheckbox.checked);
     document.body.classList.toggle('compact-view', plannerState.viewOptions.compactView);
     applyFiltersAndRender(); // Re-render automatically
 }
 
 export function resetFilters() {
-    plannerState.selectedTeams = ['all'];
-    plannerState.selectedAgents = [];
-    plannerState.agentSearchTerm = '';
+    plannerState = resetPlannerFilters(plannerState, { today: new Date() });
     
     // Clear the search input if it exists
     const agentSearchInput = document.getElementById('agentSearch');
@@ -1136,7 +1068,7 @@ export function resetFilters() {
     if (presetSelect) {
         presetSelect.value = 'current-month';
     }
-    applyPresetRange(); // This will trigger a re-render
+    applyFiltersAndRender();
 }
 
 export function applyFiltersAndRender() {
@@ -1161,11 +1093,10 @@ export function applyFiltersAndRender() {
             return;
         }
 
-        // Sort months chronologically
-        plannerState.selectedMonths.sort();
+        const selectedMonths = [...plannerState.selectedMonths].sort();
 
         // Render one table for each selected month
-        plannerState.selectedMonths.forEach(monthKey => {
+        selectedMonths.forEach(monthKey => {
             const [year, month] = monthKey.split('-').map(Number);
             const startOfMonth = new Date(year, month - 1, 1);
             const endOfMonth = new Date(year, month, 0);
@@ -1196,11 +1127,11 @@ export function applyFiltersAndRender() {
 }
 
 export function setAgentSearchTerm(term) {
-    plannerState.agentSearchTerm = term;
+    plannerState = setPlannerAgentSearchTerm(plannerState, term);
 }
 
 export function setViewOption(option, value) {
-    plannerState.viewOptions[option] = value;
+    plannerState = setPlannerViewOption(plannerState, option, value);
 }
 
 export function renderPlannerIfActive() {
