@@ -10,6 +10,7 @@ import { logActivity } from './logs.js';
 import { buildPlannerEditCommand } from './planner-edit-command.js';
 import { buildPlannerMigrationCommands, buildPlannerUndoCommand, buildPlannerClearMonthCommand } from './planner-persistence-command.js';
 import { buildPlannerReadModel, filterPlannerAgents } from './planner-read-model.js';
+import { bindPlannerTableInteractions } from './planner-interaction-wiring.js';
 import { renderPlannerTableView } from './planner-table-view.js';
 import {
     addPlannerDragSelectionCell,
@@ -769,42 +770,24 @@ export function renderPlannerTable(container, startDate, endDate) {
     });
 
     // Re-attach event listeners after every render
-    addCellEventListeners();
+    bindPlannerRenderedTableInteractions();
 }
 
 // Cell Selection Logic (Refactored to use Firestore Document ID)
-function addCellEventListeners() {
-    const cells = document.querySelectorAll('.planner-cell.selectable');
-    cells.forEach(cell => {
-        // Remove old listeners to prevent duplicates
-        cell.removeEventListener('mousedown', handleCellMouseDown);
-        cell.addEventListener('mousedown', handleCellMouseDown);
-        cell.removeEventListener('mouseover', handleCellMouseOver);
-        cell.addEventListener('mouseover', handleCellMouseOver);
-        cell.removeEventListener('mouseup', handleCellMouseUp);
-        cell.addEventListener('mouseup', handleCellMouseUp);
-        
-        // Add right-click listener to clear selection
-        cell.removeEventListener('contextmenu', handleCellRightClick);
-        cell.addEventListener('contextmenu', handleCellRightClick);
+function bindPlannerRenderedTableInteractions() {
+    bindPlannerTableInteractions({
+        root: document,
+        documentTarget: document,
+        handlers: {
+            onCellMouseDown: handleCellMouseDown,
+            onCellMouseOver: handleCellMouseOver,
+            onCellMouseUp: handleCellMouseUp,
+            onCellRightClick: handleCellRightClick,
+            onDocumentMouseUp: handleDocumentMouseUp,
+            onScopedRightClick: handleScopedRightClick,
+            onDeleteButtonClick: handleDeleteButtonClick
+        }
     });
-    
-    // Add global mouse up listener
-    document.removeEventListener('mouseup', handleDocumentMouseUp);
-    document.addEventListener('mouseup', handleDocumentMouseUp);
-    
-    // Add scoped listener to the table body (works with new unified table structure)
-    const plannerBody = document.getElementById('plannerTableBody');
-    if (plannerBody) {
-        // Remove any old listener to prevent duplicates
-        plannerBody.removeEventListener('contextmenu', handleScopedRightClick);
-        // Add the new scoped listener
-        plannerBody.addEventListener('contextmenu', handleScopedRightClick);
-        
-        // Add delete button event listener (using event delegation)
-        plannerBody.removeEventListener('click', handleDeleteButtonClick);
-        plannerBody.addEventListener('click', handleDeleteButtonClick);
-    }
 }
 
 function handleCellMouseDown(e) {
