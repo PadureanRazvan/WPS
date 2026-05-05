@@ -20,9 +20,10 @@ export function createProductivityAgentActions({
             updateSelection(toggleSelection(getSelectedAgents(), normalizedName));
         },
         selectAllAgents() {
+            const searchTerm = getAgentSearchTerm();
             updateSelection(
-                selectAllSelection(getSelectedAgents(), getFilteredAgents()),
-                getAgentSearchTerm()
+                selectAllSelection(getSelectedAgents(), getFilteredAgents(searchTerm)),
+                searchTerm
             );
         },
         deselectAllAgents() {

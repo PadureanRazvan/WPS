@@ -62,6 +62,7 @@ test('agent actions select all filtered agents using the current search term', a
   const { createProductivityAgentActions } = await loadAgentActionsModule();
   let selectedAgents = new Set(['ana pop']);
   const calls = [];
+  const filteredCalls = [];
 
   const actions = createProductivityAgentActions({
     getSelectedAgents: () => selectedAgents,
@@ -69,10 +70,15 @@ test('agent actions select all filtered agents using the current search term', a
       selectedAgents = value;
       calls.push(['setSelectedAgents', [...value].sort()]);
     },
-    getFilteredAgents: () => [
-      ['mihai popescu', {}],
-      ['zoe ivan', {}]
-    ],
+    getFilteredAgents: searchTerm => {
+      filteredCalls.push(searchTerm);
+      return searchTerm === 'mi'
+        ? [['mihai popescu', {}]]
+        : [
+            ['mihai popescu', {}],
+            ['zoe ivan', {}]
+          ];
+    },
     selectAllSelection: (selection, agents) => {
       const next = new Set(selection);
       agents.forEach(([agentKey]) => next.add(agentKey));
@@ -85,9 +91,10 @@ test('agent actions select all filtered agents using the current search term', a
 
   actions.selectAllAgents();
 
-  assert.deepEqual([...selectedAgents].sort(), ['ana pop', 'mihai popescu', 'zoe ivan']);
+  assert.deepEqual(filteredCalls, ['mi']);
+  assert.deepEqual([...selectedAgents].sort(), ['ana pop', 'mihai popescu']);
   assert.deepEqual(calls, [
-    ['setSelectedAgents', ['ana pop', 'mihai popescu', 'zoe ivan']],
+    ['setSelectedAgents', ['ana pop', 'mihai popescu']],
     ['renderAgentChips', 'mi'],
     ['renderCurrentView']
   ]);

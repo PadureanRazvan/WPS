@@ -51,10 +51,12 @@ let currentView = 'overview'; // 'overview' or 'detail'
 let selectedAgents = new Set(); // normalized names of selected agents
 let uploadCalendarMonth = new Date();
 let unsubscribeFromProductivity = null;
+let visibleAgentSearchResults = [];
 const productivityStore = createProductivityFirestoreStore({
     db,
     firestore: { collection, doc, setDoc, deleteDoc, getDocs, onSnapshot }
 });
+const PRODUCTIVITY_AGENT_SEARCH_MIN_LENGTH = 2;
 const dateCommands = createProductivityDateCommands({
     getDateEntry: dateKey => dataByDate.get(dateKey),
     deleteDateEntry: dateKey => dataByDate.delete(dateKey),
@@ -71,7 +73,7 @@ const agentActions = createProductivityAgentActions({
     setSelectedAgents: value => {
         selectedAgents = value;
     },
-    getFilteredAgents,
+    getFilteredAgents: () => visibleAgentSearchResults,
     getAgentSearchTerm: () => document.getElementById('prodAgentSearch')?.value || '',
     toggleSelection: toggleProductivityAgentSelection,
     selectAllSelection: selectAllProductivityAgents,
@@ -273,7 +275,9 @@ function renderDetailView() {
     const statsContainer = document.getElementById('productivityStats');
     if (!container) return;
 
-    pruneSelectedAgents();
+    if (selectedAgents.size > 0) {
+        pruneSelectedAgents();
+    }
 
     if (!hasAnyData()) {
         container.innerHTML = `<p style="color: var(--text-secondary); text-align: center; padding: 3rem;">${t('prod-upload-to-see')}</p>`;
@@ -348,15 +352,21 @@ function renderAgentChips(searchTerm = '') {
     const countEl = document.getElementById('prodAgentCount');
     if (!container) return;
 
-    const agents = getFilteredAgents();
-    pruneSelectedAgents();
+    const normalizedSearchTerm = String(searchTerm || '').trim();
+    const shouldLoadAgents = normalizedSearchTerm.length >= PRODUCTIVITY_AGENT_SEARCH_MIN_LENGTH;
+    const agents = shouldLoadAgents ? getFilteredAgents() : [];
+    if (selectedAgents.size > 0) {
+        pruneSelectedAgents();
+    }
 
     const view = buildProductivityAgentSelectionView({
         agents,
         selectedAgents,
         searchTerm,
+        minSearchLength: PRODUCTIVITY_AGENT_SEARCH_MIN_LENGTH,
         t
     });
+    visibleAgentSearchResults = view.visibleAgents;
 
     container.innerHTML = view.html;
     bindProductivityAgentActions({

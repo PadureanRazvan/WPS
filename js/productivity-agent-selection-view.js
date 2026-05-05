@@ -7,6 +7,10 @@ function escapeAgentSelectionHtml(value) {
         .replace(/'/g, '&#039;');
 }
 
+function centeredAgentSelectionMessage(message) {
+    return `<p style="color: var(--text-secondary); text-align: center; padding: 0.75rem 0; font-size: 0.85rem;">${escapeAgentSelectionHtml(message)}</p>`;
+}
+
 function getPrimaryTeamCode(primaryTeam) {
     return String(primaryTeam || '').split(' ')[0] || '';
 }
@@ -22,9 +26,24 @@ export function buildProductivityAgentSelectionView({
     agents = [],
     selectedAgents = new Set(),
     searchTerm = '',
+    minSearchLength = 2,
+    resultLimit = 30,
     t = key => key
 } = {}) {
-    const visibleAgents = filterProductivityAgentSelection(agents, searchTerm);
+    const normalizedSearchTerm = String(searchTerm || '').trim();
+    const canSearch = normalizedSearchTerm.length >= minSearchLength;
+    const allMatches = canSearch ? filterProductivityAgentSelection(agents, normalizedSearchTerm) : [];
+    const visibleAgents = allMatches.slice(0, resultLimit);
+    let helperHtml = '';
+    if (!normalizedSearchTerm) {
+        helperHtml = centeredAgentSelectionMessage(t('prod-search-to-select-agent'));
+    } else if (!canSearch) {
+        helperHtml = centeredAgentSelectionMessage(t('prod-keep-typing-agent'));
+    } else if (allMatches.length === 0) {
+        helperHtml = centeredAgentSelectionMessage(t('prod-no-results'));
+    } else if (allMatches.length > resultLimit) {
+        helperHtml = centeredAgentSelectionMessage(t('prod-too-many-agent-matches').replace('{count}', resultLimit));
+    }
     const html = visibleAgents.map(([normalizedName, info]) => {
         const isSelected = selectedAgents.has(normalizedName);
         const teamCode = getPrimaryTeamCode(info.primaryTeam);
@@ -38,7 +57,7 @@ export function buildProductivityAgentSelectionView({
     }).join('');
 
     return {
-        html,
+        html: `${html}${helperHtml}`,
         visibleAgents,
         countText: selectedAgents.size > 0 ? `${selectedAgents.size} ${t('prod-selected')}` : ''
     };
