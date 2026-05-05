@@ -10,3 +10,13 @@ test('reports shell delegates report calculation to the Report Read Model', () =
   assert.doesNotMatch(source, /\bcalculatePlannerReportData\b/);
   assert.doesNotMatch(source, /\bsortBucketsByHours\b/);
 });
+
+test('reports shell delegates report HTML to the Reports View Module', () => {
+  assert.match(source, /import\s+\{\s*renderReportsView\s*\}\s+from\s+'\.\/reports-view\.js';/);
+  assert.match(source, /\brenderReportsView\(/);
+  assert.doesNotMatch(source, /\brenderHoursTableRows\b/);
+  assert.doesNotMatch(source, /\brenderDistributionCards\b/);
+  assert.doesNotMatch(source, /\bformatPlannerHoursValue\b/);
+  assert.doesNotMatch(source, /dashboard-grid/);
+  assert.doesNotMatch(source, /<table/);
+});
