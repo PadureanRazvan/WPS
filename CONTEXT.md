@@ -30,6 +30,8 @@
 
 **Planner Table View** — the rules for turning a Planner Read Model and translated labels into rendered Planner table HTML, including headers, Agent rows, Planner Cells, week totals, delete-month buttons, note titles, and table display classes.
 
+**Planner Interaction Wiring** — the rules for binding rendered Planner table controls and Planner edit controls to selection, scoped right-click clearing, delete-month delegation, edit-modal opening, modal actions, undo shortcuts, and keyboard clear/open behavior without owning Firestore writes or Planner Cell business rules.
+
 **Productivity Data** — uploaded ticket and call counts grouped by date, agent, and team.
 
 **Productivity Calculation** — the rules for turning Productivity Data, Agents, Schedule Semantics, date ranges, and team filters into productivity rows such as tickets, calls, worked hours, teams, and items-per-hour.

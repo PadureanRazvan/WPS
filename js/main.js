@@ -8,6 +8,7 @@ import { initializeReports, cleanupReports } from './reports.js';
 import { initializeCharts, initializeProductivityChart } from './charts.js';
 import { updateAverageProductivityCard } from './dashboard.js';
 import { setTheme, updateLanguageUI, showSection, openEditModal, translatePage, selectEditType, saveModalChanges, closeEditModal, toggleSidebar } from './ui.js';
+import { bindPlannerControlInteractions } from './planner-interaction-wiring.js';
 import { initLogoAnimation } from './logo-animation.js';
 import { initializeChat, cleanupChat } from './chat.js';
 import { loginWithGoogle, logout, onAuthChange } from './auth.js';
@@ -222,75 +223,16 @@ function initializeUI() {
 
     // Initial translation — full UI update (flag, active option, all text)
     updateLanguageUI(currentLanguage);
-    // Selection counter buttons
-    const editBtn = document.getElementById('editSelectionBtn');
-    if (editBtn) {
-        editBtn.addEventListener('click', openEditModal);
-    }
-    const cancelBtn = document.getElementById('cancelSelectionBtn');
-    if (cancelBtn) {
-        cancelBtn.addEventListener('click', clearSelection);
-    }
-
-    // Modal event listeners
-    document.querySelectorAll('.edit-option').forEach(option => {
-        option.addEventListener('click', () => selectEditType(option.dataset.type));
-    });
-    const closeModalBtn = document.querySelector('.edit-modal-close');
-    if (closeModalBtn) {
-        closeModalBtn.addEventListener('click', closeEditModal);
-    }
-    const saveBtn = document.getElementById('saveButton');
-    if (saveBtn) {
-        saveBtn.addEventListener('click', saveModalChanges);
-    }
-    const cancelModalBtn = document.querySelector('.edit-actions .btn-secondary');
-    if (cancelModalBtn) {
-        cancelModalBtn.addEventListener('click', closeEditModal);
-    }
-
-    // Undo button (in planner toolbar)
-    const undoBtn = document.getElementById('undoBtn');
-    if (undoBtn) {
-        undoBtn.addEventListener('click', undoLastChange);
-    }
-    // Planner keyboard shortcuts (only when planner is active, no input focused, no modal open)
-    document.addEventListener('keydown', (e) => {
-        if (e.target.matches('input, textarea, [contenteditable]')) return;
-        const plannerSection = document.getElementById('planner');
-        if (!plannerSection || !plannerSection.classList.contains('active')) return;
-        const modalOpen = document.querySelector('.edit-modal.active');
-
-        // Ctrl+Z — undo last change
-        if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
-            e.preventDefault();
-            undoLastChange();
-            return;
-        }
-
-        // Enter — open edit modal when cells are selected
-        if (e.key === 'Enter' && !modalOpen) {
-            const selectedCells = document.querySelectorAll('.planner-cell.selected');
-            if (selectedCells.length > 0) {
-                e.preventDefault();
-                openEditModal();
-            }
-            return;
-        }
-
-        // Escape — clear selection or close edit modal
-        if (e.key === 'Escape') {
-            if (modalOpen) {
-                e.preventDefault();
-                closeEditModal();
-            } else {
-                const selectedCells = document.querySelectorAll('.planner-cell.selected');
-                if (selectedCells.length > 0) {
-                    e.preventDefault();
-                    clearSelection();
-                }
-            }
-            return;
+    bindPlannerControlInteractions({
+        root: document,
+        documentTarget: document,
+        actions: {
+            openEditModal,
+            clearSelection,
+            selectEditType,
+            closeEditModal,
+            saveModalChanges,
+            undoLastChange
         }
     });
 
