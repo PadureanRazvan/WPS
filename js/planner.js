@@ -8,6 +8,7 @@ import { updateDashboard } from './dashboard.js';
 import { translations, getMonthKey } from './config.js';
 import { logActivity } from './logs.js';
 import { buildPlannerEditCommand } from './planner-edit-command.js';
+import { buildPlannerMigrationCommands, buildPlannerUndoCommand, buildPlannerClearMonthCommand } from './planner-persistence-command.js';
 import { buildPlannerReadModel, filterPlannerAgents } from './planner-read-model.js';
 function getLang() { return localStorage.getItem('language') || 'ro'; }
 function t(key) { const l = getLang(); return (translations[l] && translations[l][key]) || key; }
@@ -84,27 +85,19 @@ export function initializePlanner() {
  */
 async function migrateUnmigratedAgents() {
     const currentMonthKey = getMonthKey(new Date());
-    const toMigrate = plannerData.filter(a =>
-        !a.monthlyDays && a.days && Array.isArray(a.days) && !migratedAgentIds.has(a.id)
-    );
+    const migrationCommands = buildPlannerMigrationCommands(plannerData, currentMonthKey, migratedAgentIds);
 
-    if (toMigrate.length === 0) return;
+    if (migrationCommands.length === 0) return;
 
-    console.log(`[Migration] Migrating ${toMigrate.length} agents: days → monthlyDays.${currentMonthKey}`);
+    console.log(`[Migration] Migrating ${migrationCommands.length} agents: days → monthlyDays.${currentMonthKey}`);
 
-    for (const agent of toMigrate) {
-        migratedAgentIds.add(agent.id);
-        const updateData = {
-            [`monthlyDays.${currentMonthKey}`]: [...agent.days]
-        };
-        if (agent.dayNotes && Object.keys(agent.dayNotes).length > 0) {
-            updateData[`monthlyNotes.${currentMonthKey}`] = { ...agent.dayNotes };
-        }
+    for (const command of migrationCommands) {
+        migratedAgentIds.add(command.agentId);
         try {
-            await updateAgent(agent.id, updateData);
+            await updateAgent(command.agentId, command.updateData);
         } catch (error) {
-            console.error(`[Migration] Failed for ${agent.fullName}:`, error);
-            migratedAgentIds.delete(agent.id); // allow retry
+            console.error(`[Migration] Failed for ${command.agentName}:`, error);
+            migratedAgentIds.delete(command.agentId); // allow retry
         }
     }
     console.log(`[Migration] Complete.`);
@@ -245,13 +238,11 @@ export async function undoLastChange() {
     }
 
     const snapshot = undoStack.pop();
-    for (const entry of snapshot) {
-        await updateAgent(entry.agentId, {
-            [`monthlyDays.${entry.monthKey}`]: entry.previousDays,
-            [`monthlyNotes.${entry.monthKey}`]: entry.previousDayNotes
-        });
+    const undoCommand = buildPlannerUndoCommand(snapshot);
+    for (const update of undoCommand.updates) {
+        await updateAgent(update.agentId, update.updateData);
     }
-    logActivity('portal', 'undo', { agents: snapshot.length });
+    logActivity('portal', 'undo', undoCommand.activity);
     showTemporaryMessage(t('undo-success'), "success");
 }
 
@@ -784,19 +775,12 @@ function formatMonthLabel(monthKey) {
 }
 
 async function clearAgentPlannerMonth(agentId, monthKey) {
-    if (!agentId || !monthKey) return;
+    const clearCommand = buildPlannerClearMonthCommand(agentId, monthKey, plannerData);
+    if (!clearCommand) return;
 
-    const emptyDays = Array(31).fill('');
-    await updateAgent(agentId, {
-        [`monthlyDays.${monthKey}`]: emptyDays,
-        [`monthlyNotes.${monthKey}`]: {}
-    });
+    await updateAgent(clearCommand.update.agentId, clearCommand.update.updateData);
 
-    const agent = plannerData.find(entry => entry.id === agentId);
-    logActivity('portal', 'clear_agent_month', {
-        name: agent?.fullName || agentId,
-        month: monthKey
-    });
+    logActivity('portal', 'clear_agent_month', clearCommand.activity);
     showTemporaryMessage(`Planner data cleared for ${formatMonthLabel(monthKey)}.`, "success");
 }
 
