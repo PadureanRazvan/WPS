@@ -4,15 +4,16 @@ import { collection, onSnapshot, Timestamp } from "https://www.gstatic.com/fireb
 import { addAgent, updateAgent, deleteAgent } from './planner.js';
 import { showTemporaryMessage, t } from './ui.js';
 import { logActivity } from './logs.js';
-import { getMonthKey, getAgentDaysForMonth, generateDefaultSchedule, rewriteMonthlyDaysForPrimaryTeamChange } from './config.js';
 import {
-    applyInactiveCodeToMonth,
-    buildContractMonthDaysFromDate,
-    buildPrimaryTeamHistoryForChange,
-    clearInactiveCodeFromMonth,
-    getDateKey,
-    normalizeAgentLifecycleDate
-} from './agent-lifecycle.js';
+    buildContractChangeCommand,
+    buildCreateAgentCommand,
+    buildDeactivateAgentCommand,
+    buildInlineUserEditCommand,
+    buildPrimaryTeamChangeCommand,
+    buildReactivateAgentCommand,
+    getComparableUserInlineFieldState,
+    getUserCommandDateKey
+} from './users-command.js';
 
 let usersData = [];
 
@@ -55,15 +56,6 @@ function syncPrimaryTeamSelectOptions(selectElement, selectedValue = '') {
     if (nextValue) {
         selectElement.value = nextValue;
     }
-}
-
-function getMonthStartFromKey(monthKey) {
-    const [yearStr, monthStr] = String(monthKey || '').split('-');
-    const year = parseInt(yearStr, 10);
-    const month = parseInt(monthStr, 10);
-
-    if (!year || !month) return null;
-    return new Date(year, month - 1, 1);
 }
 
 export function getUsersData() { return usersData; }
@@ -175,57 +167,29 @@ function setupNewUserForm() {
     // Handle form submit
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const fullName = document.getElementById('newAgentFullName').value.trim();
-        const username = document.getElementById('newAgentUsername').value.trim();
-        const contractType = document.getElementById('newAgentContractType').value;
-        const primaryTeam = document.getElementById('newAgentPrimaryTeam').value;
-        const hireDateStr = document.getElementById('newAgentHireDate').value;
+        const createCommand = buildCreateAgentCommand({
+            fullName: document.getElementById('newAgentFullName').value,
+            username: document.getElementById('newAgentUsername').value,
+            contractType: document.getElementById('newAgentContractType').value,
+            contractHours: document.getElementById('newAgentContractHours').value,
+            primaryTeam: document.getElementById('newAgentPrimaryTeam').value,
+            hireDateStr: document.getElementById('newAgentHireDate').value
+        }, { now: new Date() });
 
-        // Validation
-        if (!fullName || !username || !hireDateStr) {
-            showTemporaryMessage(t('fill-required-fields'), "error");
+        if (!createCommand.ok) {
+            showTemporaryMessage(t(createCommand.error), "error");
             return;
         }
 
-        let contractHours;
-        if (contractType === 'Part-time') {
-            contractHours = parseInt(document.getElementById('newAgentContractHours').value, 10);
-            if (!contractHours || contractHours < 4 || contractHours > 7) {
-                showTemporaryMessage(t('pt-hours-range'), "error");
-                return;
-            }
-        } else {
-            contractHours = 8;
-        }
-
-        const teamCode = primaryTeam.split(' ')[0]; // "RO zooplus" -> "RO"
-        const now = new Date();
-        const monthKey = getMonthKey(now);
-        const hireDate = new Date(hireDateStr);
-        const days = generateDefaultSchedule({
-            contractHours,
-            primaryTeam,
-            hireDate
-        }, monthKey);
-        const newUser = {
-            fullName,
-            username,
-            contractHours,
-            contractType,
-            primaryTeam,
-            teams: [teamCode],
-            hireDate,
-            isActive: true,
-            monthlyDays: { [monthKey]: days },
-            monthlyNotes: {}
-        };
-
-        await addAgent(newUser);
+        await addAgent(createCommand.payload);
         form.reset();
         updateContractHoursVisibility();
         formContainer.style.display = 'none';
         addBtn.style.display = 'inline-flex';
-        showTemporaryMessage(t('user-created').replace('{name}', fullName).replace('{hours}', contractHours).replace('{team}', teamCode), "success");
+        showTemporaryMessage(t('user-created')
+            .replace('{name}', createCommand.payload.fullName)
+            .replace('{hours}', createCommand.contractHours)
+            .replace('{team}', createCommand.teamCode), "success");
     });
 }
 
@@ -265,79 +229,12 @@ export function renderUsersTable() {
         `;
 
         tr.querySelectorAll('[data-field]').forEach((fieldElement) => {
-            fieldElement.dataset.initialValue = getComparableInlineFieldState(user, fieldElement.dataset.field);
+            fieldElement.dataset.initialValue = getComparableUserInlineFieldState(user, fieldElement.dataset.field);
         });
 
         tbody.appendChild(tr);
     });
 
-}
-
-function normalizeInlineDateValue(value) {
-    if (!value) return '';
-
-    const date = value instanceof Date
-        ? value
-        : value?.toDate
-            ? value.toDate()
-            : new Date(value);
-
-    if (Number.isNaN(date.getTime())) return '';
-    return date.toISOString().split('T')[0];
-}
-
-function normalizeInlineFieldValue(field, value) {
-    if (field === 'contractHours') {
-        const numericValue = typeof value === 'number' ? value : parseInt(value, 10);
-        return Number.isNaN(numericValue) ? '' : String(numericValue);
-    }
-
-    if (field === 'hireDate') {
-        return normalizeInlineDateValue(value);
-    }
-
-    if (value == null) return '';
-    return String(value).trim();
-}
-
-function getComparableInlineFieldState(user, field) {
-    if (field === 'contractHours') {
-        const currentHours = user?.contractHours ?? ((user?.contractType || 'Full-time') === 'Full-time' ? 8 : '');
-        return normalizeInlineFieldValue(field, currentHours);
-    }
-
-    if (field === 'contractType') {
-        return normalizeInlineFieldValue(field, user?.contractType || 'Full-time');
-    }
-
-    const normalizedValue = normalizeInlineFieldValue(field, user?.[field]);
-
-    if (field === 'primaryTeam') {
-        const storedTeams = Array.isArray(user?.teams)
-            ? user.teams.map(team => String(team || '').trim()).filter(Boolean)
-            : [];
-
-        return JSON.stringify({
-            primaryTeam: normalizedValue,
-            teams: storedTeams
-        });
-    }
-
-    return normalizedValue;
-}
-
-function getComparableInlineDraftState(field, rawValue) {
-    const normalizedValue = normalizeInlineFieldValue(field, rawValue);
-
-    if (field === 'primaryTeam') {
-        const teamCode = normalizedValue ? normalizedValue.split(' ')[0] : '';
-        return JSON.stringify({
-            primaryTeam: normalizedValue,
-            teams: teamCode ? [teamCode] : []
-        });
-    }
-
-    return normalizedValue;
 }
 
 // Show contract change modal
@@ -385,51 +282,27 @@ function openContractChangeModal(userId, newContractType) {
     newCloseBtn.addEventListener('click', closeModal);
 
     newSaveBtn.addEventListener('click', async () => {
-        const fromDateStr = document.getElementById('contractChangeDate').value;
-        if (!fromDateStr) {
-            showTemporaryMessage(t('select-start-date'), "error");
+        const changeCommand = buildContractChangeCommand(user, {
+            newContractType,
+            contractHours: document.getElementById('contractChangeHours').value,
+            fromDateStr: document.getElementById('contractChangeDate').value,
+            now: new Date()
+        });
+
+        if (!changeCommand.ok) {
+            showTemporaryMessage(t(changeCommand.error), "error");
             return;
         }
 
-        const fromDate = normalizeAgentLifecycleDate(fromDateStr);
-        const now = new Date();
-        const year = now.getFullYear();
-        const month = now.getMonth();
-
-        // Validate date is in current month
-        if (fromDate.getFullYear() !== year || fromDate.getMonth() !== month) {
-            showTemporaryMessage(t('date-must-be-current-month'), "error");
-            return;
-        }
-
-        const teamCode = (user.primaryTeam || 'RO zooplus').split(' ')[0];
-
-        let contractHours;
-        if (newContractType === 'Part-time') {
-            contractHours = parseInt(document.getElementById('contractChangeHours').value, 10);
-        } else {
-            contractHours = 8;
-        }
-
-        // Generate new days, merging with existing
-        const contractMonthKey = getMonthKey(now);
-        const existingDays = getAgentDaysForMonth(user, contractMonthKey);
-        const mergedDays = buildContractMonthDaysFromDate({
-            existingDays,
-            fromDate,
-            contractHours,
-            teamCode
-        });
-
-        await updateAgent(userId, {
-            contractType: newContractType,
-            contractHours,
-            [`monthlyDays.${contractMonthKey}`]: mergedDays
-        });
-        logActivity('portal', 'change_contract', { name: user.fullName, type: newContractType, hours: contractHours });
+        await updateAgent(userId, changeCommand.updateData);
+        logActivity('portal', 'change_contract', changeCommand.activity);
 
         modal.classList.remove('active');
-        showTemporaryMessage(t('contract-updated').replace('{name}', user.fullName).replace('{type}', newContractType).replace('{hours}', contractHours).replace('{date}', `${fromDate.getDate()}.${month + 1}.${year}`), "success");
+        showTemporaryMessage(t('contract-updated')
+            .replace('{name}', user.fullName)
+            .replace('{type}', newContractType)
+            .replace('{hours}', changeCommand.contractHours)
+            .replace('{date}', `${changeCommand.fromDate.getDate()}.${changeCommand.fromDate.getMonth() + 1}.${changeCommand.fromDate.getFullYear()}`), "success");
     });
 }
 
@@ -448,7 +321,7 @@ function openPrimaryTeamChangeModal(userId, newPrimaryTeam) {
     const oldTeam = user.primaryTeam || '';
     title.textContent = `${user.fullName} — ${t('team-change-title')}`;
     summary.textContent = `${oldTeam || '-'} → ${newPrimaryTeam}`;
-    dateInput.value = getDateKey(new Date());
+    dateInput.value = getUserCommandDateKey(new Date());
 
     modal.classList.add('active');
 
@@ -468,42 +341,23 @@ function openPrimaryTeamChangeModal(userId, newPrimaryTeam) {
     newCloseBtn.addEventListener('click', closeModal);
 
     newSaveBtn.addEventListener('click', async () => {
-        const fromDateStr = dateInput.value;
-        if (!fromDateStr) {
-            showTemporaryMessage(t('select-start-date'), "error");
-            return;
-        }
-
-        const fromDate = new Date(`${fromDateStr}T00:00:00`);
-        const hireDate = normalizeAgentLifecycleDate(user.hireDate);
-        const normalizedFrom = normalizeAgentLifecycleDate(fromDate);
-        if (hireDate && normalizedFrom && normalizedFrom < hireDate) {
-            showTemporaryMessage(t('team-date-before-hire'), "error");
-            return;
-        }
-
-        const teamCode = String(newPrimaryTeam).trim().split(' ')[0];
-        const primaryTeamHistory = buildPrimaryTeamHistoryForChange(user, newPrimaryTeam, fromDate);
-        const monthlyDayUpdates = rewriteMonthlyDaysForPrimaryTeamChange(user, newPrimaryTeam, fromDate);
-        const updatePayload = {
-            primaryTeam: newPrimaryTeam,
-            teams: teamCode ? [teamCode] : [],
-            primaryTeamHistory
-        };
-
-        for (const [monthKey, days] of Object.entries(monthlyDayUpdates)) {
-            updatePayload[`monthlyDays.${monthKey}`] = days;
-        }
-
-        await updateAgent(userId, updatePayload);
-        logActivity('portal', 'change_primary_team', {
-            name: user.fullName,
-            from: fromDateStr,
-            oldTeam,
-            newTeam: newPrimaryTeam
+        const teamCommand = buildPrimaryTeamChangeCommand(user, {
+            newPrimaryTeam,
+            fromDateStr: dateInput.value
         });
+
+        if (!teamCommand.ok) {
+            showTemporaryMessage(t(teamCommand.error), "error");
+            return;
+        }
+
+        await updateAgent(userId, teamCommand.updateData);
+        logActivity('portal', 'change_primary_team', teamCommand.activity);
         modal.classList.remove('active');
-        showTemporaryMessage(t('team-updated').replace('{name}', user.fullName).replace('{team}', teamCode).replace('{date}', fromDateStr), "success");
+        showTemporaryMessage(t('team-updated')
+            .replace('{name}', user.fullName)
+            .replace('{team}', teamCommand.teamCode)
+            .replace('{date}', dateInput.value), "success");
     });
 }
 
@@ -565,29 +419,9 @@ function openDeactivateModal(userId) {
         modal.classList.add('active');
 
         newSaveBtn.addEventListener('click', async () => {
-            const now = new Date();
-            const reactivateMonthKey = getMonthKey(now);
-            const futureMonthKeys = Object.keys(user.monthlyDays || {})
-                .filter(monthKey => monthKey >= reactivateMonthKey)
-                .sort();
-            const updateData = {
-                isActive: true,
-                inactiveFrom: null,
-                inactiveTo: null,
-                deactivationNote: null
-            };
-
-            futureMonthKeys.forEach(monthKey => {
-                const monthStart = getMonthStartFromKey(monthKey);
-                if (!monthStart) return;
-
-                const existingDays = getAgentDaysForMonth(user, monthKey);
-                const clearedDays = clearInactiveCodeFromMonth(existingDays, monthStart, now);
-                updateData[`monthlyDays.${monthKey}`] = clearedDays;
-            });
-
-            await updateAgent(userId, updateData);
-            logActivity('portal', 'reactivate_agent', { name: user.fullName });
+            const reactivateCommand = buildReactivateAgentCommand(user, { now: new Date() });
+            await updateAgent(userId, reactivateCommand.updateData);
+            logActivity('portal', 'reactivate_agent', reactivateCommand.activity);
             closeModal();
             showTemporaryMessage(t('agent-reactivated').replace('{name}', user.fullName), "success");
         });
@@ -643,43 +477,27 @@ function openDeactivateModal(userId) {
 
     // Save handler
     newSaveBtn.addEventListener('click', async () => {
-        const startDate = dateFromInput._selectedDate;
-        if (!startDate) {
-            showTemporaryMessage(t('select-start-date-deact'), "error");
+        const deactivateCommand = buildDeactivateAgentCommand(user, {
+            startDate: dateFromInput._selectedDate,
+            endDate: dateToInput._selectedDate || null,
+            noteText: noteInput ? noteInput.value : '',
+            now: new Date(),
+            timestampFromDate: Timestamp.fromDate
+        });
+
+        if (!deactivateCommand.ok) {
+            showTemporaryMessage(t(deactivateCommand.error), "error");
             return;
         }
 
-        const endDate = dateToInput._selectedDate || null;
+        await updateAgent(userId, deactivateCommand.updateData);
 
-        if (endDate && endDate < startDate) {
-            showTemporaryMessage(t('end-date-after-start'), "error");
-            return;
-        }
-
-        const noteText = noteInput ? noteInput.value.trim() : '';
-
-        const now = new Date();
-        const deactMonthKey = getMonthKey(now);
-        const existingDays = getAgentDaysForMonth(user, deactMonthKey);
-        const newDays = applyInactiveCodeToMonth(existingDays, now, startDate, endDate);
-
-        // Build update object
-        const updateData = {
-            isActive: false,
-            [`monthlyDays.${deactMonthKey}`]: newDays,
-            inactiveFrom: Timestamp.fromDate(startDate),
-            inactiveTo: endDate ? Timestamp.fromDate(endDate) : null,
-            deactivationNote: noteText || null
-        };
-
-        await updateAgent(userId, updateData);
-
-        const modeLabel = endDate ? 'period' : 'indefinite';
-        const fromStr = startDate.toLocaleDateString('ro-RO');
-        const toStr = endDate ? endDate.toLocaleDateString('ro-RO') : 'indefinit';
-        logActivity('portal', 'deactivate_agent', { name: user.fullName, mode: modeLabel, from: fromStr, to: toStr, note: noteText });
+        logActivity('portal', 'deactivate_agent', deactivateCommand.activity);
         closeModal();
-        showTemporaryMessage(t('agent-deactivated').replace('{name}', user.fullName).replace('{from}', fromStr).replace('{to}', toStr), "success");
+        showTemporaryMessage(t('agent-deactivated')
+            .replace('{name}', user.fullName)
+            .replace('{from}', deactivateCommand.labels.from)
+            .replace('{to}', deactivateCommand.labels.to), "success");
     });
 }
 
@@ -691,76 +509,48 @@ async function handleInlineEdit(e) {
     const id = tr.dataset.id;
     const field = target.dataset.field;
     const user = usersData.find(u => u.id === id);
-    let value;
 
     if (!user) return;
 
-    // isActive is handled by the deactivate modal, not inline edit
-    if (field === 'isActive') return;
-
-    // Contract type change — open modal instead of direct update
-    if (field === 'contractType') {
-        if (e.type !== 'change') return;
-        const newType = target.value;
-        if (normalizeInlineFieldValue('contractType', newType) === getComparableInlineFieldState(user, 'contractType')) return;
-        openContractChangeModal(id, newType);
-        return;
-    }
-
-    if (field === 'primaryTeam') {
-        if (e.type !== 'change') return;
-        const newTeam = target.value;
-        const currentState = getComparableInlineFieldState(user, field);
-        const nextState = getComparableInlineDraftState(field, newTeam);
-        if (nextState === currentState) return;
-        openPrimaryTeamChangeModal(id, newTeam);
-        return;
-    }
-
     // Determine value based on input type
+    let value;
     if (target.isContentEditable) {
         value = target.textContent.trim();
     } else {
         value = target.value;
     }
 
-    const currentState = getComparableInlineFieldState(user, field);
-    const lastSavedState = target.dataset.initialValue || currentState;
+    const inlineCommand = buildInlineUserEditCommand(user, {
+        field,
+        rawValue: value,
+        eventType: e.type,
+        initialValue: target.dataset.initialValue,
+        timestampFromDate: Timestamp.fromDate
+    });
 
-    // Field-specific validation and transformation
-    if (field === 'contractHours') {
-        value = parseInt(value, 10);
-        if (isNaN(value) || value < 4 || value > 8) {
-            showTemporaryMessage(t('hours-range-error'), "error");
-            renderUsersTable();
-            return;
-        }
-    } else if (field === 'hireDate') {
-        if (!value) {
-            showTemporaryMessage(t('hire-date-empty'), "error");
-            renderUsersTable();
-            return;
-        }
-        value = Timestamp.fromDate(new Date(value));
-    } else if (field === 'username') {
-        // No .fsp validation needed
-    } else if (field === 'fullName' && !value) {
-        showTemporaryMessage(t('name-empty'), "error");
-        renderUsersTable();
-            return;
-    }
-
-    const nextState = getComparableInlineDraftState(field, value);
-    if (nextState === currentState || nextState === lastSavedState) {
-        target.dataset.initialValue = currentState;
+    if (!inlineCommand.ok) {
+        showTemporaryMessage(t(inlineCommand.error), "error");
+        if (inlineCommand.rerender) renderUsersTable();
         return;
     }
 
-    let updatePayload = { [field]: value };
-    const logDetails = { field, agentId: id };
+    if (inlineCommand.action === 'open-contract-modal') {
+        openContractChangeModal(id, inlineCommand.value);
+        return;
+    }
 
-    await updateAgent(id, updatePayload);
-    target.dataset.initialValue = nextState;
-    logActivity('portal', 'edit_user', logDetails);
+    if (inlineCommand.action === 'open-primary-team-modal') {
+        openPrimaryTeamChangeModal(id, inlineCommand.value);
+        return;
+    }
+
+    if (inlineCommand.action === 'noop') {
+        if (inlineCommand.initialValue) target.dataset.initialValue = inlineCommand.initialValue;
+        return;
+    }
+
+    await updateAgent(id, inlineCommand.updatePayload);
+    target.dataset.initialValue = inlineCommand.nextState;
+    logActivity('portal', 'edit_user', inlineCommand.logDetails);
     showTemporaryMessage(t('user-updated'), "success", 1000);
 } 
