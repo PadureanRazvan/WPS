@@ -22,6 +22,8 @@
 
 **Report Read Model** — the rules for turning Agents, Schedule Semantics, and a selected date range into report-ready shop and Report Role buckets, sorted agent distributions, totals, and range labels.
 
+**Reports View** — the rules for turning a Report Read Model and translated labels into Reports table and distribution-card HTML, including empty states, range titles, hours formatting, and escaped display text.
+
 **Planner Read Model** — the rules for turning Agents, Schedule Semantics, Planner filters, date ranges, and view options into table-ready Planner rows, Planner Cells, headers, totals, notes, and display classes.
 
 **Planner Edit Command** — the rules for turning selected Planner Cells, a new Planner Cell value, and an optional note into Firestore update payloads, undo snapshots, missing-Agent diagnostics, and edit activity metadata.
