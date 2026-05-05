@@ -149,6 +149,7 @@ function renderReports() {
 export function initializeReports() {
     const input = document.getElementById('reportsDateRange');
     if (!input) return;
+    const refreshBtn = document.getElementById('reportsRefreshBtn');
 
     // Default to current month
     const now = new Date();
@@ -171,6 +172,17 @@ export function initializeReports() {
             });
         }
     });
+
+    if (refreshBtn) {
+        const label = t('reports-refresh');
+        refreshBtn.title = label;
+        refreshBtn.setAttribute('aria-label', label);
+        refreshBtn.addEventListener('click', () => {
+            refreshBtn.classList.add('is-loading');
+            renderReports();
+            setTimeout(() => refreshBtn.classList.remove('is-loading'), 350);
+        });
+    }
 
     // Initial render with default range
     renderReports();

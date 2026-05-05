@@ -1,4 +1,4 @@
-import { normalizeTeamForDisplay } from './config.js';
+import { getEffectiveReportRoleCode, normalizeTeamForDisplay } from './config.js';
 
 export function normalizeProductivityName(name) {
     if (!name) return '';
@@ -45,6 +45,30 @@ function collectEntryKeys(...entryMaps) {
         map.forEach((_, key) => keys.add(key));
     });
     return keys;
+}
+
+function normalizeBoundaryDate(date) {
+    const value = date instanceof Date ? new Date(date) : new Date(`${date}T00:00:00`);
+    if (Number.isNaN(value.getTime())) return null;
+    value.setHours(0, 0, 0, 0);
+    return value;
+}
+
+export function isPerAgentProductivityRoleExcluded(agent, date) {
+    return Boolean(getEffectiveReportRoleCode(agent, date));
+}
+
+export function hasPerAgentProductivityEligibleDate(agent, start, end) {
+    const current = normalizeBoundaryDate(start);
+    const endDate = normalizeBoundaryDate(end);
+    if (!current || !endDate) return false;
+
+    while (current <= endDate) {
+        if (!isPerAgentProductivityRoleExcluded(agent, current)) return true;
+        current.setDate(current.getDate() + 1);
+    }
+
+    return false;
 }
 
 export function calculateMatchedTeamTrendPoint({
