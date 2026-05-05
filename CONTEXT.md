@@ -4,6 +4,8 @@
 
 **Agent** — a WPS user whose contract, primary team, activity status, planner days, and productivity data are tracked.
 
+**Agent Lifecycle** — the rules for an Agent's contract start, active/inactive state, primary team history, Report Role state, and date-effective eligibility across Planner, Reports, and Productivity.
+
 **Planner Cell** — one agent/day value in the Planner. A cell can be empty, a leave code such as `Co` or `DZ`, or one or more schedule entries such as `8RO` or `4RO+42L`.
 
 **Schedule Entry** — the smallest working-time expression inside a Planner Cell. It combines hours with an optional team code. `82L` means 8 hours for `2L`, not 82 hours.
