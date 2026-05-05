@@ -190,22 +190,6 @@ function getMonthStartFromKey(monthKey) {
     return new Date(year, month - 1, 1);
 }
 
-function parsePlannerDayEntries(dayValue) {
-    if (!dayValue || typeof dayValue !== 'string') return [];
-
-    const trimmed = dayValue.trim();
-    if (isNonWorkingCode(trimmed)) return [];
-
-    return trimmed
-        .split('+')
-        .map(part => parseShiftEntry(part))
-        .filter(Boolean)
-        .map(parsed => ({
-            hours: parsed.hours,
-            team: parsed.team ? normalizeTeamForDisplay(parsed.team) : null
-        }));
-}
-
 export function rewriteMonthlyDaysForPrimaryTeamChange(agent, newPrimaryTeam, fromDate) {
     const from = normalizeScheduleBoundaryDate(fromDate);
     if (!from || !agent?.monthlyDays) return {};
@@ -254,18 +238,6 @@ export function rewriteMonthlyDaysForPrimaryTeamChange(agent, newPrimaryTeam, fr
     return updates;
 }
 
-function addReportHours(bucketGroup, displayName, agentName, hours) {
-    if (!bucketGroup[displayName]) {
-        bucketGroup[displayName] = { totalHours: 0, agents: new Map() };
-    }
-
-    bucketGroup[displayName].totalHours += hours;
-    bucketGroup[displayName].agents.set(
-        agentName,
-        (bucketGroup[displayName].agents.get(agentName) || 0) + hours
-    );
-}
-
 export function isReportRoleTeamCode(teamCode) {
     return REPORT_ROLE_TEAM_CODES.includes(normalizeTeamForDisplay(String(teamCode || '').toUpperCase()));
 }
@@ -273,46 +245,6 @@ export function isReportRoleTeamCode(teamCode) {
 export function getEffectiveReportRoleCode(agent, date) {
     const effectiveCode = normalizeTeamForDisplay(getEffectivePrimaryTeamCode(agent, date));
     return isReportRoleTeamCode(effectiveCode) ? effectiveCode : null;
-}
-
-export function calculatePlannerReportData(agents, start, end) {
-    if (!Array.isArray(agents) || agents.length === 0) return null;
-
-    const shopData = {};
-    const roleData = {};
-    let shopGrandTotal = 0;
-    let roleGrandTotal = 0;
-
-    for (const agent of agents) {
-        const agentName = agent.fullName || agent.username || 'Unknown';
-        const current = normalizeScheduleBoundaryDate(start);
-        const endDate = normalizeScheduleBoundaryDate(end);
-
-        if (!current || !endDate) continue;
-
-        while (current <= endDate) {
-            const dayValue = getEffectiveAgentDayValue(agent, current);
-            const reportRoleCode = getEffectiveReportRoleCode(agent, current);
-            const primaryTeamCode = reportRoleCode || getEffectivePrimaryTeamCode(agent, current);
-
-            for (const entry of parsePlannerDayEntries(dayValue)) {
-                const resolvedCode = reportRoleCode || entry.team || primaryTeamCode;
-                const displayName = TEAM_DISPLAY_NAMES[resolvedCode] || resolvedCode;
-
-                if (isReportRoleTeamCode(resolvedCode)) {
-                    addReportHours(roleData, displayName, agentName, entry.hours);
-                    roleGrandTotal += entry.hours;
-                } else {
-                    addReportHours(shopData, displayName, agentName, entry.hours);
-                    shopGrandTotal += entry.hours;
-                }
-            }
-
-            current.setDate(current.getDate() + 1);
-        }
-    }
-
-    return { shopData, roleData, shopGrandTotal, roleGrandTotal };
 }
 
 function isDateBeforeAgentHire(agent, date) {
