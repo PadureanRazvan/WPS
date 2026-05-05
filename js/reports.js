@@ -1,6 +1,7 @@
 // js/reports.js
 import { getPlannerData } from './planner.js';
-import { translations, formatPlannerHoursValue, calculatePlannerReportData } from './config.js';
+import { translations, formatPlannerHoursValue } from './config.js';
+import { buildReportReadModel } from './report-read-model.js';
 
 function getLang() { return localStorage.getItem('language') || 'ro'; }
 function t(key) { const l = getLang(); return (translations[l] && translations[l][key]) || key; }
@@ -10,18 +11,14 @@ let reportStart = null;
 let reportEnd = null;
 
 // --- Render ---
-function sortBucketsByHours(data) {
-    return Object.entries(data || {}).sort((a, b) => b[1].totalHours - a[1].totalHours);
-}
-
-function renderHoursTableRows(sortedBuckets, grandTotal) {
+function renderHoursTableRows(buckets, grandTotal) {
     let rows = '';
-    for (const [name, data] of sortedBuckets) {
+    for (const bucket of buckets) {
         rows += `
             <tr>
-                <td>${name}</td>
-                <td style="color: var(--accent); font-weight: bold;">${formatPlannerHoursValue(data.totalHours)}</td>
-                <td>${data.agents.size}</td>
+                <td>${bucket.name}</td>
+                <td style="color: var(--accent); font-weight: bold;">${formatPlannerHoursValue(bucket.totalHours)}</td>
+                <td>${bucket.agentCount}</td>
             </tr>`;
     }
 
@@ -35,22 +32,21 @@ function renderHoursTableRows(sortedBuckets, grandTotal) {
     return rows;
 }
 
-function renderDistributionCards(sortedBuckets) {
+function renderDistributionCards(buckets) {
     let cards = '';
 
-    for (const [name, data] of sortedBuckets) {
-        const sortedAgents = [...data.agents.entries()].sort((a, b) => b[1] - a[1]);
-        const agentRows = sortedAgents.map(([agentName, hours]) => `
+    for (const bucket of buckets) {
+        const agentRows = bucket.agents.map(agent => `
             <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid var(--border);">
-                <span>${agentName}</span>
-                <span style="color: var(--text-secondary)">${formatPlannerHoursValue(hours)}h</span>
+                <span>${agent.name}</span>
+                <span style="color: var(--text-secondary)">${formatPlannerHoursValue(agent.hours)}h</span>
             </div>`).join('');
 
         cards += `
             <div class="stat-card">
-                <h4 style="color: var(--accent); margin-bottom: 0.5rem;">${name}</h4>
+                <h4 style="color: var(--accent); margin-bottom: 0.5rem;">${bucket.name}</h4>
                 <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.75rem;">
-                    ${data.agents.size} ${t('reports-agents-hours')} · ${formatPlannerHoursValue(data.totalHours)} ${t('reports-hours-unit')}
+                    ${bucket.agentCount} ${t('reports-agents-hours')} · ${formatPlannerHoursValue(bucket.totalHours)} ${t('reports-hours-unit')}
                 </div>
                 <div style="max-height: 250px; overflow-y: auto; padding-right: 0.75rem;">
                     ${agentRows}
@@ -72,27 +68,20 @@ function renderReports() {
         return;
     }
 
-    const reportData = calculatePlannerReportData(getPlannerData(), reportStart, reportEnd);
-    const sortedShops = sortBucketsByHours(reportData?.shopData);
-    const sortedRoles = sortBucketsByHours(reportData?.roleData);
+    const reportModel = buildReportReadModel(getPlannerData(), reportStart, reportEnd);
+    const shopBuckets = reportModel.shop.buckets;
+    const roleBuckets = reportModel.roles.buckets;
 
-    if (!reportData || (sortedShops.length === 0 && sortedRoles.length === 0)) {
+    if (!reportModel.hasData) {
         container.innerHTML = `<div style="text-align: center; padding: 3rem; color: var(--text-secondary);">
             ${t('reports-no-data')}
         </div>`;
         return;
     }
 
-    // Format date range for title
-    const fmt = (d) => {
-        const y = d.getFullYear();
-        const m = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        return `${day}.${m}.${y}`;
-    };
-    const rangeLabel = fmt(reportStart) + ' - ' + fmt(reportEnd);
+    const rangeLabel = reportModel.range.label;
 
-    const shopHoursSection = sortedShops.length > 0 ? `
+    const shopHoursSection = shopBuckets.length > 0 ? `
         <div class="chart-container">
             <h3 class="chart-title">${t('reports-hours-per-shop')} — ${rangeLabel}</h3>
             <table style="margin-top: 1rem;">
@@ -103,19 +92,19 @@ function renderReports() {
                         <th>${t('reports-nr-agents')}</th>
                     </tr>
                 </thead>
-                <tbody>${renderHoursTableRows(sortedShops, reportData.shopGrandTotal)}</tbody>
+                <tbody>${renderHoursTableRows(shopBuckets, reportModel.shop.grandTotal)}</tbody>
             </table>
         </div>` : '';
 
-    const shopDistributionSection = sortedShops.length > 0 ? `
+    const shopDistributionSection = shopBuckets.length > 0 ? `
         <div class="chart-container" style="margin-top: 1.5rem;">
             <h3 class="chart-title">${t('reports-distribution')} — ${rangeLabel}</h3>
             <div class="dashboard-grid" style="margin-top: 1rem;">
-                ${renderDistributionCards(sortedShops)}
+                ${renderDistributionCards(shopBuckets)}
             </div>
         </div>` : '';
 
-    const roleHoursSection = sortedRoles.length > 0 ? `
+    const roleHoursSection = roleBuckets.length > 0 ? `
         <div class="chart-container" style="margin-top: 1.5rem;">
             <h3 class="chart-title">${t('reports-role-hours')} — ${rangeLabel}</h3>
             <table style="margin-top: 1rem;">
@@ -126,15 +115,15 @@ function renderReports() {
                         <th>${t('reports-nr-agents')}</th>
                     </tr>
                 </thead>
-                <tbody>${renderHoursTableRows(sortedRoles, reportData.roleGrandTotal)}</tbody>
+                <tbody>${renderHoursTableRows(roleBuckets, reportModel.roles.grandTotal)}</tbody>
             </table>
         </div>` : '';
 
-    const roleDistributionSection = sortedRoles.length > 0 ? `
+    const roleDistributionSection = roleBuckets.length > 0 ? `
         <div class="chart-container" style="margin-top: 1.5rem;">
             <h3 class="chart-title">${t('reports-role-distribution')} — ${rangeLabel}</h3>
             <div class="dashboard-grid" style="margin-top: 1rem;">
-                ${renderDistributionCards(sortedRoles)}
+                ${renderDistributionCards(roleBuckets)}
             </div>
         </div>` : '';
 

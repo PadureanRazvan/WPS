@@ -1130,7 +1130,6 @@ export {
     TEAM_DISPLAY_NAMES,
     UPLOAD_VALID_TEAMS,
     buildPrimaryTeamHistoryForChange,
-    calculatePlannerReportData,
     extractHoursFromDay,
     formatPlannerHoursValue,
     generateDefaultSchedule,
@@ -1149,3 +1148,9 @@ export {
     parseShiftEntry,
     rewriteMonthlyDaysForPrimaryTeamChange
 } from './schedule-semantics.js';
+
+export {
+    buildReportReadModel,
+    calculatePlannerReportData,
+    formatReportDateRange
+} from './report-read-model.js';

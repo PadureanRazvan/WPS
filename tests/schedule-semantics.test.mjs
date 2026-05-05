@@ -39,29 +39,3 @@ test('schedule semantics resolve primary-team history by date', async () => {
   assert.equal(getEffectivePrimaryTeam(agent, new Date('2026-05-04T00:00:00')), 'TL Team Lead');
   assert.equal(getEffectivePrimaryTeamCode(agent, new Date('2026-05-04T00:00:00')), 'TL');
 });
-
-test('schedule semantics report role hours separately from shop hours', async () => {
-  const { calculatePlannerReportData } = await loadScheduleSemanticsModule();
-  const agents = [{
-    fullName: 'Mixed Role Agent',
-    primaryTeam: 'CS zooplus',
-    primaryTeamHistory: [
-      { from: '2026-05-01', primaryTeam: 'CS zooplus' },
-      { from: '2026-05-02', primaryTeam: 'QA Quality Assurance' }
-    ],
-    monthlyDays: {
-      '2026-05': ['8CS', '8QA', '82L']
-    }
-  }];
-
-  const result = calculatePlannerReportData(
-    agents,
-    new Date('2026-05-01T00:00:00'),
-    new Date('2026-05-03T00:00:00')
-  );
-
-  assert.equal(result.shopGrandTotal, 8);
-  assert.equal(result.roleGrandTotal, 16);
-  assert.equal(result.shopData['CS zooplus'].totalHours, 8);
-  assert.equal(result.roleData.QA.totalHours, 16);
-});

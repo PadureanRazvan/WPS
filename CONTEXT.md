@@ -14,6 +14,8 @@
 
 **Report Role** — a non-shop role, currently `TL` or `QA`, whose planned hours are reported separately from shop teams.
 
+**Report Read Model** — the rules for turning Agents, Schedule Semantics, and a selected date range into report-ready shop and Report Role buckets, sorted agent distributions, totals, and range labels.
+
 **Productivity Data** — uploaded ticket and call counts grouped by date, agent, and team.
 
 **Productivity Calculation** — the rules for turning Productivity Data, Agents, Schedule Semantics, date ranges, and team filters into productivity rows such as tickets, calls, worked hours, teams, and items-per-hour.
