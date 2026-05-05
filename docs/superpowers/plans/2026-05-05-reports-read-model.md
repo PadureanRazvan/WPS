@@ -15,11 +15,11 @@
 **Files:**
 - Create: `tests/report-read-model.test.mjs`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Add tests that import `buildReportReadModel` and `calculatePlannerReportData` from `../js/report-read-model.js`.
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `node --test tests/report-read-model.test.mjs`
 
@@ -32,11 +32,11 @@ Expected: FAIL because `js/report-read-model.js` does not exist yet.
 - Modify: `js/schedule-semantics.js`
 - Modify: `js/config.js`
 
-- [ ] **Step 1: Implement minimal report aggregation**
+- [x] **Step 1: Implement minimal report aggregation**
 
 Create the new module with `calculatePlannerReportData(agents, start, end)` and `buildReportReadModel(agents, start, end)`.
 
-- [ ] **Step 2: Run the focused tests**
+- [x] **Step 2: Run the focused tests**
 
 Run: `node --test tests/report-read-model.test.mjs tests/report-roles.test.mjs tests/schedule-semantics.test.mjs`
 
@@ -47,11 +47,11 @@ Expected: PASS.
 **Files:**
 - Modify: `js/reports.js`
 
-- [ ] **Step 1: Replace local sorting/date-label rules**
+- [x] **Step 1: Replace local sorting/date-label rules**
 
 Import `buildReportReadModel` from `./report-read-model.js`. Render the returned read model instead of directly calling `calculatePlannerReportData`.
 
-- [ ] **Step 2: Run all tests**
+- [x] **Step 2: Run all tests**
 
 Run: `node --test tests/*.test.mjs`
 

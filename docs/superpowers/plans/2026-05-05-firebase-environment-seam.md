@@ -15,7 +15,7 @@
 **Files:**
 - Create: `tests/firebase-environments.test.mjs`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```js
 import assert from 'node:assert/strict';
@@ -70,7 +70,7 @@ test('unknown Firebase environment fails fast', async () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `node --test tests/firebase-environments.test.mjs`
 
@@ -81,7 +81,7 @@ Expected: FAIL because `js/firebase-environments.js` does not exist yet.
 **Files:**
 - Create: `js/firebase-environments.js`
 
-- [ ] **Step 1: Write minimal implementation**
+- [x] **Step 1: Write minimal implementation**
 
 ```js
 const DEFAULT_FIREBASE_ENVIRONMENT = 'production';
@@ -129,7 +129,7 @@ export function getFirebaseConfig(environmentName = getFirebaseEnvironmentName()
 }
 ```
 
-- [ ] **Step 2: Run test to verify it passes**
+- [x] **Step 2: Run test to verify it passes**
 
 Run: `node --test tests/firebase-environments.test.mjs`
 
@@ -140,17 +140,17 @@ Expected: PASS.
 **Files:**
 - Modify: `js/firebase-config.js`
 
-- [ ] **Step 1: Replace inline config with environment module**
+- [x] **Step 1: Replace inline config with environment module**
 
 Use `getFirebaseConfig()` and export `firebaseEnvironment` for browser confirmation. Keep the existing exported `db`, `auth`, `googleProvider`, `signInWithPopup`, `signOut`, and `onAuthStateChanged` names unchanged.
 
-- [ ] **Step 2: Run full tests**
+- [x] **Step 2: Run full tests**
 
 Run: `node --test tests/*.test.mjs`
 
 Expected: all tests pass.
 
-- [ ] **Step 3: Reload external Chrome**
+- [x] **Step 3: Reload external Chrome**
 
 Reload `http://localhost:3000/`.
 
