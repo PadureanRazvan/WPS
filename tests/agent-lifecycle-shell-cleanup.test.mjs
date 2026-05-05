@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 
 const scheduleSource = readFileSync(new URL('../js/schedule-semantics.js', import.meta.url), 'utf8');
 const usersSource = readFileSync(new URL('../js/users.js', import.meta.url), 'utf8');
+const usersCommandSource = readFileSync(new URL('../js/users-command.js', import.meta.url), 'utf8');
 const productivityMetricsSource = readFileSync(new URL('../js/productivity-metrics.js', import.meta.url), 'utf8');
 
 test('Schedule Semantics delegates Agent Lifecycle rules to the Agent Lifecycle module', () => {
@@ -24,12 +25,12 @@ test('Schedule Semantics delegates Agent Lifecycle rules to the Agent Lifecycle 
   });
 });
 
-test('Users shell delegates lifecycle month rules to the Agent Lifecycle module', () => {
-  assert.match(usersSource, /from\s+'\.\/agent-lifecycle\.js';/);
-  assert.match(usersSource, /\bbuildContractMonthDaysFromDate\(/);
-  assert.match(usersSource, /\bapplyInactiveCodeToMonth\(/);
-  assert.match(usersSource, /\bclearInactiveCodeFromMonth\(/);
-  assert.match(usersSource, /\bnormalizeAgentLifecycleDate\(/);
+test('Users Command delegates lifecycle month rules to the Agent Lifecycle module', () => {
+  assert.match(usersCommandSource, /from\s+'\.\/agent-lifecycle\.js';/);
+  assert.match(usersCommandSource, /\bbuildContractMonthDaysFromDate\(/);
+  assert.match(usersCommandSource, /\bapplyInactiveCodeToMonth\(/);
+  assert.match(usersCommandSource, /\bclearInactiveCodeFromMonth\(/);
+  assert.match(usersCommandSource, /\bnormalizeAgentLifecycleDate\(/);
 
   [
     /function normalizePlannerDate/,
@@ -38,8 +39,10 @@ test('Users shell delegates lifecycle month rules to the Agent Lifecycle module'
     /function clearInactiveCodeFromMonth/,
     /function generateDaysFromDate/
   ].forEach(pattern => {
-    assert.doesNotMatch(usersSource, pattern);
+    assert.doesNotMatch(usersCommandSource, pattern);
   });
+
+  assert.doesNotMatch(usersSource, /from\s+'\.\/agent-lifecycle\.js';/);
 });
 
 test('Productivity metrics delegates per-Agent role eligibility to Agent Lifecycle', () => {
