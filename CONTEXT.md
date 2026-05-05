@@ -6,6 +6,8 @@
 
 **Agent Lifecycle** — the rules for an Agent's contract start, active/inactive state, primary team history, Report Role state, and date-effective eligibility across Planner, Reports, and Productivity.
 
+**App Shell Wiring** — the rules for binding Sherpa app boot, authenticated shell visibility, navigation, theme and language controls, logout, before-unload cleanup, and cross-module refresh events while keeping feature Modules responsible for their own business rules and Firestore writes.
+
 **Users Command** — the rules for turning Users form input, inline Agent edits, contract changes, primary team changes, deactivation, and reactivation into validated Agent update payloads, activity metadata, and user-facing diagnostics while keeping the Users shell responsible for DOM modals and Firestore writes.
 
 **Planner Cell** — one agent/day value in the Planner. A cell can be empty, a leave code such as `Co` or `DZ`, or one or more schedule entries such as `8RO` or `4RO+42L`.
