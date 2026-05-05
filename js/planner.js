@@ -5,8 +5,9 @@ import { db } from './firebase-config.js';
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, Timestamp } from "https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore.js";
 import { showTemporaryMessage } from './ui.js';
 import { updateDashboard } from './dashboard.js';
-import { translations, getMonthKey, getAgentDaysForMonth, getAgentNotesForMonth } from './config.js';
+import { translations, getMonthKey } from './config.js';
 import { logActivity } from './logs.js';
+import { buildPlannerEditCommand } from './planner-edit-command.js';
 import { buildPlannerReadModel, filterPlannerAgents } from './planner-read-model.js';
 function getLang() { return localStorage.getItem('language') || 'ro'; }
 function t(key) { const l = getLang(); return (translations[l] && translations[l][key]) || key; }
@@ -204,80 +205,27 @@ export async function deleteAgent(agentId) {
  * @param {string} noteText - Optional note/reason for the change.
  */
 export async function applyChangesToSelectedCells(selectedCellKeys, newValue, noteText = '') {
-    console.log(`Applying value "${newValue}" to ${selectedCellKeys.size} cells.`);
-    // Group changes by agentId, then by monthKey
-    const updates = new Map();
+    const editCommand = buildPlannerEditCommand(plannerData, selectedCellKeys, newValue, noteText);
+    console.log(`Applying value "${newValue}" to ${editCommand.cellCount} cells.`);
 
-    selectedCellKeys.forEach(key => {
-        const [agentId, monthKey, dayIndexStr] = key.split('|');
-        const dayIndex = parseInt(dayIndexStr, 10);
-
-        if (!updates.has(agentId)) {
-            updates.set(agentId, new Map());
-        }
-        const agentMonths = updates.get(agentId);
-        if (!agentMonths.has(monthKey)) {
-            agentMonths.set(monthKey, []);
-        }
-        agentMonths.get(monthKey).push({ dayIndex, newValue });
+    editCommand.missingAgentIds.forEach(agentId => {
+        console.error(`Could not find agent with ID ${agentId} in local data.`);
     });
 
-    const snapshot = [];
-
-    for (const [agentId, monthsMap] of updates.entries()) {
-        const agent = plannerData.find(a => a.id === agentId);
-        if (!agent) {
-            console.error(`Could not find agent with ID ${agentId} in local data.`);
-            continue;
-        }
-
-        const updateData = {};
-
-        for (const [monthKey, changes] of monthsMap.entries()) {
-            const daysArray = getAgentDaysForMonth(agent, monthKey);
-            const notesObj = getAgentNotesForMonth(agent, monthKey);
-
-            // Save snapshot for undo (per agent+month)
-            snapshot.push({
-                agentId,
-                monthKey,
-                previousDays: [...daysArray],
-                previousDayNotes: { ...notesObj }
-            });
-
-            const newDays = [...daysArray];
-            while (newDays.length < 31) newDays.push('');
-            const newDayNotes = { ...notesObj };
-
-            changes.forEach(({ dayIndex, newValue }) => {
-                if (dayIndex >= 0 && dayIndex < newDays.length) {
-                    newDays[dayIndex] = newValue;
-                    if (noteText) {
-                        newDayNotes[dayIndex.toString()] = noteText;
-                    } else {
-                        delete newDayNotes[dayIndex.toString()];
-                    }
-                }
-            });
-
-            // Use Firestore dot-notation to write to specific month
-            updateData[`monthlyDays.${monthKey}`] = newDays;
-            updateData[`monthlyNotes.${monthKey}`] = newDayNotes;
-        }
-
-        await updateAgent(agentId, updateData);
+    for (const update of editCommand.updates) {
+        await updateAgent(update.agentId, update.updateData);
     }
 
-    if (snapshot.length > 0) {
-        undoStack.push(snapshot);
+    if (editCommand.snapshots.length > 0) {
+        undoStack.push(editCommand.snapshots);
         if (undoStack.length > MAX_UNDO) undoStack.shift();
     }
 
-    const agentNames = [...updates.keys()].map(id => {
-        const a = plannerData.find(x => x.id === id);
-        return a?.fullName || id;
+    logActivity('portal', 'edit_cells', {
+        agents: editCommand.activity.agentNames.join(', '),
+        cells: editCommand.activity.cells,
+        value: editCommand.activity.value
     });
-    logActivity('portal', 'edit_cells', { agents: agentNames.join(', '), cells: selectedCellKeys.size, value: newValue });
     showTemporaryMessage("Changes saved to database!", "success");
 }
 

@@ -18,6 +18,8 @@
 
 **Planner Read Model** — the rules for turning Agents, Schedule Semantics, Planner filters, date ranges, and view options into table-ready Planner rows, Planner Cells, headers, totals, notes, and display classes.
 
+**Planner Edit Command** — the rules for turning selected Planner Cells, a new Planner Cell value, and an optional note into Firestore update payloads, undo snapshots, missing-Agent diagnostics, and edit activity metadata.
+
 **Productivity Data** — uploaded ticket and call counts grouped by date, agent, and team.
 
 **Productivity Calculation** — the rules for turning Productivity Data, Agents, Schedule Semantics, date ranges, and team filters into productivity rows such as tickets, calls, worked hours, teams, and items-per-hour.
