@@ -28,106 +28,121 @@ function fakeElement(overrides = {}) {
   };
 }
 
-test('agent actions toggle one agent and refresh the view', async () => {
+test('agent actions submit a search, commit one agent, and render detail once', async () => {
   const { createProductivityAgentActions } = await loadAgentActionsModule();
-  let selectedAgents = new Set(['ana pop']);
+  let selectedAgents = new Set();
+  let committed = false;
   const calls = [];
 
   const actions = createProductivityAgentActions({
-    getSelectedAgents: () => selectedAgents,
     setSelectedAgents: value => {
       selectedAgents = value;
       calls.push(['setSelectedAgents', [...value].sort()]);
     },
-    toggleSelection: (selection, agentKey) => {
-      const next = new Set(selection);
-      next.has(agentKey) ? next.delete(agentKey) : next.add(agentKey);
-      return next;
+    setDetailSearchCommitted: value => {
+      committed = value;
+      calls.push(['setDetailSearchCommitted', value]);
     },
-    renderAgentChips: searchTerm => calls.push(['renderAgentChips', searchTerm]),
+    getSearchResults: searchTerm => {
+      calls.push(['getSearchResults', searchTerm]);
+      return [
+        ['ana pop', { fullName: 'Ana Pop' }],
+        ['ana maria', { fullName: 'Ana Maria' }]
+      ];
+    },
+    setAgentSearchTerm: value => calls.push(['setAgentSearchTerm', value]),
+    renderAgentSearchResults: searchTerm => calls.push(['renderAgentSearchResults', searchTerm]),
     renderCurrentView: () => calls.push(['renderCurrentView'])
   });
 
-  actions.toggleAgent('mihai popescu');
+  const submitted = actions.submitAgentSearch('ana');
 
-  assert.deepEqual([...selectedAgents].sort(), ['ana pop', 'mihai popescu']);
+  assert.equal(submitted, true);
+  assert.equal(committed, true);
+  assert.deepEqual([...selectedAgents], ['ana pop']);
   assert.deepEqual(calls, [
-    ['setSelectedAgents', ['ana pop', 'mihai popescu']],
-    ['renderAgentChips', undefined],
+    ['getSearchResults', 'ana'],
+    ['setSelectedAgents', ['ana pop']],
+    ['setDetailSearchCommitted', true],
+    ['setAgentSearchTerm', 'Ana Pop'],
+    ['renderAgentSearchResults', 'Ana Pop'],
     ['renderCurrentView']
   ]);
 });
 
-test('agent actions select all filtered agents using the current search term', async () => {
+test('agent actions reject unmatched searches without rendering the detail table', async () => {
   const { createProductivityAgentActions } = await loadAgentActionsModule();
   let selectedAgents = new Set(['ana pop']);
-  const calls = [];
-  const filteredCalls = [];
-
-  const actions = createProductivityAgentActions({
-    getSelectedAgents: () => selectedAgents,
-    setSelectedAgents: value => {
-      selectedAgents = value;
-      calls.push(['setSelectedAgents', [...value].sort()]);
-    },
-    getFilteredAgents: searchTerm => {
-      filteredCalls.push(searchTerm);
-      return searchTerm === 'mi'
-        ? [['mihai popescu', {}]]
-        : [
-            ['mihai popescu', {}],
-            ['zoe ivan', {}]
-          ];
-    },
-    selectAllSelection: (selection, agents) => {
-      const next = new Set(selection);
-      agents.forEach(([agentKey]) => next.add(agentKey));
-      return next;
-    },
-    getAgentSearchTerm: () => 'mi',
-    renderAgentChips: searchTerm => calls.push(['renderAgentChips', searchTerm]),
-    renderCurrentView: () => calls.push(['renderCurrentView'])
-  });
-
-  actions.selectAllAgents();
-
-  assert.deepEqual(filteredCalls, ['mi']);
-  assert.deepEqual([...selectedAgents].sort(), ['ana pop', 'mihai popescu']);
-  assert.deepEqual(calls, [
-    ['setSelectedAgents', ['ana pop', 'mihai popescu']],
-    ['renderAgentChips', 'mi'],
-    ['renderCurrentView']
-  ]);
-});
-
-test('agent actions deselect all agents using the current search term', async () => {
-  const { createProductivityAgentActions } = await loadAgentActionsModule();
-  let selectedAgents = new Set(['ana pop']);
+  let committed = true;
   const calls = [];
 
   const actions = createProductivityAgentActions({
-    getSelectedAgents: () => selectedAgents,
     setSelectedAgents: value => {
       selectedAgents = value;
       calls.push(['setSelectedAgents', value.size]);
     },
-    clearSelection: () => new Set(),
-    getAgentSearchTerm: () => 'ana',
-    renderAgentChips: searchTerm => calls.push(['renderAgentChips', searchTerm]),
-    renderCurrentView: () => calls.push(['renderCurrentView'])
+    setDetailSearchCommitted: value => {
+      committed = value;
+      calls.push(['setDetailSearchCommitted', value]);
+    },
+    getSearchResults: () => [],
+    renderAgentSearchResults: searchTerm => calls.push(['renderAgentSearchResults', searchTerm]),
+    renderCurrentView: () => calls.push(['renderCurrentView']),
+    showTemporaryMessage: (...args) => calls.push(['showTemporaryMessage', ...args]),
+    noResultMessage: 'No matching agent.'
   });
 
-  actions.deselectAllAgents();
+  const submitted = actions.submitAgentSearch('zz');
 
+  assert.equal(submitted, false);
+  assert.equal(committed, false);
   assert.equal(selectedAgents.size, 0);
   assert.deepEqual(calls, [
     ['setSelectedAgents', 0],
-    ['renderAgentChips', 'ana'],
-    ['renderCurrentView']
+    ['setDetailSearchCommitted', false],
+    ['renderAgentSearchResults', 'zz'],
+    ['showTemporaryMessage', 'No matching agent.', 'error', 1800]
   ]);
 });
 
-test('agent action binding connects rendered chips to toggle actions', async () => {
+test('agent actions use a chosen suggestion to fill the search without rendering detail', async () => {
+  const { createProductivityAgentActions } = await loadAgentActionsModule();
+  const calls = [];
+
+  const actions = createProductivityAgentActions({
+    getVisibleAgents: () => [
+      ['ana pop', { fullName: 'Ana Pop' }]
+    ],
+    setAgentSearchTerm: value => calls.push(['setAgentSearchTerm', value]),
+    setDetailSearchCommitted: value => calls.push(['setDetailSearchCommitted', value]),
+    renderAgentSearchResults: searchTerm => calls.push(['renderAgentSearchResults', searchTerm]),
+    renderCurrentView: () => calls.push(['renderCurrentView'])
+  });
+
+  const chosen = actions.chooseAgentSuggestion('ana pop');
+
+  assert.equal(chosen, true);
+  assert.deepEqual(calls, [
+    ['setAgentSearchTerm', 'Ana Pop'],
+    ['setDetailSearchCommitted', false],
+    ['renderAgentSearchResults', 'Ana Pop']
+  ]);
+});
+
+test('agent actions resolve exact matches before falling back to the first result', async () => {
+  const { resolveProductivityAgentSearch } = await loadAgentActionsModule();
+
+  const agents = [
+    ['ana one', { fullName: 'Ana One' }],
+    ['ana pop', { fullName: 'Ana Pop' }]
+  ];
+
+  assert.deepEqual(resolveProductivityAgentSearch(agents, 'Ana Pop'), ['ana pop', { fullName: 'Ana Pop' }]);
+  assert.deepEqual(resolveProductivityAgentSearch(agents, 'ana'), ['ana one', { fullName: 'Ana One' }]);
+  assert.equal(resolveProductivityAgentSearch([], 'ana'), null);
+});
+
+test('agent action binding connects rendered suggestions to choose actions', async () => {
   const { bindProductivityAgentActions } = await loadAgentActionsModule();
   const firstChip = fakeElement({ dataset: { agentKey: 'ana pop' } });
   const secondChip = fakeElement({ dataset: { agentKey: 'mihai popescu' } });
@@ -140,15 +155,15 @@ test('agent action binding connects rendered chips to toggle actions', async () 
         return [firstChip, secondChip];
       }
     }),
-    toggleAgent: agentKey => calls.push(['toggleAgent', agentKey])
+    chooseAgentSuggestion: agentKey => calls.push(['chooseAgentSuggestion', agentKey])
   });
 
   firstChip.dispatch('click');
   secondChip.dispatch('click');
 
   assert.deepEqual(calls, [
-    ['toggleAgent', 'ana pop'],
-    ['toggleAgent', 'mihai popescu']
+    ['chooseAgentSuggestion', 'ana pop'],
+    ['chooseAgentSuggestion', 'mihai popescu']
   ]);
 });
 

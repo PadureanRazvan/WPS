@@ -4,7 +4,8 @@ import { collection, doc, setDoc, deleteDoc, getDocs, onSnapshot } from "https:/
 import { getPlannerData } from './planner.js';
 import { getUsersData } from './users.js';
 import { showTemporaryMessage } from './ui.js';
-import { translations } from './config.js';
+import { translations, getMonthKey } from './config.js';
+import { hasPerAgentProductivityEligibleDate, normalizeProductivityName } from './productivity-metrics.js';
 import { buildProductivityExportCsv, getProductivityDateStatus } from './productivity-upload-calendar.js';
 import { createProductivityDateCommands } from './productivity-date-commands.js';
 import { buildProductivityUploadCalendarView, buildProductivityUploadDateStatusView, buildProductivityUploadSuccessView } from './productivity-upload-calendar-view.js';
@@ -20,15 +21,8 @@ import { bindProductivityDateRangePicker } from './productivity-date-range-picke
 import { bindProductivityControls } from './productivity-controls.js';
 import { bindProductivityAgentActions, createProductivityAgentActions } from './productivity-agent-actions.js';
 import {
-    buildProductivityAgentSelectionOptions,
-    createProductivityAgentSelectionCache,
-    pruneProductivityAgentSelection
-} from './productivity-agent-selection-model.js';
-import {
     buildProductivityAgentSelectionView,
-    clearProductivityAgentSelection,
-    selectAllProductivityAgents,
-    toggleProductivityAgentSelection
+    filterProductivityAgentSelection
 } from './productivity-agent-selection-view.js';
 import {
     calculateProductivityOverview,
@@ -52,24 +46,18 @@ let currentTeamFilter = 'all';
 let productivityPicker = null;
 let currentView = 'overview'; // 'overview' or 'detail'
 let selectedAgents = new Set(); // normalized names of selected agents
+let detailSearchCommitted = false;
 let uploadCalendarMonth = new Date();
 let unsubscribeFromProductivity = null;
 let visibleAgentSearchResults = [];
-let productivityDataVersion = 0;
-let productivityOverviewCache = null;
 const productivityStore = createProductivityFirestoreStore({
     db,
     firestore: { collection, doc, setDoc, deleteDoc, getDocs, onSnapshot }
 });
-const agentSelectionCache = createProductivityAgentSelectionCache();
 const PRODUCTIVITY_AGENT_SEARCH_MIN_LENGTH = 2;
 const dateCommands = createProductivityDateCommands({
     getDateEntry: dateKey => dataByDate.get(dateKey),
-    deleteDateEntry: dateKey => {
-        const deleted = dataByDate.delete(dateKey);
-        if (deleted) markProductivityDataChanged();
-        return deleted;
-    },
+    deleteDateEntry: dateKey => dataByDate.delete(dateKey),
     getDateStatus: getProductivityDateStatus,
     buildExportCsv: buildProductivityExportCsv,
     deletePersistedDate: deleteFromFirestore,
@@ -79,39 +67,34 @@ const dateCommands = createProductivityDateCommands({
     t
 });
 const agentActions = createProductivityAgentActions({
-    getSelectedAgents: () => selectedAgents,
     setSelectedAgents: value => {
         selectedAgents = value;
     },
-    getFilteredAgents: () => visibleAgentSearchResults,
+    setDetailSearchCommitted: value => {
+        detailSearchCommitted = value;
+    },
+    getVisibleAgents: () => visibleAgentSearchResults,
+    getSearchResults: getAgentSearchResults,
     getAgentSearchTerm: () => document.getElementById('prodAgentSearch')?.value || '',
-    toggleSelection: toggleProductivityAgentSelection,
-    selectAllSelection: selectAllProductivityAgents,
-    clearSelection: clearProductivityAgentSelection,
-    renderAgentChips,
-    renderCurrentView
+    setAgentSearchTerm,
+    renderAgentSearchResults,
+    renderCurrentView,
+    showTemporaryMessage,
+    getNoResultMessage: () => t('prod-no-results')
 });
 
-// --- Cached read-model state ---
+// --- Name Normalization & Matching ---
 
-function markProductivityDataChanged() {
-    productivityDataVersion += 1;
-    productivityOverviewCache = null;
-    agentSelectionCache.clear();
-}
-
-function getProductivityCacheKey(agents) {
-    return {
-        dataVersion: productivityDataVersion,
-        startKey: formatProductivityDateKey(dateStart),
-        endKey: formatProductivityDateKey(dateEnd),
-        teamFilter: currentTeamFilter,
-        usersRef: agents
-    };
-}
-
-function pruneSelectedAgents(allowedAgents = getFilteredAgents()) {
-    selectedAgents = pruneProductivityAgentSelection(selectedAgents, allowedAgents);
+function pruneSelectedAgents() {
+    const allowedAgents = new Set(getSearchableAgents().map(([normalizedName]) => normalizedName));
+    selectedAgents.forEach(normalizedName => {
+        if (!allowedAgents.has(normalizedName)) {
+            selectedAgents.delete(normalizedName);
+        }
+    });
+    if (selectedAgents.size === 0) {
+        detailSearchCommitted = false;
+    }
 }
 
 function formatDateDisplay(dateKey) {
@@ -126,7 +109,6 @@ function replaceProductivityData(nextDataByDate) {
     nextDataByDate.forEach((entry, dateKey) => {
         dataByDate.set(dateKey, entry);
     });
-    markProductivityDataChanged();
 }
 
 async function saveToFirestore(dateKey) {
@@ -207,28 +189,13 @@ function hasAnyData() {
 // --- Productivity Calculation ---
 
 function calculateProductivity() {
-    const agents = getUsersData();
-    const cacheKey = getProductivityCacheKey(agents);
-    if (
-        productivityOverviewCache
-        && productivityOverviewCache.key.dataVersion === cacheKey.dataVersion
-        && productivityOverviewCache.key.startKey === cacheKey.startKey
-        && productivityOverviewCache.key.endKey === cacheKey.endKey
-        && productivityOverviewCache.key.teamFilter === cacheKey.teamFilter
-        && productivityOverviewCache.key.usersRef === cacheKey.usersRef
-    ) {
-        return productivityOverviewCache.overview;
-    }
-
-    const overview = calculateProductivityOverview({
+    return calculateProductivityOverview({
         dataByDate,
-        agents,
+        agents: getUsersData(),
         start: dateStart,
         end: dateEnd,
         teamFilter: currentTeamFilter
     });
-    productivityOverviewCache = { key: cacheKey, overview };
-    return overview;
 }
 
 // --- Rendering ---
@@ -267,17 +234,17 @@ function renderDetailView() {
     const statsContainer = document.getElementById('productivityStats');
     if (!container) return;
 
-    if (selectedAgents.size > 0) {
-        pruneSelectedAgents();
-    }
-
     if (!hasAnyData()) {
         container.innerHTML = `<p style="color: var(--text-secondary); text-align: center; padding: 3rem;">${t('prod-upload-to-see')}</p>`;
         if (statsContainer) statsContainer.innerHTML = '';
         return;
     }
 
-    if (selectedAgents.size === 0) {
+    if (selectedAgents.size > 0) {
+        pruneSelectedAgents();
+    }
+
+    if (!detailSearchCommitted || selectedAgents.size === 0) {
         container.innerHTML = `<p style="color: var(--text-secondary); text-align: center; padding: 3rem;">${t('prod-select-agent')}</p>`;
         if (statsContainer) statsContainer.innerHTML = '';
         return;
@@ -289,7 +256,7 @@ function renderDetailView() {
         selectedAgents,
         start: dateStart,
         end: dateEnd,
-        teamFilter: currentTeamFilter
+        teamFilter: 'all'
     });
 
     const view = buildProductivityDetailView({
@@ -301,33 +268,47 @@ function renderDetailView() {
     container.innerHTML = view.contentHtml;
 }
 
-// --- Agent Chips UI ---
+// --- Agent Search UI ---
 
-function getFilteredAgents() {
-    const agents = getUsersData();
-    return agentSelectionCache.get(getProductivityCacheKey(agents), () =>
-        buildProductivityAgentSelectionOptions({
-            dataByDate,
-            agents,
-            start: dateStart,
-            end: dateEnd,
-            teamFilter: currentTeamFilter
-        })
-    );
+function setAgentSearchTerm(value) {
+    const input = document.getElementById('prodAgentSearch');
+    if (input) input.value = value;
 }
 
-function renderAgentChips(searchTerm = '') {
+function getSearchableAgents() {
+    const agentNames = new Map();
+    getUsersData().forEach(u => {
+        if (!u?.fullName) return;
+        const key = normalizeProductivityName(u.fullName);
+        if (!agentNames.has(key)) {
+            agentNames.set(key, { fullName: u.fullName, primaryTeam: u.primaryTeam, agent: u });
+        }
+    });
+
+    const agents = [...agentNames.entries()].filter(([, info]) =>
+        hasPerAgentProductivityEligibleDate(info.agent, dateStart, dateEnd)
+    );
+    agents.sort((a, b) => a[1].fullName.localeCompare(b[1].fullName));
+    return agents;
+}
+
+function getAgentSearchResults(searchTerm = '') {
+    const normalizedSearchTerm = String(searchTerm || '').trim();
+    if (normalizedSearchTerm.length < PRODUCTIVITY_AGENT_SEARCH_MIN_LENGTH) return [];
+    return filterProductivityAgentSelection(getSearchableAgents(), normalizedSearchTerm);
+}
+
+function renderAgentSearchResults(searchTerm = '') {
     const container = document.getElementById('agentChipsContainer');
     const countEl = document.getElementById('prodAgentCount');
     if (!container) return;
 
     const normalizedSearchTerm = String(searchTerm || '').trim();
     const shouldLoadAgents = normalizedSearchTerm.length >= PRODUCTIVITY_AGENT_SEARCH_MIN_LENGTH;
-    const allAgents = shouldLoadAgents || selectedAgents.size > 0 ? getFilteredAgents() : [];
+    const agents = shouldLoadAgents ? getSearchableAgents() : [];
     if (selectedAgents.size > 0) {
-        pruneSelectedAgents(allAgents);
+        pruneSelectedAgents();
     }
-    const agents = shouldLoadAgents ? allAgents : [];
 
     const view = buildProductivityAgentSelectionView({
         agents,
@@ -341,7 +322,7 @@ function renderAgentChips(searchTerm = '') {
     container.innerHTML = view.html;
     bindProductivityAgentActions({
         container,
-        toggleAgent: agentActions.toggleAgent
+        chooseAgentSuggestion: agentActions.chooseAgentSuggestion
     });
     if (countEl) countEl.textContent = view.countText;
 }
@@ -361,6 +342,7 @@ function setView(view) {
     const overviewBtn = document.getElementById('viewOverview');
     const detailBtn = document.getElementById('viewDetail');
     const agentSection = document.getElementById('agentSelectorSection');
+    const teamFilter = document.getElementById('productivityTeamFilter');
 
     if (overviewBtn) {
         overviewBtn.style.background = view === 'overview' ? 'var(--accent)' : 'var(--primary-dark)';
@@ -373,9 +355,11 @@ function setView(view) {
         detailBtn.style.fontWeight = view === 'detail' ? '600' : '400';
     }
     if (agentSection) agentSection.style.display = view === 'detail' ? 'block' : 'none';
+    if (teamFilter) teamFilter.style.display = view === 'detail' ? 'none' : '';
 
     if (view === 'detail') {
-        renderAgentChips();
+        detailSearchCommitted = false;
+        renderAgentSearchResults(document.getElementById('prodAgentSearch')?.value || '');
     }
     renderCurrentView();
 }
@@ -383,7 +367,7 @@ function setView(view) {
 function refreshProductivityViews({ source = 'manual' } = {}) {
     renderUploadCalendar();
     updateUploadDateStatus();
-    if (currentView === 'detail') renderAgentChips();
+    if (currentView === 'detail') renderAgentSearchResults(document.getElementById('prodAgentSearch')?.value || '');
     renderCurrentView();
     document.dispatchEvent(new CustomEvent('productivity-data-updated', { detail: { source } }));
 }
@@ -526,7 +510,6 @@ export async function initializeProductivity() {
         const ticketsData = await parseTicketsXLSX(file);
         const entry = getOrCreateDateEntry(dateKey);
         entry.ticketsData = ticketsData;
-        markProductivityDataChanged();
         console.log(`[Productivity] Parsed ${ticketsData.size} agents from tickets file for ${dateKey}.`);
     });
 
@@ -535,7 +518,6 @@ export async function initializeProductivity() {
         const callsData = parseCallsCSV(text);
         const entry = getOrCreateDateEntry(dateKey);
         entry.callsData = callsData;
-        markProductivityDataChanged();
         console.log(`[Productivity] Parsed ${callsData.size} agents from calls file for ${dateKey}.`);
     });
 
@@ -555,9 +537,11 @@ export async function initializeProductivity() {
         doc: document,
         getCurrentView: () => currentView,
         setView,
-        renderAgentChips,
-        selectAllAgents: agentActions.selectAllAgents,
-        deselectAllAgents: agentActions.deselectAllAgents,
+        renderAgentSearchResults,
+        submitAgentSearch: agentActions.submitAgentSearch,
+        markAgentSearchPending: () => {
+            detailSearchCommitted = false;
+        },
         setCurrentTeamFilter: value => {
             currentTeamFilter = value;
         },
@@ -579,7 +563,6 @@ export function cleanupProductivity() {
         unsubscribeFromProductivity = null;
     }
     dataByDate.clear();
-    markProductivityDataChanged();
 }
 
 /**

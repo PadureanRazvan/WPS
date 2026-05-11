@@ -2,9 +2,9 @@ export function bindProductivityControls({
     doc = globalThis.document,
     getCurrentView = () => 'overview',
     setView = () => {},
-    renderAgentChips = () => {},
-    selectAllAgents = () => {},
-    deselectAllAgents = () => {},
+    renderAgentSearchResults = () => {},
+    submitAgentSearch = () => {},
+    markAgentSearchPending = () => {},
     setCurrentTeamFilter = () => {},
     hasAnyData = () => false,
     renderCurrentView = () => {},
@@ -26,16 +26,24 @@ export function bindProductivityControls({
     });
 
     const agentSearch = getById('prodAgentSearch');
-    agentSearch?.addEventListener('input', () => renderAgentChips(agentSearch.value));
+    agentSearch?.addEventListener('input', () => {
+        markAgentSearchPending();
+        renderAgentSearchResults(agentSearch.value);
+    });
+    agentSearch?.addEventListener('keydown', event => {
+        if (event.key !== 'Enter') return;
+        event.preventDefault();
+        submitAgentSearch(agentSearch.value);
+    });
 
-    getById('prodSelectAll')?.addEventListener('click', () => selectAllAgents());
-    getById('prodDeselectAll')?.addEventListener('click', () => deselectAllAgents());
+    getById('prodAgentSearchBtn')?.addEventListener('click', () => {
+        submitAgentSearch(agentSearch?.value || '');
+    });
 
     const teamFilter = getById('productivityTeamFilter');
     teamFilter?.addEventListener('change', () => {
         setCurrentTeamFilter(teamFilter.value);
-        if (getCurrentView() === 'detail') renderAgentChips();
-        if (hasAnyData()) renderCurrentView();
+        if (getCurrentView() === 'overview' && hasAnyData()) renderCurrentView();
     });
 
     const refreshButton = getById('productivityRefreshBtn');

@@ -418,9 +418,8 @@
                             <div style="display: flex; align-items: center; gap: 1rem;">
                                 <div style="position: relative; flex: 1;">
                                     <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;">
-                                        <input type="text" id="prodAgentSearch" data-translate="prod-search-agent" placeholder="Caută agent..." style="flex: 1; padding: 0.5rem 0.75rem; background: var(--primary-dark); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary); font-size: 0.85rem;">
-                                        <button id="prodSelectAll" class="btn btn-secondary" data-translate="prod-visible-btn" style="padding: 0.4rem 0.75rem; font-size: 0.8rem; white-space: nowrap;">Vizibili</button>
-                                        <button id="prodDeselectAll" class="btn btn-secondary" data-translate="prod-none-btn" style="padding: 0.4rem 0.75rem; font-size: 0.8rem; white-space: nowrap;">Niciunul</button>
+                                        <input type="text" id="prodAgentSearch" data-translate="prod-search-agent" placeholder="Caută agent..." style="flex: 1; min-width: 0; padding: 0.5rem 0.75rem; background: var(--primary-dark); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary); font-size: 0.85rem;">
+                                        <button type="button" id="prodAgentSearchBtn" class="btn btn-primary" data-translate="prod-search-btn" style="padding: 0.5rem 0.9rem; font-size: 0.8rem; white-space: nowrap;">Caută</button>
                                         <span id="prodAgentCount" style="color: var(--text-secondary); font-size: 0.8rem; white-space: nowrap;"></span>
                                     </div>
                                     <div id="agentChipsContainer" style="display: flex; flex-wrap: wrap; gap: 0.35rem; max-height: 120px; overflow-y: auto; padding: 0.25rem 0;"></div>

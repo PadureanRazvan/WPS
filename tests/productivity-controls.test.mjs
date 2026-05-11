@@ -39,48 +39,53 @@ function fakeDocument(elements) {
   };
 }
 
-test('productivity controls bind view buttons and agent controls', async () => {
+test('productivity controls bind view buttons and search-on-submit agent controls', async () => {
   const { bindProductivityControls } = await loadControlsModule();
   const viewOverview = fakeElement();
   const viewDetail = fakeElement();
   const agentSearch = fakeElement({ value: 'ana' });
-  const selectAll = fakeElement();
-  const deselectAll = fakeElement();
+  const searchButton = fakeElement();
   const calls = [];
+  let prevented = false;
 
   bindProductivityControls({
     doc: fakeDocument({
       viewOverview,
       viewDetail,
       prodAgentSearch: agentSearch,
-      prodSelectAll: selectAll,
-      prodDeselectAll: deselectAll
+      prodAgentSearchBtn: searchButton
     }),
     setView: view => calls.push(['setView', view]),
-    renderAgentChips: search => calls.push(['renderAgentChips', search]),
-    selectAllAgents: () => calls.push(['selectAllAgents']),
-    deselectAllAgents: () => calls.push(['deselectAllAgents']),
+    renderAgentSearchResults: search => calls.push(['renderAgentSearchResults', search]),
+    submitAgentSearch: search => calls.push(['submitAgentSearch', search]),
     log: message => calls.push(['log', message])
   });
 
   viewOverview.dispatch('click');
   viewDetail.dispatch('click');
   agentSearch.dispatch('input');
-  selectAll.dispatch('click');
-  deselectAll.dispatch('click');
+  searchButton.dispatch('click');
+  agentSearch.value = 'mihai';
+  agentSearch.dispatch('keydown', {
+    key: 'Enter',
+    preventDefault: () => {
+      prevented = true;
+    }
+  });
 
   assert.deepEqual(calls, [
     ['log', '[Productivity] Switching to Sumar view'],
     ['setView', 'overview'],
     ['log', '[Productivity] Switching to Per Agent view'],
     ['setView', 'detail'],
-    ['renderAgentChips', 'ana'],
-    ['selectAllAgents'],
-    ['deselectAllAgents']
+    ['renderAgentSearchResults', 'ana'],
+    ['submitAgentSearch', 'ana'],
+    ['submitAgentSearch', 'mihai']
   ]);
+  assert.equal(prevented, true);
 });
 
-test('productivity controls bind team filter to detail chips and current view refresh', async () => {
+test('productivity controls keep team filter scoped to the summary view', async () => {
   const { bindProductivityControls } = await loadControlsModule();
   const teamFilter = fakeElement({ value: '2L' });
   const calls = [];
@@ -89,7 +94,6 @@ test('productivity controls bind team filter to detail chips and current view re
     doc: fakeDocument({ productivityTeamFilter: teamFilter }),
     getCurrentView: () => 'detail',
     setCurrentTeamFilter: value => calls.push(['setCurrentTeamFilter', value]),
-    renderAgentChips: search => calls.push(['renderAgentChips', search]),
     hasAnyData: () => true,
     renderCurrentView: () => calls.push(['renderCurrentView'])
   });
@@ -97,13 +101,11 @@ test('productivity controls bind team filter to detail chips and current view re
   teamFilter.dispatch('change');
 
   assert.deepEqual(calls, [
-    ['setCurrentTeamFilter', '2L'],
-    ['renderAgentChips', undefined],
-    ['renderCurrentView']
+    ['setCurrentTeamFilter', '2L']
   ]);
 });
 
-test('productivity controls skip detail chip refresh and current view refresh when not needed', async () => {
+test('productivity controls refresh summary when the summary team filter changes', async () => {
   const { bindProductivityControls } = await loadControlsModule();
   const teamFilter = fakeElement({ value: 'RO' });
   const calls = [];
@@ -112,14 +114,16 @@ test('productivity controls skip detail chip refresh and current view refresh wh
     doc: fakeDocument({ productivityTeamFilter: teamFilter }),
     getCurrentView: () => 'overview',
     setCurrentTeamFilter: value => calls.push(['setCurrentTeamFilter', value]),
-    renderAgentChips: () => calls.push(['renderAgentChips']),
-    hasAnyData: () => false,
+    hasAnyData: () => true,
     renderCurrentView: () => calls.push(['renderCurrentView'])
   });
 
   teamFilter.dispatch('change');
 
-  assert.deepEqual(calls, [['setCurrentTeamFilter', 'RO']]);
+  assert.deepEqual(calls, [
+    ['setCurrentTeamFilter', 'RO'],
+    ['renderCurrentView']
+  ]);
 });
 
 test('productivity controls bind refresh button loading and success message', async () => {
