@@ -4,8 +4,7 @@ import { collection, doc, setDoc, deleteDoc, getDocs, onSnapshot } from "https:/
 import { getPlannerData } from './planner.js';
 import { getUsersData } from './users.js';
 import { showTemporaryMessage } from './ui.js';
-import { translations, normalizeTeamForDisplay, getMonthKey } from './config.js';
-import { findProductivityAgent, hasPerAgentProductivityEligibleDate, normalizeProductivityName } from './productivity-metrics.js';
+import { translations } from './config.js';
 import { buildProductivityExportCsv, getProductivityDateStatus } from './productivity-upload-calendar.js';
 import { createProductivityDateCommands } from './productivity-date-commands.js';
 import { buildProductivityUploadCalendarView, buildProductivityUploadDateStatusView, buildProductivityUploadSuccessView } from './productivity-upload-calendar-view.js';
@@ -21,6 +20,11 @@ import { bindProductivityDateRangePicker } from './productivity-date-range-picke
 import { bindProductivityControls } from './productivity-controls.js';
 import { bindProductivityAgentActions, createProductivityAgentActions } from './productivity-agent-actions.js';
 import {
+    buildProductivityAgentSelectionOptions,
+    createProductivityAgentSelectionCache,
+    pruneProductivityAgentSelection
+} from './productivity-agent-selection-model.js';
+import {
     buildProductivityAgentSelectionView,
     clearProductivityAgentSelection,
     selectAllProductivityAgents,
@@ -32,8 +36,7 @@ import {
     getProductivityDaysInRange,
     getProductivityEligibleHoursForRange,
     getProductivityEligibleHoursForTeamInRange,
-    hasAnyProductivityData,
-    mergeProductivityDataForRange
+    hasAnyProductivityData
 } from './productivity-calculation.js';
 
 function getLang() { return localStorage.getItem('language') || 'ro'; }
@@ -52,14 +55,21 @@ let selectedAgents = new Set(); // normalized names of selected agents
 let uploadCalendarMonth = new Date();
 let unsubscribeFromProductivity = null;
 let visibleAgentSearchResults = [];
+let productivityDataVersion = 0;
+let productivityOverviewCache = null;
 const productivityStore = createProductivityFirestoreStore({
     db,
     firestore: { collection, doc, setDoc, deleteDoc, getDocs, onSnapshot }
 });
+const agentSelectionCache = createProductivityAgentSelectionCache();
 const PRODUCTIVITY_AGENT_SEARCH_MIN_LENGTH = 2;
 const dateCommands = createProductivityDateCommands({
     getDateEntry: dateKey => dataByDate.get(dateKey),
-    deleteDateEntry: dateKey => dataByDate.delete(dateKey),
+    deleteDateEntry: dateKey => {
+        const deleted = dataByDate.delete(dateKey);
+        if (deleted) markProductivityDataChanged();
+        return deleted;
+    },
     getDateStatus: getProductivityDateStatus,
     buildExportCsv: buildProductivityExportCsv,
     deletePersistedDate: deleteFromFirestore,
@@ -82,48 +92,26 @@ const agentActions = createProductivityAgentActions({
     renderCurrentView
 });
 
-// --- Name Normalization & Matching ---
+// --- Cached read-model state ---
 
-function matchAgent(fileName) {
-    return findProductivityAgent(fileName, getUsersData());
+function markProductivityDataChanged() {
+    productivityDataVersion += 1;
+    productivityOverviewCache = null;
+    agentSelectionCache.clear();
 }
 
-function pruneSelectedAgents() {
-    const allowedAgents = new Set(getFilteredAgents().map(([normalizedName]) => normalizedName));
-    selectedAgents.forEach(normalizedName => {
-        if (!allowedAgents.has(normalizedName)) {
-            selectedAgents.delete(normalizedName);
-        }
-    });
-}
-
-function entryHasTeamData(entry, teamCode) {
-    if (!entry?.teams) return false;
-
-    let hasTeam = false;
-    entry.teams.forEach((count, team) => {
-        if (count > 0 && normalizeTeamForDisplay(team) === teamCode) {
-            hasTeam = true;
-        }
-    });
-    return hasTeam;
-}
-
-function getAgentsWithUploadedTeamData(teamCode, start = dateStart, end = dateEnd) {
-    const matchingAgents = new Set();
-    const normalizedTeamCode = normalizeTeamForDisplay(teamCode);
-    const { mergedTickets, mergedCalls } = getMergedDataForRange(start, end, { excludePerAgentRoles: true });
-
-    const addMatchedAgent = (entry) => {
-        if (!entryHasTeamData(entry, normalizedTeamCode)) return;
-        const agent = matchAgent(entry.originalName);
-        if (!agent) return;
-        matchingAgents.add(normalizeProductivityName(agent.fullName));
+function getProductivityCacheKey(agents) {
+    return {
+        dataVersion: productivityDataVersion,
+        startKey: formatProductivityDateKey(dateStart),
+        endKey: formatProductivityDateKey(dateEnd),
+        teamFilter: currentTeamFilter,
+        usersRef: agents
     };
+}
 
-    mergedTickets.forEach(addMatchedAgent);
-    mergedCalls.forEach(addMatchedAgent);
-    return matchingAgents;
+function pruneSelectedAgents(allowedAgents = getFilteredAgents()) {
+    selectedAgents = pruneProductivityAgentSelection(selectedAgents, allowedAgents);
 }
 
 function formatDateDisplay(dateKey) {
@@ -138,6 +126,7 @@ function replaceProductivityData(nextDataByDate) {
     nextDataByDate.forEach((entry, dateKey) => {
         dataByDate.set(dateKey, entry);
     });
+    markProductivityDataChanged();
 }
 
 async function saveToFirestore(dateKey) {
@@ -215,28 +204,31 @@ function hasAnyData() {
     return hasAnyProductivityData(dataByDate);
 }
 
-// --- Merge data across date range for productivity ---
-
-function getMergedDataForRange(start, end, { excludePerAgentRoles = false } = {}) {
-    return mergeProductivityDataForRange({
-        dataByDate,
-        agents: getUsersData(),
-        start,
-        end,
-        excludePerAgentRoles
-    });
-}
-
 // --- Productivity Calculation ---
 
 function calculateProductivity() {
-    return calculateProductivityOverview({
+    const agents = getUsersData();
+    const cacheKey = getProductivityCacheKey(agents);
+    if (
+        productivityOverviewCache
+        && productivityOverviewCache.key.dataVersion === cacheKey.dataVersion
+        && productivityOverviewCache.key.startKey === cacheKey.startKey
+        && productivityOverviewCache.key.endKey === cacheKey.endKey
+        && productivityOverviewCache.key.teamFilter === cacheKey.teamFilter
+        && productivityOverviewCache.key.usersRef === cacheKey.usersRef
+    ) {
+        return productivityOverviewCache.overview;
+    }
+
+    const overview = calculateProductivityOverview({
         dataByDate,
-        agents: getUsersData(),
+        agents,
         start: dateStart,
         end: dateEnd,
         teamFilter: currentTeamFilter
     });
+    productivityOverviewCache = { key: cacheKey, overview };
+    return overview;
 }
 
 // --- Rendering ---
@@ -312,39 +304,16 @@ function renderDetailView() {
 // --- Agent Chips UI ---
 
 function getFilteredAgents() {
-    const agentNames = new Map();
-    dataByDate.forEach(entry => {
-        const addFromMap = (map) => {
-            if (!map) return;
-            map.forEach((val, normalizedName) => {
-                const agent = matchAgent(val.originalName);
-                if (agent) {
-                    const agentKey = normalizeProductivityName(agent.fullName);
-                    if (agentNames.has(agentKey)) return;
-                    agentNames.set(agentKey, { fullName: agent.fullName, primaryTeam: agent.primaryTeam, agent });
-                }
-            });
-        };
-        addFromMap(entry.ticketsData);
-        addFromMap(entry.callsData);
-    });
-
-    getUsersData().forEach(u => {
-        const key = normalizeProductivityName(u.fullName);
-        if (!agentNames.has(key)) {
-            agentNames.set(key, { fullName: u.fullName, primaryTeam: u.primaryTeam, agent: u });
-        }
-    });
-
-    let agents = [...agentNames.entries()].filter(([, info]) =>
-        hasPerAgentProductivityEligibleDate(info.agent, dateStart, dateEnd)
+    const agents = getUsersData();
+    return agentSelectionCache.get(getProductivityCacheKey(agents), () =>
+        buildProductivityAgentSelectionOptions({
+            dataByDate,
+            agents,
+            start: dateStart,
+            end: dateEnd,
+            teamFilter: currentTeamFilter
+        })
     );
-    if (currentTeamFilter !== 'all') {
-        const matchingAgents = getAgentsWithUploadedTeamData(currentTeamFilter);
-        agents = agents.filter(([normalizedName]) => matchingAgents.has(normalizedName));
-    }
-    agents.sort((a, b) => a[1].fullName.localeCompare(b[1].fullName));
-    return agents;
 }
 
 function renderAgentChips(searchTerm = '') {
@@ -354,10 +323,11 @@ function renderAgentChips(searchTerm = '') {
 
     const normalizedSearchTerm = String(searchTerm || '').trim();
     const shouldLoadAgents = normalizedSearchTerm.length >= PRODUCTIVITY_AGENT_SEARCH_MIN_LENGTH;
-    const agents = shouldLoadAgents ? getFilteredAgents() : [];
+    const allAgents = shouldLoadAgents || selectedAgents.size > 0 ? getFilteredAgents() : [];
     if (selectedAgents.size > 0) {
-        pruneSelectedAgents();
+        pruneSelectedAgents(allAgents);
     }
+    const agents = shouldLoadAgents ? allAgents : [];
 
     const view = buildProductivityAgentSelectionView({
         agents,
@@ -556,6 +526,7 @@ export async function initializeProductivity() {
         const ticketsData = await parseTicketsXLSX(file);
         const entry = getOrCreateDateEntry(dateKey);
         entry.ticketsData = ticketsData;
+        markProductivityDataChanged();
         console.log(`[Productivity] Parsed ${ticketsData.size} agents from tickets file for ${dateKey}.`);
     });
 
@@ -564,6 +535,7 @@ export async function initializeProductivity() {
         const callsData = parseCallsCSV(text);
         const entry = getOrCreateDateEntry(dateKey);
         entry.callsData = callsData;
+        markProductivityDataChanged();
         console.log(`[Productivity] Parsed ${callsData.size} agents from calls file for ${dateKey}.`);
     });
 
@@ -607,6 +579,7 @@ export function cleanupProductivity() {
         unsubscribeFromProductivity = null;
     }
     dataByDate.clear();
+    markProductivityDataChanged();
 }
 
 /**
