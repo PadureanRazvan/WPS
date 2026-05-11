@@ -36,16 +36,18 @@ function statCard(label, value, detail = '', valueStyle = '') {
 
 export function buildProductivityOverviewView({
     rows = [],
+    summary = null,
     daysInRange = 0,
     datesWithData = 0,
     t = key => key
 } = {}) {
     const totalAgents = rows.length;
-    const totalTickets = rows.reduce((sum, row) => sum + row.tickets, 0);
-    const totalCalls = rows.reduce((sum, row) => sum + row.calls, 0);
-    const totalAll = rows.reduce((sum, row) => sum + row.total, 0);
-    const totalHours = rows.reduce((sum, row) => sum + row.hours, 0);
-    const avgProd = totalHours > 0 ? (totalAll / totalHours).toFixed(2) : 'N/A';
+    const totalTickets = summary ? summary.tickets : rows.reduce((sum, row) => sum + row.tickets, 0);
+    const totalCalls = summary ? summary.calls : rows.reduce((sum, row) => sum + row.calls, 0);
+    const totalAll = summary ? summary.total : rows.reduce((sum, row) => sum + row.total, 0);
+    const totalHours = summary ? summary.hours : rows.reduce((sum, row) => sum + row.hours, 0);
+    const averageProductivity = summary ? summary.productivity : (totalHours > 0 ? totalAll / totalHours : null);
+    const avgProd = averageProductivity !== null ? averageProductivity.toFixed(2) : 'N/A';
     const rangeLabel = daysInRange === 1 ? `1 ${t('prod-day')}` : `${daysInRange} ${t('prod-days')}`;
 
     const statsHtml = `

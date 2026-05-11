@@ -236,7 +236,7 @@ function calculateProductivity() {
         start: dateStart,
         end: dateEnd,
         teamFilter: currentTeamFilter
-    }).rows;
+    });
 }
 
 // --- Rendering ---
@@ -252,15 +252,15 @@ function renderProductivity() {
         return;
     }
 
-    const results = calculateProductivity();
-    const filtered = results; // filtering is now done inside calculateProductivity
+    const overview = calculateProductivity();
+    const filtered = overview.rows; // filtering is now done inside calculateProductivity
 
     const statsContainer = document.getElementById('productivityStats');
-    const { datesWithData } = getMergedDataForRange(dateStart, dateEnd);
     const view = buildProductivityOverviewView({
         rows: filtered,
+        summary: overview.summary,
         daysInRange: getProductivityDaysInRange(dateStart, dateEnd),
-        datesWithData,
+        datesWithData: overview.datesWithData,
         t
     });
 

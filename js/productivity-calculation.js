@@ -188,6 +188,60 @@ export function mergeProductivityDataForRange({
     return { mergedTickets, mergedCalls, datesWithData };
 }
 
+function getUploadedTeamCount(uploadedEntry, teamFilter) {
+    if (!uploadedEntry?.teams) return 0;
+
+    const normalizedFilter = normalizeTeamForDisplay(String(teamFilter || '').trim().toUpperCase());
+    let total = 0;
+    uploadedEntry.teams.forEach((count, team) => {
+        if (normalizeTeamForDisplay(String(team || '').trim().toUpperCase()) === normalizedFilter) {
+            total += Number(count) || 0;
+        }
+    });
+    return total;
+}
+
+function calculateOverviewSummary({
+    mergedTickets,
+    mergedCalls,
+    agents,
+    rows,
+    teamFilter
+}) {
+    const hasTeamFilter = teamFilter !== 'all';
+    const allNames = new Set();
+    mergedTickets.forEach((_, key) => allNames.add(key));
+    mergedCalls.forEach((_, key) => allNames.add(key));
+
+    let tickets = 0;
+    let calls = 0;
+    allNames.forEach(normalizedName => {
+        const ticketEntry = mergedTickets.get(normalizedName);
+        const callEntry = mergedCalls.get(normalizedName);
+        const originalName = ticketEntry?.originalName || callEntry?.originalName || normalizedName;
+        const agent = findProductivityAgent(originalName, agents);
+        if (!agent) return;
+
+        if (hasTeamFilter) {
+            tickets += getUploadedTeamCount(ticketEntry, teamFilter);
+            calls += getUploadedTeamCount(callEntry, teamFilter);
+        } else {
+            tickets += Number(ticketEntry?.tickets) || 0;
+            calls += Number(callEntry?.calls) || 0;
+        }
+    });
+
+    const total = tickets + calls;
+    const hours = rows.reduce((sum, row) => sum + row.hours, 0);
+    return {
+        tickets,
+        calls,
+        total,
+        hours,
+        productivity: hours > 0 ? total / hours : null
+    };
+}
+
 export function calculateProductivityOverview({
     dataByDate,
     agents,
@@ -197,17 +251,21 @@ export function calculateProductivityOverview({
 }) {
     if (!hasAnyProductivityData(dataByDate)) return { rows: [], datesWithData: 0 };
 
-    const { mergedTickets, mergedCalls, datesWithData } = mergeProductivityDataForRange({
+    const allMergedData = mergeProductivityDataForRange({
+        dataByDate,
+        agents,
+        start,
+        end,
+        excludePerAgentRoles: false
+    });
+
+    const { mergedTickets, mergedCalls } = mergeProductivityDataForRange({
         dataByDate,
         agents,
         start,
         end,
         excludePerAgentRoles: true
     });
-    if (mergedTickets.size === 0 && mergedCalls.size === 0) {
-        return { rows: [], datesWithData };
-    }
-
     const rows = [];
     const allNames = new Set();
     mergedTickets.forEach((_, key) => allNames.add(key));
@@ -280,9 +338,19 @@ export function calculateProductivityOverview({
         });
     });
 
+    const sortedRows = rows.sort((a, b) => b.productivity - a.productivity);
+    const summary = calculateOverviewSummary({
+        mergedTickets: allMergedData.mergedTickets,
+        mergedCalls: allMergedData.mergedCalls,
+        agents,
+        rows: sortedRows,
+        teamFilter
+    });
+
     return {
-        rows: rows.sort((a, b) => b.productivity - a.productivity),
-        datesWithData
+        rows: sortedRows,
+        datesWithData: allMergedData.datesWithData,
+        summary
     };
 }
 

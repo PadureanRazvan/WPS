@@ -87,6 +87,40 @@ test('productivity view returns empty overview content while keeping zeroed stat
   assert.match(view.contentHtml, /No agents/);
 });
 
+test('productivity view uses overview summary for shop totals when it differs from visible agent rows', async () => {
+  const { buildProductivityOverviewView } = await loadViewModule();
+
+  const view = buildProductivityOverviewView({
+    rows: [
+      {
+        name: 'Regular Agent',
+        teamsDisplay: 'CS',
+        teams: new Map([['CS', 10]]),
+        tickets: 10,
+        calls: 0,
+        total: 10,
+        hours: 4,
+        productivity: 2.5
+      }
+    ],
+    summary: {
+      tickets: 13,
+      calls: 0,
+      total: 13,
+      hours: 4,
+      productivity: 3.25
+    },
+    daysInRange: 1,
+    datesWithData: 1,
+    t
+  });
+
+  assert.match(view.statsHtml, /Tickets resolved[\s\S]*13/);
+  assert.match(view.statsHtml, /Average[\s\S]*3\.25/);
+  assert.match(view.contentHtml, /Regular Agent/);
+  assert.doesNotMatch(view.contentHtml, /13/);
+});
+
 test('productivity view builds detail stats and collapses repeated date labels', async () => {
   const { buildProductivityDetailView } = await loadViewModule();
 

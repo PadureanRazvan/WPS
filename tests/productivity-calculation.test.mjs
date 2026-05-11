@@ -109,3 +109,58 @@ test('overview calculation filters items and hours by selected team', async () =
   assert.equal(rows[0].productivity, 4);
   assert.equal(rows[0].teamsDisplay, 'CS');
 });
+
+test('overview summary includes QA and TL shop tickets without adding report-role rows or hours', async () => {
+  const { calculateProductivityOverview } = await loadProductivityCalculationModule();
+  const agents = [
+    makeAgent({
+      fullName: 'Regular Agent',
+      username: 'Regular Agent_fsp',
+      primaryTeam: 'CS zooplus',
+      monthlyDays: { '2026-05': ['4CS'] }
+    }),
+    makeAgent({
+      fullName: 'QA Agent',
+      username: 'QA Agent_fsp',
+      primaryTeam: 'QA Quality Assurance',
+      monthlyDays: { '2026-05': ['8QA'] }
+    }),
+    makeAgent({
+      fullName: 'Team Lead',
+      username: 'Team Lead_fsp',
+      primaryTeam: 'TL Team Lead',
+      monthlyDays: { '2026-05': ['8TL'] }
+    })
+  ];
+  const dataByDate = new Map([
+    ['2026-05-01', {
+      ticketsData: new Map([
+        ['regular agent', uploadedEntry('Regular Agent_fsp', 'tickets', { CS: 10 })],
+        ['qa agent', uploadedEntry('QA Agent_fsp', 'tickets', { CS: 2 })],
+        ['team lead', uploadedEntry('Team Lead_fsp', 'tickets', { CS: 1 })]
+      ]),
+      callsData: null
+    }]
+  ]);
+
+  const { rows, summary } = calculateProductivityOverview({
+    agents,
+    dataByDate,
+    start: new Date('2026-05-01T00:00:00'),
+    end: new Date('2026-05-01T00:00:00'),
+    teamFilter: 'CS'
+  });
+
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].name, 'Regular Agent');
+  assert.equal(rows[0].tickets, 10);
+  assert.equal(rows[0].hours, 4);
+  assert.equal(rows[0].productivity, 2.5);
+  assert.deepEqual(summary, {
+    tickets: 13,
+    calls: 0,
+    total: 13,
+    hours: 4,
+    productivity: 3.25
+  });
+});
