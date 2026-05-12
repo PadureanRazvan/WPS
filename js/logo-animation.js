@@ -1,5 +1,50 @@
 // Sherpa Logo — Morphing particle animation with electric discharges
 // Rebuilt with: Cartesian morphing, nearest-neighbor matching, smooth color blending
+const TWO_PI = Math.PI * 2;
+
+function clamp01(value) {
+    return Math.max(0, Math.min(1, value));
+}
+
+function smoothstep(edge0, edge1, value) {
+    const t = clamp01((value - edge0) / (edge1 - edge0));
+    return t * t * (3 - 2 * t);
+}
+
+export function getLogoMotion({ rotY, dt, now = 0, globeFactor = 0, heartFactor = 0 } = {}) {
+    const heartPresence = smoothstep(0.12, 0.86, heartFactor);
+
+    if (heartPresence > 0) {
+        const target = Math.round(rotY / TWO_PI) * TWO_PI;
+        const settleRate = 4.8 + heartPresence * 5.2;
+        let nextRotY = rotY + (target - rotY) * (1 - Math.exp(-dt * settleRate));
+
+        if (heartFactor > 0.94 && Math.abs(target - nextRotY) < 0.012) {
+            nextRotY = target;
+        }
+
+        const sway = Math.sin(now * 0.00075) * 0.045 * heartPresence;
+        const rotX = 0.12
+            + Math.sin(now * 0.0008) * 0.026 * heartPresence
+            + Math.sin(now * 0.00025) * 0.1 * (1 - heartPresence);
+
+        return {
+            rotY: nextRotY,
+            displayRotY: nextRotY + sway,
+            rotX,
+            heartPresence
+        };
+    }
+
+    const nextRotY = rotY + dt * (0.3 + (1 - globeFactor) * 0.2);
+    return {
+        rotY: nextRotY,
+        displayRotY: nextRotY,
+        rotX: 0.25 + Math.sin(now * 0.00025) * 0.1,
+        heartPresence: 0
+    };
+}
+
 export function initLogoAnimation(canvasId = 'sherpaLogo', canvasSize = 120) {
     const canvas = document.getElementById(canvasId);
     if (!canvas) return;
@@ -204,27 +249,29 @@ export function initLogoAnimation(canvasId = 'sherpaLogo', canvasSize = 120) {
             return a * a * a - hx * hx * hy * hy * hy <= 0;
         }
 
-        // 3D "pillow" heart: 2D heart silhouette extruded with elliptical z-depth
-        // Z thickness varies: thickest at center, zero at edges
-        const shellN = Math.floor(N * 0.4);
+        // Soft sculpted heart: dense rim plus a shallower interior so it reads as
+        // a face-on particle shape instead of a spinning 3D object.
+        const shellN = Math.floor(N * 0.56);
         const fillN = N - shellN;
-        const maxDepth = R * 0.35;
+        const maxDepth = R * 0.2;
 
-        // Shell particles — on the surface outline at various z slices
+        // Shell particles — double-banded to make the silhouette feel intentional
         for (let i = 0; i < shellN; i++) {
             const t = (i / shellN) * Math.PI * 2;
             const hx = 16 * Math.pow(Math.sin(t), 3);
             const hy = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t);
-            // Z depth: elliptical cross-section, thicker near center
+            const rimBand = i % 3 === 0 ? 0.92 : 1;
             const distFromCenter = Math.sqrt(hx * hx + hy * hy) / 17;
             const zEnvelope = maxDepth * Math.sqrt(Math.max(0, 1 - distFromCenter * distFromCenter));
             const zAngle = Math.random() * Math.PI * 2;
-            const zr = zEnvelope * (0.8 + Math.random() * 0.2);
+            const zr = zEnvelope * (0.3 + Math.random() * 0.35);
             pts.push({
-                x: hx * s + (Math.random() - 0.5) * 0.4,
-                y: -hy * s - R * 0.05 + (Math.random() - 0.5) * 0.4,
+                x: hx * s * rimBand + (Math.random() - 0.5) * 0.25,
+                y: -hy * s * rimBand - R * 0.05 + (Math.random() - 0.5) * 0.25,
                 z: Math.sin(zAngle) * zr,
-                isLand: false, size: 1.15 + Math.random() * 0.1
+                isLand: false,
+                heartEdge: true,
+                size: 1.18 + Math.random() * 0.22
             });
         }
         // Volume fill — rejection-sample inside the 2D heart, with 3D z depth
@@ -236,12 +283,14 @@ export function initLogoAnimation(canvasId = 'sherpaLogo', canvasSize = 120) {
             if (insideHeart(nx, ny)) {
                 const distFromCenter = Math.sqrt(nx * nx + ny * ny) / 1.3;
                 const zEnvelope = maxDepth * Math.sqrt(Math.max(0, 1 - distFromCenter));
-                const z = (Math.random() - 0.5) * 2 * zEnvelope;
+                const z = (Math.random() - 0.5) * 1.35 * zEnvelope;
                 pts.push({
                     x: nx * R * 0.62,
                     y: -ny * R * 0.62 - R * 0.05,
                     z: z,
-                    isLand: false, size: 0.9 + Math.random() * 0.3
+                    isLand: false,
+                    heartEdge: false,
+                    size: 0.78 + Math.random() * 0.28
                 });
                 placed++;
             }
@@ -254,7 +303,9 @@ export function initLogoAnimation(canvasId = 'sherpaLogo', canvasSize = 120) {
             const hy = -(13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t)) * fill;
             pts.push({
                 x: hx * s, y: hy * s - R * 0.05, z: (Math.random() - 0.5) * R * 0.15,
-                isLand: false, size: 0.9
+                isLand: false,
+                heartEdge: false,
+                size: 0.9
             });
         }
         return pts;
@@ -361,13 +412,15 @@ export function initLogoAnimation(canvasId = 'sherpaLogo', canvasSize = 120) {
         alpha: 0.5 + Math.random() * 0.5,
         pulse: Math.random() * Math.PI * 2,
         breath: Math.random() * Math.PI * 2,
+        twinkle: Math.random(),
         // Color: 0 = amber, 1 = globe-land, 2 = globe-ocean
         colorFrom: p.isLand ? 1 : 2,
         colorTo: p.isLand ? 1 : 2,
         colorBlend: 1,
         // Stagger: random delay for wave effect
         stagger: Math.random() * 0.25,
-        isLand: p.isLand
+        isLand: p.isLand,
+        heartEdge: false
     }));
 
     // Spring easing with slight overshoot
@@ -401,6 +454,8 @@ export function initLogoAnimation(canvasId = 'sherpaLogo', canvasSize = 120) {
             p.colorTo = isToGlobe ? (tp.isLand ? 1 : 2) : isToHeart ? 3 : 0;
             p.colorBlend = 0;
             p.isLand = tp.isLand;
+            p.heartEdge = isToHeart && !!tp.heartEdge;
+            p.twinkle = Math.random();
             p.stagger = Math.random() * 0.2;
         }
 
@@ -491,9 +546,53 @@ export function initLogoAnimation(canvasId = 'sherpaLogo', canvasSize = 120) {
                 : [15 + depth * 15, 60 + depth * 25, 150 + depth * 35];
         } else { // heart red
             return dark
-                ? [210 + depth * 30, 50 + depth * 25, 50 + depth * 20]
-                : [190 + depth * 30, 35 + depth * 20, 40 + depth * 15];
+                ? [195 + depth * 58, 34 + depth * 58, 54 + depth * 48]
+                : [178 + depth * 56, 24 + depth * 46, 48 + depth * 42];
         }
+    }
+
+    function traceHeartPath(scale, offsetY = 0) {
+        for (let i = 0; i <= 96; i++) {
+            const t = (i / 96) * Math.PI * 2;
+            const hx = 16 * Math.pow(Math.sin(t), 3);
+            const hy = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t);
+            const x = cx + hx * scale;
+            const y = cy - hy * scale - R * 0.05 + offsetY;
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+    }
+
+    function drawHeartAura(now, heartFactor, dark, settlePulse) {
+        if (heartFactor < 0.03) return;
+
+        const lift = Math.sin(now * 0.0011) * 1.1 * heartFactor;
+        const beat = 1 + heartFactor * 0.018 * Math.sin(now * 0.0028);
+        const scale = (R / 17) * (0.98 + heartFactor * 0.05) * beat * settlePulse;
+        const red = dark ? [255, 72, 94] : [225, 45, 72];
+        const pink = dark ? [255, 142, 158] : [255, 106, 128];
+
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.beginPath();
+        traceHeartPath(scale * 1.05, lift);
+        const glow = ctx.createRadialGradient(cx, cy - R * 0.12 + lift, R * 0.1, cx, cy + lift, R * 0.92);
+        glow.addColorStop(0, `rgba(${pink[0]},${pink[1]},${pink[2]},${heartFactor * 0.16})`);
+        glow.addColorStop(0.62, `rgba(${red[0]},${red[1]},${red[2]},${heartFactor * 0.08})`);
+        glow.addColorStop(1, `rgba(${red[0]},${red[1]},${red[2]},0)`);
+        ctx.shadowColor = `rgba(${red[0]},${red[1]},${red[2]},${heartFactor * 0.35})`;
+        ctx.shadowBlur = 14 * heartFactor;
+        ctx.fillStyle = glow;
+        ctx.fill();
+
+        ctx.shadowBlur = 0;
+        ctx.beginPath();
+        traceHeartPath(scale * 1.02, lift);
+        ctx.lineWidth = 0.7 + heartFactor * 0.55;
+        ctx.strokeStyle = `rgba(${pink[0]},${pink[1]},${pink[2]},${heartFactor * 0.28})`;
+        ctx.stroke();
+        ctx.restore();
     }
 
     // ── Main animation loop ───────────────────────────────────────
@@ -515,16 +614,11 @@ export function initLogoAnimation(canvasId = 'sherpaLogo', canvasSize = 120) {
             ? (morphProgress < 1 ? morphProgress : 1)
             : (morphProgress < 1 ? 1 - morphProgress : 0);
 
-        // Rotation — heart eases to face camera (nearest multiple of 2PI)
-        if (heartFactor > 0.5) {
-            // Ease rotY toward nearest front-facing angle (multiple of 2*PI)
-            const target = Math.round(rotY / (Math.PI * 2)) * Math.PI * 2;
-            rotY += (target - rotY) * dt * 3 * heartFactor;
-        } else {
-            const rotSpeed = 0.3 + (1 - globeFactor) * 0.2;
-            rotY += dt * rotSpeed;
-        }
-        const rotX = 0.25 + Math.sin(now * 0.00025) * (1 - heartFactor * 0.7) * 0.1;
+        // Rotation — the heart settles face-on and uses a tiny sway instead of spinning.
+        const motion = getLogoMotion({ rotY, dt, now, globeFactor, heartFactor });
+        rotY = motion.rotY;
+        const displayRotY = motion.displayRotY;
+        const rotX = motion.rotX;
 
         // Morph timing + settle pulse
         let settlePulse = 1;
@@ -550,6 +644,7 @@ export function initLogoAnimation(canvasId = 'sherpaLogo', canvasSize = 120) {
         }
 
         ctx.clearRect(0, 0, size, size);
+        drawHeartAura(now, heartFactor, dark, settlePulse);
 
         // Shape-specific atmosphere glow
         const glowStrength = Math.max(globeFactor, heartFactor * 0.5, (1 - globeFactor - heartFactor) * 0.3);
@@ -569,9 +664,11 @@ export function initLogoAnimation(canvasId = 'sherpaLogo', canvasSize = 120) {
         }
 
         // 3D projection
-        const cosY = Math.cos(rotY), sinY = Math.sin(rotY);
+        const cosY = Math.cos(displayRotY), sinY = Math.sin(displayRotY);
         const cosX = Math.cos(rotX), sinX = Math.sin(rotX);
         const perspD = 120;
+        const heartFloat = Math.sin(now * 0.0011) * 1.1 * heartFactor;
+        const heartBeat = 1 + heartFactor * 0.018 * Math.sin(now * 0.0028);
 
         const proj = [];
         for (const p of particles) {
@@ -579,19 +676,22 @@ export function initLogoAnimation(canvasId = 'sherpaLogo', canvasSize = 120) {
             const z2 = p.x * sinY + p.z * cosY;
             const y2 = p.y * cosX - z2 * sinX;
             const z3 = p.y * sinX + z2 * cosX;
-            const sc = perspD / (perspD + z3) * settlePulse;
-            const breath = 1 + Math.sin(now * 0.0012 + p.breath) * 0.06;
+            const sc = perspD / (perspD + z3) * settlePulse * heartBeat;
+            const breath = 1 + Math.sin(now * 0.0012 + p.breath) * (0.06 - heartFactor * 0.025);
 
             proj.push({
                 x: cx + x2 * sc,
-                y: cy + y2 * sc,
+                y: cy + y2 * sc + heartFloat,
                 z: z3,
                 size: p.size * sc * breath,
                 alpha: p.alpha * sc * (Math.sin(now * 0.002 + p.pulse) * 0.15 + 0.85),
                 colorFrom: p.colorFrom,
                 colorTo: p.colorTo,
                 colorBlend: p.colorBlend,
-                isLand: p.isLand
+                isLand: p.isLand,
+                heartEdge: p.heartEdge,
+                pulse: p.pulse,
+                twinkle: p.twinkle
             });
         }
 
@@ -599,7 +699,7 @@ export function initLogoAnimation(canvasId = 'sherpaLogo', canvasSize = 120) {
 
         // Connection lines — grid-accelerated, capped per particle, back-hemisphere fade
         ctx.lineWidth = 0.3;
-        const maxConn = 10 + (1 - globeFactor) * 6;
+        const maxConn = 10 + (1 - globeFactor) * 6 - heartFactor * 2;
         const maxConnSq = maxConn * maxConn;
         const cellSize = maxConn;
         const grid = new Map();
@@ -635,22 +735,29 @@ export function initLogoAnimation(canvasId = 'sherpaLogo', canvasSize = 120) {
 
                             const d = Math.sqrt(d2);
                             const la = (1 - d / maxConn) * 0.12 * Math.min(a.alpha, b.alpha);
-                            // Per-particle color blend (avg of both particles)
-                            const blend = (a.colorBlend + b.colorBlend) / 2;
-                            const cType = (a.isLand && b.isLand) ? 1 : (a.isLand || b.isLand) ? 2 : 0;
-                            const landAlpha = la * (cType === 1 ? 2.2 : cType === 2 ? 0.8 : 1);
-                            const blendFactor = globeFactor * blend;
-                            const finalAlpha = la + (landAlpha - la) * blendFactor;
-                            if (blendFactor > 0.3) {
-                                const c = cType === 1
-                                    ? (dark ? [60, 180, 100] : [30, 130, 60])
-                                    : (dark ? [50, 120, 200] : [30, 80, 170]);
-                                const r = 232 + (c[0] - 232) * blendFactor;
-                                const g = 168 + (c[1] - 168) * blendFactor;
-                                const bv = 73 + (c[2] - 73) * blendFactor;
-                                ctx.strokeStyle = `rgba(${r|0},${g|0},${bv|0},${finalAlpha})`;
+                            if (heartFactor > 0.25) {
+                                const depthMatch = 1 - Math.min(1, Math.abs(a.z - b.z) / (R * 1.4));
+                                const alpha = la * heartFactor * (0.42 + depthMatch * 0.32);
+                                const lineColor = dark ? [255, 94, 116] : [215, 46, 72];
+                                ctx.strokeStyle = `rgba(${lineColor[0]},${lineColor[1]},${lineColor[2]},${alpha})`;
                             } else {
-                                ctx.strokeStyle = `rgba(232,168,73,${finalAlpha})`;
+                                // Per-particle color blend (avg of both particles)
+                                const blend = (a.colorBlend + b.colorBlend) / 2;
+                                const cType = (a.isLand && b.isLand) ? 1 : (a.isLand || b.isLand) ? 2 : 0;
+                                const landAlpha = la * (cType === 1 ? 2.2 : cType === 2 ? 0.8 : 1);
+                                const blendFactor = globeFactor * blend;
+                                const finalAlpha = la + (landAlpha - la) * blendFactor;
+                                if (blendFactor > 0.3) {
+                                    const c = cType === 1
+                                        ? (dark ? [60, 180, 100] : [30, 130, 60])
+                                        : (dark ? [50, 120, 200] : [30, 80, 170]);
+                                    const r = 232 + (c[0] - 232) * blendFactor;
+                                    const g = 168 + (c[1] - 168) * blendFactor;
+                                    const bv = 73 + (c[2] - 73) * blendFactor;
+                                    ctx.strokeStyle = `rgba(${r|0},${g|0},${bv|0},${finalAlpha})`;
+                                } else {
+                                    ctx.strokeStyle = `rgba(232,168,73,${finalAlpha})`;
+                                }
                             }
                             ctx.beginPath();
                             ctx.moveTo(a.x, a.y);
@@ -678,19 +785,20 @@ export function initLogoAnimation(canvasId = 'sherpaLogo', canvasSize = 120) {
             // Snap to half-pixels for crisp dots
             const px = Math.round(p.x) + 0.5;
             const py = Math.round(p.y) + 0.5;
-            const coreR = Math.max(0.7, p.size * 0.5);
+            const coreR = Math.max(0.7, p.size * (p.heartEdge ? 0.56 : 0.5));
+            const particleAlpha = Math.min(1, p.alpha * (1 + heartFactor * (p.heartEdge ? 0.22 : 0.08)));
 
             // Solid core — sharp and legible
-            ctx.fillStyle = `rgba(${r},${g},${b},${p.alpha})`;
+            ctx.fillStyle = `rgba(${r},${g},${b},${particleAlpha})`;
             ctx.beginPath();
             ctx.arc(px, py, coreR, 0, Math.PI * 2);
             ctx.fill();
 
             // Faint halo — only for larger particles, using additive blend
             if (p.size > 0.9) {
-                const haloR = p.size * 1.8;
+                const haloR = p.size * (heartFactor > 0.45 ? 2.4 : 1.8);
                 const halo = ctx.createRadialGradient(px, py, coreR, px, py, haloR);
-                halo.addColorStop(0, `rgba(${r},${g},${b},${p.alpha * 0.18})`);
+                halo.addColorStop(0, `rgba(${r},${g},${b},${particleAlpha * (0.18 + heartFactor * 0.08)})`);
                 halo.addColorStop(1, `rgba(${r},${g},${b},0)`);
                 ctx.globalCompositeOperation = 'lighter';
                 ctx.fillStyle = halo;
@@ -699,15 +807,37 @@ export function initLogoAnimation(canvasId = 'sherpaLogo', canvasSize = 120) {
                 ctx.fill();
                 ctx.globalCompositeOperation = 'source-over';
             }
+
+            if (heartFactor > 0.75 && p.heartEdge && p.twinkle > 0.86) {
+                const sparkle = Math.max(0, Math.sin(now * 0.004 + p.pulse * 1.7));
+                if (sparkle > 0.82) {
+                    const a = (sparkle - 0.82) / 0.18 * heartFactor * 0.55;
+                    const ray = 2.2 + sparkle * 1.6;
+                    ctx.save();
+                    ctx.globalCompositeOperation = 'lighter';
+                    ctx.strokeStyle = `rgba(255,220,225,${a})`;
+                    ctx.lineWidth = 0.45;
+                    ctx.beginPath();
+                    ctx.moveTo(px - ray, py);
+                    ctx.lineTo(px + ray, py);
+                    ctx.moveTo(px, py - ray);
+                    ctx.lineTo(px, py + ray);
+                    ctx.stroke();
+                    ctx.restore();
+                }
+            }
         }
 
         // Electric discharges
         boltCooldown -= dt;
-        if (boltCooldown <= 0 && proj.length > 20) {
+        const settledHeart = heartFactor > 0.82 && morphProgress >= 1;
+        if (boltCooldown <= 0 && proj.length > 20 && !settledHeart) {
             createBolt(proj);
             boltCooldown = morphProgress < 1
                 ? 0.08 + Math.random() * 0.15
-                : 2.5 + Math.random() * 4;
+                : heartFactor > 0.45 ? 5 + Math.random() * 5 : 2.5 + Math.random() * 4;
+        } else if (settledHeart && boltCooldown < 1.8) {
+            boltCooldown = 1.8 + Math.random() * 1.5;
         }
 
         // Shape-tinted lightning bolts
