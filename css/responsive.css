@@ -753,6 +753,14 @@
         font-size: 0.65rem;
         padding: 0.25rem 0.4rem;
     }
+    #planner .planner-export-btn {
+        width: 36px;
+        height: 36px;
+        padding: 0;
+    }
+    #planner .planner-export-label {
+        display: none;
+    }
     #planner .unified-planner-table th:nth-child(1),
     #planner .unified-planner-table td:nth-child(1) {
         width: 80px;

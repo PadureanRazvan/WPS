@@ -123,6 +123,10 @@ export const translations = {
         'planner-select-months': 'Selectați una sau mai multe luni pentru a le vizualiza.',
         'planner-invalid-range': 'Perioadă invalidă.',
         'planner-rotate': 'Rotește telefonul în mod landscape pentru a folosi Planificatorul',
+        'planner-export': 'Export CSV',
+        'planner-export-title': 'Exportă luna din planner',
+        'planner-export-empty': 'Nu există date din planner de exportat.',
+        'planner-export-success': 'Exportate {count} rânduri din planner.',
         'edit-btn': 'Editează',
 
         // Reports
@@ -489,6 +493,10 @@ export const translations = {
         'planner-select-months': 'Select one or more months to view.',
         'planner-invalid-range': 'Invalid period.',
         'planner-rotate': 'Rotate your phone to landscape to use the Planner',
+        'planner-export': 'Export CSV',
+        'planner-export-title': 'Export planner month',
+        'planner-export-empty': 'No planner data to export.',
+        'planner-export-success': 'Exported {count} planner rows.',
         'edit-btn': 'Edit',
 
         // Reports
@@ -856,6 +864,10 @@ export const translations = {
         'planner-select-months': 'Seleziona uno o più mesi da visualizzare.',
         'planner-invalid-range': 'Periodo non valido.',
         'planner-rotate': 'Ruota il telefono in modalità landscape per usare il Pianificatore',
+        'planner-export': 'Esporta CSV',
+        'planner-export-title': 'Esporta il mese del pianificatore',
+        'planner-export-empty': 'Nessun dato del pianificatore da esportare.',
+        'planner-export-success': 'Esportate {count} righe del pianificatore.',
         'edit-btn': 'Modifica',
 
         // Reports
