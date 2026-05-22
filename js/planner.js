@@ -13,6 +13,12 @@ import { buildPlannerReadModel, filterPlannerAgents } from './planner-read-model
 import { bindPlannerTableInteractions } from './planner-interaction-wiring.js';
 import { renderPlannerTableView } from './planner-table-view.js';
 import {
+    buildPlannerExportCsv,
+    buildPlannerExportFilename,
+    buildPlannerExportRows,
+    downloadPlannerExportCsv
+} from './planner-export-command.js';
+import {
     addPlannerDragSelectionCell,
     clearPlannerCellSelection,
     createPlannerSelectionState,
@@ -311,7 +317,12 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeDatepicker();
     initializeAgentFilter();
     initializeFilterControls();
+    initializePlannerExportButton();
 });
+
+function initializePlannerExportButton() {
+    document.getElementById('plannerExportBtn')?.addEventListener('click', exportToCSV);
+}
 
 function initializeFilterControls() {
     const filterTypeButtons = document.querySelectorAll('.filter-type-btn');
@@ -991,7 +1002,36 @@ export function renderPlannerIfActive() {
     }
 }
 
+function getPlannerExportDateRange() {
+    const { start, end } = plannerState.dateRange;
+    if (start && end) {
+        return { start, end };
+    }
+
+    const now = new Date();
+    return {
+        start: new Date(now.getFullYear(), now.getMonth(), 1),
+        end: new Date(now.getFullYear(), now.getMonth() + 1, 0)
+    };
+}
+
 export function exportToCSV() {
-    console.log('Exporting to CSV...');
-    showTemporaryMessage("CSV export functionality coming soon!", "info");
+    const { start, end } = getPlannerExportDateRange();
+    const rows = buildPlannerExportRows(plannerData, start, end, {
+        filterState: plannerState,
+        viewOptions: plannerState.viewOptions,
+        dayNames: t('planner-day-names').split(','),
+        today: new Date(),
+        unknownAgentLabel: t('unknown-agent')
+    });
+
+    if (rows.length === 0) {
+        showTemporaryMessage(t('planner-export-empty'), 'info');
+        return;
+    }
+
+    const csv = buildPlannerExportCsv(rows);
+    const filename = buildPlannerExportFilename(start, end);
+    downloadPlannerExportCsv({ filename, csv });
+    showTemporaryMessage(t('planner-export-success').replace('{count}', rows.length), 'success', 2000);
 } 
