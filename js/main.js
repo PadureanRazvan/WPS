@@ -4,6 +4,7 @@
 import { initializePlanner, cleanupPlanner, clearSelection, undoLastChange } from './planner.js';
 import { initializeUsers, cleanupUsers } from './users.js';
 import { initializeProductivity, cleanupProductivity } from './productivity.js';
+import { initializeSchedule, cleanupSchedule } from './schedule.js';
 import { initializeReports, cleanupReports } from './reports.js';
 import { initializeCharts, initializeProductivityChart } from './charts.js';
 import { updateAverageProductivityCard } from './dashboard.js';
@@ -64,6 +65,7 @@ async function initializeApp() {
     });
     initializeReports();
     initializeLogs();
+    initializeSchedule();
 
     // Initialize core UI elements and event listeners
     bindAppShellInteractions({
@@ -125,6 +127,7 @@ bindAppLifecycleEvents({
             cleanupUsers();
             cleanupProductivity();
             cleanupReports();
+            cleanupSchedule();
             cleanupChat();
         },
         cleanupBeforeUnload: () => {
@@ -132,6 +135,7 @@ bindAppLifecycleEvents({
             cleanupUsers();
             cleanupProductivity();
             cleanupReports();
+            cleanupSchedule();
         }
     }
 });

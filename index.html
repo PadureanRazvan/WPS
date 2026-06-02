@@ -14,6 +14,7 @@
     <link rel="stylesheet" href="css/planner.css">
     <link rel="stylesheet" href="css/responsive.css">
     <link rel="stylesheet" href="css/chat.css">
+    <link rel="stylesheet" href="css/schedule.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/litepicker/dist/css/litepicker.css"/>
     <style>
         /* FIX: Styles for the selection counter visibility */
@@ -88,6 +89,12 @@
                         <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/>
                     </svg>
                     <span>Planner</span>
+                </div>
+                <div class="nav-item" data-tooltip="orar">
+                    <svg class="nav-icon" viewBox="0 0 24 24">
+                        <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM5 6V5h14v1H5zm7.5 5.5l-1 1v3.5h1v-3.09l2.79-2.79-.71-.71-2.08 2.09zM12 9c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1z"/>
+                    </svg>
+                    <span data-translate="nav-orar">Orar</span>
                 </div>
                 <div class="nav-item" data-tooltip="productivity">
                     <svg class="nav-icon" viewBox="0 0 24 24">
@@ -390,6 +397,70 @@
                     <div class="table-container enhanced-table">
                         <!-- Table will be populated dynamically -->
                     </div>
+                </div>
+            </section>
+
+            <!-- Orar (Schedule) Section -->
+            <section id="orar" class="section">
+                <header class="header">
+                    <div class="header-title-group">
+                        <h2 class="header-title" data-translate="orar-title">Orar</h2>
+                        <p class="header-subtitle" data-translate="orar-subtitle">Importă orarul lunar al agenților și previzualizează turele înainte de salvare.</p>
+                    </div>
+                    <div class="header-actions" style="display: flex; align-items: center; gap: 0.75rem;">
+                        <button type="button" id="orarTemplateBtn" class="btn btn-secondary" data-translate="orar-download-template">Descarcă model CSV</button>
+                        <button type="button" id="orarSaveBtn" class="btn btn-primary" disabled aria-disabled="true" title="Faza 2" data-translate="orar-save-disabled">Salvează importul (Faza 2)</button>
+                    </div>
+                </header>
+                <div class="content">
+
+                    <!-- Import / drop area -->
+                    <div class="orar-import-card">
+                        <div class="upload-area orar-drop-area" id="orarDropArea" style="cursor: pointer;">
+                            <input type="file" id="orarFileInput" accept=".csv,text/csv" style="display: none;">
+                            <svg class="upload-icon" viewBox="0 0 24 24">
+                                <path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/>
+                            </svg>
+                            <h3 data-translate="orar-import-title">Importă orarul lunar</h3>
+                            <p style="color: var(--text-secondary); margin-top: 0.5rem;" data-translate="orar-import-hint">Trage fișierul CSV aici sau dă click pentru a-l selecta. Folosește modelul de mai sus pentru a păstra coloanele corecte.</p>
+                            <p id="orarFileName" class="orar-file-name" style="margin-top: 0.5rem; font-size: 0.85rem;"></p>
+                        </div>
+                    </div>
+
+                    <!-- Validation summary (filled by schedule.js) -->
+                    <div id="orarValidationSummary" class="orar-summary" style="display: none;"></div>
+
+                    <!-- Preview table (filled by schedule.js) -->
+                    <div class="orar-preview-section" id="orarPreviewSection" style="display: none;">
+                        <h3 class="chart-title orar-section-title" data-translate="orar-preview-title">Previzualizare import</h3>
+                        <div class="table-container orar-table-container" id="orarPreviewContainer">
+                            <p class="orar-empty" data-translate="orar-no-rows">Nu există rânduri de previzualizat.</p>
+                        </div>
+                    </div>
+
+                    <!-- Demo overview: summary cards + sample table -->
+                    <div class="orar-overview-block">
+                        <div class="orar-overview-head">
+                            <h3 class="chart-title orar-section-title" style="margin-bottom: 0.25rem;" data-translate="orar-overview-title">Vedere de ansamblu (date demonstrative)</h3>
+                            <span class="orar-demo-badge" data-translate="orar-overview-note">Date de exemplu, generate automat. Nu reprezintă un orar real și nu sunt salvate.</span>
+                        </div>
+                        <div class="dashboard-grid orar-stats" id="orarStats">
+                            <!-- Populated dynamically -->
+                        </div>
+                        <div class="table-container orar-table-container" id="orarDemoContainer" style="margin-top: 1.5rem;">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- Info / roadmap panel -->
+                    <div class="chart-container orar-roadmap" id="orarInfoPanel" style="margin-top: 1.5rem;">
+                        <h3 class="chart-title" style="margin-bottom: 1rem; color: var(--accent);" data-translate="orar-roadmap-title">Ce urmează</h3>
+                        <ul style="color: var(--text-secondary); line-height: 2; padding-left: 1.5rem;">
+                            <li data-translate="orar-roadmap-phase2">Faza 2 — Încărcarea orarului lunar în format CSV, salvat în cloud pentru fiecare lună în parte.</li>
+                            <li data-translate="orar-roadmap-phase3">Faza 3 — Productivitate în timp real: tichete împărțite la orele lucrate de la începutul turei.</li>
+                        </ul>
+                    </div>
+
                 </div>
             </section>
 
