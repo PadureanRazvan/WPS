@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 
 import {
   getEffectiveAgentDayValue
-} from 'file:///C:/Users/USER/Desktop/WPS/js/config.js';
+} from '../js/config.js';
 
 function makeAgent(overrides = {}) {
   return {

@@ -6,7 +6,7 @@ import {
   formatPlannerHoursValue,
   isValidPlannerHoursValue,
   parseShiftEntry
-} from 'file:///C:/Users/USER/Desktop/WPS/js/config.js';
+} from '../js/config.js';
 
 test('parseShiftEntry accepts .5 single-team values', () => {
   assert.deepEqual(parseShiftEntry('7.5RO'), { hours: 7.5, team: 'RO' });
