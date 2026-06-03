@@ -294,6 +294,9 @@ function buildDemoTableHtml(rows) {
     return `<table class="orar-demo-table">${thead}<tbody>${body}</tbody></table>`;
 }
 
+// The overview shows only a small sample of shifts, not the whole roster.
+const DEMO_SAMPLE_SIZE = 8;
+
 function renderDemoOverview() {
     const statsEl = getEl('orarStats');
     const tableEl = getEl('orarDemoContainer');
@@ -305,7 +308,14 @@ function renderDemoOverview() {
     const { rows, metrics } = buildScheduleDemoData(agents);
 
     if (statsEl) statsEl.innerHTML = buildDemoStatsHtml(metrics);
-    if (tableEl) tableEl.innerHTML = buildDemoTableHtml(rows);
+    if (tableEl) {
+        const sample = rows.slice(0, DEMO_SAMPLE_SIZE);
+        let html = buildDemoTableHtml(sample);
+        if (rows.length > sample.length) {
+            html += `<p class="orar-demo-count" style="margin-top:0.75rem;color:var(--text-secondary);font-size:0.85rem;text-align:right;">${sample.length} / ${rows.length}</p>`;
+        }
+        tableEl.innerHTML = html;
+    }
 }
 
 // =====================================================================
