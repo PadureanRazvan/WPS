@@ -407,9 +407,13 @@
                         <h2 class="header-title" data-translate="orar-title">Orar</h2>
                         <p class="header-subtitle" data-translate="orar-subtitle">Importă orarul lunar al agenților și previzualizează turele înainte de salvare.</p>
                     </div>
-                    <div class="header-actions" style="display: flex; align-items: center; gap: 0.75rem;">
+                    <div class="header-actions" style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                        <label class="orar-month-field">
+                            <span class="orar-month-label" data-translate="orar-month-label">Luna</span>
+                            <select id="orarMonth" class="orar-month-select"></select>
+                        </label>
                         <button type="button" id="orarTemplateBtn" class="btn btn-secondary" data-translate="orar-download-template">Descarcă model CSV</button>
-                        <button type="button" id="orarSaveBtn" class="btn btn-primary" disabled aria-disabled="true" title="Faza 2" data-translate="orar-save-disabled">Salvează importul (Faza 2)</button>
+                        <button type="button" id="orarSaveBtn" class="btn btn-primary" disabled aria-disabled="true" data-translate="orar-save">Salvează orarul</button>
                     </div>
                 </header>
                 <div class="content">
@@ -438,16 +442,16 @@
                         </div>
                     </div>
 
-                    <!-- Demo overview: summary cards + sample table -->
+                    <!-- Saved-schedule overview: summary cards + sample table -->
                     <div class="orar-overview-block">
                         <div class="orar-overview-head">
-                            <h3 class="chart-title orar-section-title" style="margin-bottom: 0.25rem;" data-translate="orar-overview-title">Vedere de ansamblu (date demonstrative)</h3>
-                            <span class="orar-demo-badge" data-translate="orar-overview-note">Date de exemplu, generate automat. Nu reprezintă un orar real și nu sunt salvate.</span>
+                            <h3 class="chart-title orar-section-title" style="margin-bottom: 0.25rem;" data-translate="orar-overview-title">Vedere de ansamblu</h3>
+                            <span class="orar-overview-info" id="orarOverviewInfo"></span>
                         </div>
                         <div class="dashboard-grid orar-stats" id="orarStats">
                             <!-- Populated dynamically -->
                         </div>
-                        <div class="table-container orar-table-container" id="orarDemoContainer" style="margin-top: 1.5rem;">
+                        <div class="table-container orar-table-container" id="orarOverviewContainer" style="margin-top: 1.5rem;">
                             <!-- Populated dynamically -->
                         </div>
                     </div>
@@ -456,7 +460,6 @@
                     <div class="chart-container orar-roadmap" id="orarInfoPanel" style="margin-top: 1.5rem;">
                         <h3 class="chart-title" style="margin-bottom: 1rem; color: var(--accent);" data-translate="orar-roadmap-title">Ce urmează</h3>
                         <ul style="color: var(--text-secondary); line-height: 2; padding-left: 1.5rem;">
-                            <li data-translate="orar-roadmap-phase2">Faza 2 — Încărcarea orarului lunar în format CSV, salvat în cloud pentru fiecare lună în parte.</li>
                             <li data-translate="orar-roadmap-phase3">Faza 3 — Productivitate în timp real: tichete împărțite la orele lucrate de la începutul turei.</li>
                         </ul>
                     </div>
