@@ -228,7 +228,7 @@ function toStorableRow(result) {
     return {
         agentUsername: username,
         agentName,
-        date: row.date || '',
+        date: result.normalizedDate || row.date || '',
         startTime: row.startTime || '',
         endTime: row.endTime || '',
         breakMinutes: Number.isFinite(row.breakMinutes) ? row.breakMinutes : (Number(row.breakMinutes) || 0),
@@ -328,7 +328,7 @@ function buildPreviewTableHtml(results) {
         return `<tr class="${rowClass}">` +
             `<td class="orar-cell-left">${escapeHtml(agentName)}</td>` +
             `<td class="orar-cell-left">${escapeHtml(row.agentUsername || '')}</td>` +
-            `<td>${escapeHtml(row.date || '')}</td>` +
+            `<td>${escapeHtml(result.normalizedDate || row.date || '')}</td>` +
             `<td>${escapeHtml(row.startTime || '')}</td>` +
             `<td>${escapeHtml(row.endTime || '')}</td>` +
             `<td>${escapeHtml(Number.isFinite(row.breakMinutes) ? row.breakMinutes : (row.breakMinutes ?? ''))}</td>` +
