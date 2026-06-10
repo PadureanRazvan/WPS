@@ -6,6 +6,7 @@ import { initializeUsers, cleanupUsers } from './users.js';
 import { initializeProductivity, cleanupProductivity } from './productivity.js';
 import { initializeSchedule, cleanupSchedule } from './schedule.js';
 import { initializeReports, cleanupReports } from './reports.js';
+import { initializeInfoVersion } from './info-version.js';
 import { initializeCharts, initializeProductivityChart } from './charts.js';
 import { updateAverageProductivityCard } from './dashboard.js';
 import { setTheme, updateLanguageUI, showSection, openEditModal, selectEditType, saveModalChanges, closeEditModal, toggleSidebar } from './ui.js';
@@ -66,6 +67,7 @@ async function initializeApp() {
     initializeReports();
     initializeLogs();
     initializeSchedule();
+    initializeInfoVersion();
 
     // Initialize core UI elements and event listeners
     bindAppShellInteractions({

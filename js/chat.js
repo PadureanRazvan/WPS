@@ -696,7 +696,7 @@ async function executeAction(command, params) {
 
             case 'NAVIGATE': {
                 const [sectionId] = params;
-                const validSections = ['dashboard', 'users', 'planner', 'productivity', 'upload', 'reports', 'logs', 'roadmap', 'info'];
+                const validSections = ['dashboard', 'users', 'planner', 'productivity', 'upload', 'reports', 'logs', 'info'];
                 if (!validSections.includes(sectionId)) return `Invalid section: ${sectionId}`;
                 showSection(sectionId);
                 logActivity('ai', 'navigate', { section: sectionId });

@@ -1,0 +1,233 @@
+/* css/info.css
+ *
+ * Info section — the Sherpa version panel and its liquid (lava-lamp / metaball)
+ * background. Theme-aware via the app's CSS variables; the blobs blend with
+ * `screen` in dark mode and `multiply` in light mode so they read as glowing
+ * liquid on either background. Honors prefers-reduced-motion.
+ */
+
+/* ---- Stage: rounded frame that clips the liquid ---- */
+.version-stage {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;                 /* keep blob blend-modes inside the stage */
+    display: grid;
+    place-items: center;
+    min-height: 460px;
+    padding: 2.5rem 1.5rem;
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    background: var(--primary-light);
+    box-shadow: var(--card-shadow);
+}
+
+/* ---- Liquid background ---- */
+.version-liquid {
+    position: absolute;
+    inset: -15%;
+    z-index: 0;
+    filter: blur(42px) saturate(135%);  /* heavy blur fuses the blobs into liquid */
+    pointer-events: none;
+}
+
+.version-blob {
+    position: absolute;
+    width: 42%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    mix-blend-mode: screen;
+    opacity: 0.85;
+    will-change: transform, border-radius;
+}
+
+[data-theme="light"] .version-blob {
+    mix-blend-mode: multiply;
+    opacity: 0.55;
+}
+
+/* Each blob: a soft radial puff in an accent-family hue, drifting + morphing on
+ * its own clock so the mass never repeats exactly. */
+.version-blob.b1 {
+    top: 6%; left: 8%;
+    background: radial-gradient(circle at 30% 30%, var(--accent), transparent 70%);
+    animation: blob-drift-1 17s ease-in-out infinite, blob-morph 11s ease-in-out infinite;
+}
+.version-blob.b2 {
+    top: 30%; left: 48%;
+    background: radial-gradient(circle at 30% 30%, var(--accent-hover), transparent 70%);
+    animation: blob-drift-2 21s ease-in-out infinite, blob-morph 13s ease-in-out infinite reverse;
+}
+.version-blob.b3 {
+    top: 52%; left: 12%;
+    background: radial-gradient(circle at 30% 30%, var(--success), transparent 70%);
+    animation: blob-drift-3 19s ease-in-out infinite, blob-morph 15s ease-in-out infinite;
+}
+.version-blob.b4 {
+    top: 14%; left: 60%;
+    width: 36%;
+    background: radial-gradient(circle at 30% 30%, var(--warning), transparent 70%);
+    animation: blob-drift-4 23s ease-in-out infinite, blob-morph 12s ease-in-out infinite reverse;
+}
+.version-blob.b5 {
+    top: 58%; left: 54%;
+    width: 38%;
+    background: radial-gradient(circle at 30% 30%, var(--accent), transparent 70%);
+    animation: blob-drift-1 25s ease-in-out infinite reverse, blob-morph 14s ease-in-out infinite;
+}
+
+@keyframes blob-drift-1 {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33%      { transform: translate(26%, 18%) scale(1.18); }
+    66%      { transform: translate(-14%, 24%) scale(0.9); }
+}
+@keyframes blob-drift-2 {
+    0%, 100% { transform: translate(0, 0) scale(1.05); }
+    50%      { transform: translate(-30%, -16%) scale(0.85); }
+}
+@keyframes blob-drift-3 {
+    0%, 100% { transform: translate(0, 0) scale(0.95); }
+    40%      { transform: translate(22%, -20%) scale(1.2); }
+    80%      { transform: translate(8%, 14%) scale(1); }
+}
+@keyframes blob-drift-4 {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    50%      { transform: translate(-22%, 26%) scale(1.15); }
+}
+/* Organic wobble — nudge the border-radius so the puffs aren't perfect circles. */
+@keyframes blob-morph {
+    0%, 100% { border-radius: 42% 58% 63% 37% / 41% 44% 56% 59%; }
+    50%      { border-radius: 62% 38% 37% 63% / 58% 63% 37% 42%; }
+}
+
+/* ---- Foreground card ---- */
+.version-card {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.65rem;
+    max-width: 460px;
+    padding: 2.25rem 2.5rem;
+    text-align: center;
+    border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+    border-radius: 20px;
+    background: color-mix(in srgb, var(--primary-light) 55%, transparent);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.18);
+}
+
+.version-mark {
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+}
+
+.version-codename {
+    font-size: clamp(2rem, 6vw, 3rem);
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -0.01em;
+    background: linear-gradient(100deg, var(--accent), var(--accent-hover), var(--accent));
+    background-size: 220% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: var(--accent);                /* fallback if background-clip unsupported */
+    animation: version-shimmer 6s linear infinite;
+}
+
+@keyframes version-shimmer {
+    to { background-position: 220% center; }
+}
+
+.version-number {
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+}
+
+.version-meta {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.6rem;
+    margin-top: 0.4rem;
+}
+
+.version-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.35rem 0.7rem;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--primary) 60%, transparent);
+}
+
+.version-chip-label {
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+}
+
+.version-chip-value {
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.version-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.version-status-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--success);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--success) 70%, transparent);
+    animation: version-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes version-pulse {
+    0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--success) 60%, transparent); }
+    70%  { box-shadow: 0 0 0 9px color-mix(in srgb, var(--success) 0%, transparent); }
+    100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--success) 0%, transparent); }
+}
+
+.version-hint {
+    margin: 1.1rem auto 0;
+    max-width: 460px;
+    text-align: center;
+    font-size: 0.82rem;
+    line-height: 1.6;
+    color: var(--text-secondary);
+}
+
+/* ---- Smaller screens ---- */
+@media (max-width: 600px) {
+    .version-stage { min-height: 380px; border-radius: 18px; }
+    .version-card { padding: 1.75rem 1.4rem; }
+    .version-liquid { filter: blur(32px) saturate(135%); }
+}
+
+/* ---- Accessibility: hold still if the user prefers reduced motion ---- */
+@media (prefers-reduced-motion: reduce) {
+    .version-blob,
+    .version-codename,
+    .version-status-dot {
+        animation: none;
+    }
+}
