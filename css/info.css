@@ -6,19 +6,44 @@
  * liquid on either background. Honors prefers-reduced-motion.
  */
 
-/* ---- Stage: rounded frame that clips the liquid ---- */
+/* ---- Section fills the viewport so the liquid has the whole space ----
+ * Mirrors the planner pattern: the active Info section becomes a flex column
+ * that owns the full height; its sticky header keeps its natural size and the
+ * content region (with the stage) takes everything that's left. */
+#info.section.active {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+}
+
+#info .header {
+    flex: 0 0 auto;
+}
+
+.version-content {
+    flex: 1;
+    min-height: 0;                      /* let the flex child actually shrink */
+    display: flex;
+    padding: 1.5rem 3rem 2.25rem;
+}
+
+/* ---- Stage: rounded frame that clips the liquid; now fills the content ---- */
 .version-stage {
     position: relative;
     overflow: hidden;
     isolation: isolate;                 /* keep blob blend-modes inside the stage */
+    flex: 1;
+    width: 100%;
+    min-height: 360px;                  /* fallback when not in a flex context */
     display: grid;
     place-items: center;
-    min-height: 460px;
     padding: 2.5rem 1.5rem;
     border: 1px solid var(--border);
     border-radius: 24px;
     background: var(--primary-light);
     box-shadow: var(--card-shadow);
+    perspective: 1200px;                /* depth for the interactive card tilt */
 }
 
 /* ---- Liquid background ---- */
@@ -26,8 +51,11 @@
     position: absolute;
     inset: -15%;
     z-index: 0;
-    filter: blur(42px) saturate(135%);  /* heavy blur fuses the blobs into liquid */
+    filter: blur(52px) saturate(140%);  /* heavy blur fuses the blobs into liquid */
     pointer-events: none;
+    /* Pointer parallax — the whole mass drifts a touch against the cursor. */
+    transform: translate3d(var(--liquid-px, 0px), var(--liquid-py, 0px), 0);
+    will-change: transform;
 }
 
 .version-blob {
@@ -75,6 +103,33 @@
     animation: blob-drift-1 25s ease-in-out infinite reverse, blob-morph 14s ease-in-out infinite;
 }
 
+/* Interactive glow — a blob of light that tracks the cursor through the liquid.
+ * Position (--cursor-x / --cursor-y, in px) and presence are driven by JS;
+ * it fades in only while the pointer is over the stage. No auto-animation, so
+ * the JS lerp owns all of its movement. */
+.version-cursor {
+    top: 0; left: 0;
+    width: 40%;
+    background: radial-gradient(circle at 50% 50%, var(--accent-hover), transparent 66%);
+    opacity: 0;
+    transform: translate3d(var(--cursor-x, 50%), var(--cursor-y, 50%), 0) translate(-50%, -50%) scale(0.7);
+    animation: none;                    /* movement comes from JS, not keyframes */
+    transition: opacity 0.5s ease;
+}
+
+.version-stage.is-hovering .version-cursor {
+    opacity: 0.95;
+    transform: translate3d(var(--cursor-x, 50%), var(--cursor-y, 50%), 0) translate(-50%, -50%) scale(1);
+}
+
+[data-theme="light"] .version-cursor {
+    opacity: 0;
+}
+
+[data-theme="light"] .version-stage.is-hovering .version-cursor {
+    opacity: 0.6;
+}
+
 @keyframes blob-drift-1 {
     0%, 100% { transform: translate(0, 0) scale(1); }
     33%      { transform: translate(26%, 18%) scale(1.18); }
@@ -116,6 +171,36 @@
     -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
     box-shadow: 0 8px 40px rgba(0, 0, 0, 0.18);
+    /* Interactive 3D tilt toward the cursor (vars set by JS; lerped there). */
+    transform-style: preserve-3d;
+    transform: rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg));
+    transition: box-shadow 0.4s ease;
+    will-change: transform;
+}
+
+.version-stage.is-hovering .version-card {
+    box-shadow: 0 26px 70px rgba(0, 0, 0, 0.32);
+}
+
+/* Specular sheen — a soft reflection that slides under the cursor. Sits behind
+ * the card's text (z-index: -1) so it never hurts legibility. */
+.version-card-sheen {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    pointer-events: none;
+    background: radial-gradient(
+        240px circle at var(--sheen-x, 50%) var(--sheen-y, 50%),
+        color-mix(in srgb, var(--accent-hover) 55%, transparent),
+        transparent 60%
+    );
+    opacity: 0;
+    transition: opacity 0.4s ease;
+}
+
+.version-stage.is-hovering .version-card-sheen {
+    opacity: 0.85;
 }
 
 .version-mark {
@@ -150,84 +235,28 @@
     color: var(--text-secondary);
 }
 
-.version-meta {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 0.6rem;
-    margin-top: 0.4rem;
-}
-
-.version-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.45rem;
-    padding: 0.35rem 0.7rem;
-    border: 1px solid var(--border);
-    border-radius: 999px;
-    background: color-mix(in srgb, var(--primary) 60%, transparent);
-}
-
-.version-chip-label {
-    font-size: 0.62rem;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--text-secondary);
-}
-
-.version-chip-value {
-    font-family: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
-    font-size: 0.82rem;
-    font-weight: 600;
-    color: var(--text-primary);
-}
-
-.version-status {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-top: 0.75rem;
-    font-size: 0.85rem;
-    color: var(--text-secondary);
-}
-
-.version-status-dot {
-    width: 9px;
-    height: 9px;
-    border-radius: 50%;
-    background: var(--success);
-    box-shadow: 0 0 0 0 color-mix(in srgb, var(--success) 70%, transparent);
-    animation: version-pulse 2.4s ease-in-out infinite;
-}
-
-@keyframes version-pulse {
-    0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--success) 60%, transparent); }
-    70%  { box-shadow: 0 0 0 9px color-mix(in srgb, var(--success) 0%, transparent); }
-    100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--success) 0%, transparent); }
-}
-
-.version-hint {
-    margin: 1.1rem auto 0;
-    max-width: 460px;
-    text-align: center;
-    font-size: 0.82rem;
-    line-height: 1.6;
-    color: var(--text-secondary);
-}
-
 /* ---- Smaller screens ---- */
-@media (max-width: 600px) {
-    .version-stage { min-height: 380px; border-radius: 18px; }
-    .version-card { padding: 1.75rem 1.4rem; }
-    .version-liquid { filter: blur(32px) saturate(135%); }
+@media (max-width: 768px) {
+    .version-content { padding: 1rem 1rem 1.5rem; }
 }
 
-/* ---- Accessibility: hold still if the user prefers reduced motion ---- */
+@media (max-width: 600px) {
+    /* Let the section breathe and scroll rather than locking to the viewport. */
+    #info.section.active { height: auto; min-height: 100vh; overflow: visible; }
+    .version-stage { min-height: 72vh; border-radius: 18px; }
+    .version-card { padding: 1.75rem 1.4rem; }
+    .version-liquid { filter: blur(40px) saturate(140%); }
+}
+
+/* ---- Accessibility: hold still if the user prefers reduced motion ----
+ * Kill the auto-animations and neutralize the pointer tilt/parallax. The
+ * cursor glow still fades in on hover (user-driven, gentle), but nothing
+ * moves on its own. */
 @media (prefers-reduced-motion: reduce) {
     .version-blob,
-    .version-codename,
-    .version-status-dot {
+    .version-codename {
         animation: none;
     }
+    .version-card { transform: none; }
+    .version-liquid { transform: none; }
 }
