@@ -56,22 +56,23 @@ function asTrimmedString(value) {
     return String(value).trim();
 }
 
-// Strict "YYYY-MM-DD" calendar-date check. Returns the matching "YYYY-MM"
-// month key when the date is real, or null when it is malformed or impossible
-// (e.g. 2026-02-30, 2026-13-01). Uses UTC construction so it is timezone-proof.
-function getDateMonthKey(dateStr) {
-    const text = asTrimmedString(dateStr);
-    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(text);
-    if (!match) return null;
+// Remove an Excel "text guard" from a value. The CSV template emits dates as
+// ="2026-06-01" so Excel keeps them as text instead of reformatting them; our
+// quote-aware CSV parser turns that into =2026-06-01, and some tools leave it as
+// ="2026-06-01". Strip both shapes so the inner value can be parsed.
+function stripExcelGuard(value) {
+    let text = asTrimmedString(value);
+    if (text.startsWith('=')) text = text.slice(1);
+    const quoted = /^"(.*)"$/.exec(text);
+    if (quoted) text = quoted[1];
+    return text.trim();
+}
 
-    const year = Number(match[1]);
-    const month = Number(match[2]);
-    const day = Number(match[3]);
-
-    if (month < 1 || month > 12) return null;
-    if (day < 1 || day > 31) return null;
-
-    // Round-trip through a UTC Date to reject impossible days (e.g. Feb 30).
+// Confirm a (year, month, day) triple is a real calendar date (UTC round-trip,
+// timezone-proof) and return canonical "YYYY-MM-DD", or null when impossible
+// (e.g. 2026-02-30, 2026-13-01).
+function toCanonicalDate(year, month, day) {
+    if (month < 1 || month > 12 || day < 1 || day > 31) return null;
     const date = new Date(Date.UTC(year, month - 1, day));
     if (
         date.getUTCFullYear() !== year ||
@@ -80,8 +81,47 @@ function getDateMonthKey(dateStr) {
     ) {
         return null;
     }
+    const pad = n => String(n).padStart(2, '0');
+    return `${year}-${pad(month)}-${pad(day)}`;
+}
 
-    return `${match[1]}-${match[2]}`;
+/**
+ * Normalize a date cell to canonical "YYYY-MM-DD", or null when it cannot be
+ * resolved unambiguously. Accepts (after stripping any Excel text guard):
+ *   - year-first ISO with -, / or . separators: 2026-06-01, 2026/06/01, 2026.06.01
+ *   - day/month-first with a 4-digit year ONLY when one of the leading parts is
+ *     > 12, which forces the day: 13/06/2026 -> 2026-06-13
+ *
+ * Ambiguous day/month dates (both <= 12, e.g. 06.07.2026) are deliberately
+ * REJECTED rather than guessed — a silently swapped day/month would corrupt a
+ * schedule. Those surface as INVALID_DATE so the user restores YYYY-MM-DD.
+ *
+ * @param {*} raw
+ * @returns {string|null} canonical "YYYY-MM-DD" or null
+ */
+export function normalizeScheduleDate(raw) {
+    const text = stripExcelGuard(raw);
+    if (text === '') return null;
+
+    // Year-first (unambiguous).
+    let m = /^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/.exec(text);
+    if (m) {
+        return toCanonicalDate(Number(m[1]), Number(m[2]), Number(m[3]));
+    }
+
+    // Day/month-first with a 4-digit year: resolvable only when one leading
+    // part is > 12 (that part must be the day).
+    m = /^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})$/.exec(text);
+    if (m) {
+        const a = Number(m[1]);
+        const b = Number(m[2]);
+        const year = Number(m[3]);
+        if (a > 12 && b <= 12) return toCanonicalDate(year, b, a);
+        if (b > 12 && a <= 12) return toCanonicalDate(year, a, b);
+        return null; // ambiguous (both <= 12) or both > 12
+    }
+
+    return null;
 }
 
 // Resolve a row to a known agent. Primary: case-insensitive username match.
@@ -111,7 +151,7 @@ function buildDuplicateCounts(rows) {
     const counts = new Map();
     rows.forEach(row => {
         const username = asTrimmedString(row?.agentUsername).toLowerCase();
-        const date = asTrimmedString(row?.date);
+        const date = normalizeScheduleDate(row?.date);
         if (!username || !date) return;
         const key = `${username}|${date}`;
         counts.set(key, (counts.get(key) || 0) + 1);
@@ -153,23 +193,23 @@ export function validateScheduleRows(rows, agents = [], options = {}) {
             errors.push(makeError(SCHEDULE_ERROR_CODES.UNKNOWN_AGENT));
         }
 
-        // Date + month checks. A bad date short-circuits the month comparison.
-        const dateStr = asTrimmedString(row?.date);
-        const dateMonthKey = getDateMonthKey(dateStr);
-        if (dateMonthKey === null) {
+        // Date + month checks. Normalize first (Excel-safe); a bad date
+        // short-circuits the month comparison.
+        const normalizedDate = normalizeScheduleDate(row?.date);
+        if (normalizedDate === null) {
             errors.push(makeError(SCHEDULE_ERROR_CODES.INVALID_DATE));
         } else {
             // Compare against the explicit expectedMonth when provided,
             // otherwise against the row's own month column.
             const referenceMonth = expectedMonth || asTrimmedString(row?.month);
-            if (referenceMonth && dateMonthKey !== referenceMonth) {
+            if (referenceMonth && normalizedDate.slice(0, 7) !== referenceMonth) {
                 errors.push(makeError(SCHEDULE_ERROR_CODES.MONTH_MISMATCH));
             }
         }
 
-        // Duplicate (agent_username, date) within the batch.
+        // Duplicate (agent_username, date) within the batch (normalized date).
         const dupUsername = asTrimmedString(row?.agentUsername).toLowerCase();
-        if (dupUsername && dateStr && duplicateCounts.get(`${dupUsername}|${dateStr}`) > 1) {
+        if (dupUsername && normalizedDate && duplicateCounts.get(`${dupUsername}|${normalizedDate}`) > 1) {
             errors.push(makeError(SCHEDULE_ERROR_CODES.DUPLICATE));
         }
 
@@ -228,7 +268,8 @@ export function validateScheduleRows(rows, agents = [], options = {}) {
             status,
             errors,
             resolvedAgent: resolvedAgent || null,
-            workedMinutes
+            workedMinutes,
+            normalizedDate
         };
     });
 

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 import {
   validateScheduleRows,
+  normalizeScheduleDate,
   SCHEDULE_ERROR_CODES
 } from '../js/schedule-validation.js';
 
@@ -35,6 +36,45 @@ function validateOne(row, agents = AGENTS, options = {}) {
 function codes(result) {
   return result.errors.map(e => e.code);
 }
+
+test('normalizeScheduleDate normalizes ISO and unambiguous variants to YYYY-MM-DD', () => {
+  assert.equal(normalizeScheduleDate('2026-06-01'), '2026-06-01');
+  assert.equal(normalizeScheduleDate('2026/06/01'), '2026-06-01');
+  assert.equal(normalizeScheduleDate('2026.6.1'), '2026-06-01');
+  assert.equal(normalizeScheduleDate('13/06/2026'), '2026-06-13'); // 13 > 12 forces the day
+  assert.equal(normalizeScheduleDate('06/13/2026'), '2026-06-13'); // day on the other side
+});
+
+test('normalizeScheduleDate strips the Excel text guard', () => {
+  assert.equal(normalizeScheduleDate('="2026-06-01"'), '2026-06-01');
+  assert.equal(normalizeScheduleDate('=2026-06-01'), '2026-06-01'); // quotes already consumed by CSV parser
+});
+
+test('normalizeScheduleDate rejects ambiguous and impossible dates', () => {
+  assert.equal(normalizeScheduleDate('06.07.2026'), null); // both <= 12 -> ambiguous, never guess
+  assert.equal(normalizeScheduleDate('2026-02-30'), null); // impossible calendar date
+  assert.equal(normalizeScheduleDate('2026-13-01'), null); // month out of range
+  assert.equal(normalizeScheduleDate(''), null);
+  assert.equal(normalizeScheduleDate('not a date'), null);
+});
+
+test('validateScheduleRows accepts a text-guarded date and reports the normalized value', () => {
+  const result = validateOne(makeRow({ date: '="2026-06-01"' }));
+  assert.equal(result.status, 'ok');
+  assert.equal(result.normalizedDate, '2026-06-01');
+  assert.equal(codes(result).length, 0);
+});
+
+test('validateScheduleRows normalizes a slash date and matches the expected month', () => {
+  const result = validateOne(makeRow({ date: '2026/06/02' }), AGENTS, { expectedMonth: '2026-06' });
+  assert.equal(result.status, 'ok');
+  assert.equal(result.normalizedDate, '2026-06-02');
+});
+
+test('validateScheduleRows flags an ambiguous date as INVALID_DATE (no day/month guess)', () => {
+  const result = validateOne(makeRow({ date: '06.07.2026' }), AGENTS, { expectedMonth: '2026-06' });
+  assert.ok(codes(result).includes(SCHEDULE_ERROR_CODES.INVALID_DATE));
+});
 
 test('a valid working row is ok with correct workedMinutes', () => {
   const result = validateOne(makeRow());

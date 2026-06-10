@@ -67,8 +67,25 @@ test('buildScheduleTemplateCsv emits the header line then the row fields', () =>
 
   assert.equal(csv, [
     'month,agent_username,agent_name,date,start_time,end_time,break_minutes,notes',
-    '2026-06,mpopescu,Maria Popescu,2026-06-01,09:00,17:00,30,'
+    '2026-06,mpopescu,Maria Popescu,="2026-06-01",09:00,17:00,30,'
   ].join('\n'));
+});
+
+test('buildScheduleTemplateCsv text-guards the date column so Excel keeps YYYY-MM-DD', () => {
+  const csv = buildScheduleTemplateCsv([
+    {
+      month: '2026-06',
+      agent_username: 'mpopescu',
+      agent_name: 'Maria Popescu',
+      date: '2026-06-01',
+      start_time: '09:00',
+      end_time: '17:00',
+      break_minutes: '30',
+      notes: ''
+    }
+  ]);
+  // The date cell is emitted as an unquoted Excel text formula ="YYYY-MM-DD".
+  assert.match(csv.split('\n')[1], /,="2026-06-01",/);
 });
 
 test('buildScheduleTemplateCsv escapes commas, quotes, and newlines', () => {
@@ -93,7 +110,7 @@ test('buildScheduleTemplateCsv escapes commas, quotes, and newlines', () => {
     csv,
     [
       'month,agent_username,agent_name,date,start_time,end_time,break_minutes,notes',
-      '2026-06,ionescu,"Ionescu, Andrei",2026-06-01,08:00,16:00,30,"Needs ""cover""\nsecond line"'
+      '2026-06,ionescu,"Ionescu, Andrei",="2026-06-01",08:00,16:00,30,"Needs ""cover""\nsecond line"'
     ].join('\n')
   );
 });
@@ -105,7 +122,7 @@ test('buildScheduleTemplateCsv defaults to the example rows when rows are omitte
   assert.equal(lines[0], 'month,agent_username,agent_name,date,start_time,end_time,break_minutes,notes');
   // header + 4 example rows (3 client rows + 1 day-off row).
   assert.equal(lines.length, buildScheduleTemplateRows().length + 1);
-  assert.equal(lines[1], '2026-06,mpopescu,Maria Popescu,2026-06-01,09:00,17:00,30,');
+  assert.equal(lines[1], '2026-06,mpopescu,Maria Popescu,="2026-06-01",09:00,17:00,30,');
 });
 
 test('buildScheduleTemplateFilename uses the month when a YYYY-MM value is given', () => {
