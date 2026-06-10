@@ -15,6 +15,34 @@
     gap: 0.25rem;
 }
 
+/* --- Month picker in the header actions --- */
+#orar .orar-month-field {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+#orar .orar-month-label {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+#orar .orar-month-select {
+    padding: 0.6rem 0.75rem;
+    background: var(--primary-dark);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-primary);
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+#orar .orar-month-select:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
 #orar .orar-section-title {
     font-size: 1.25rem;
     font-weight: 700;
@@ -225,7 +253,7 @@
 }
 
 /* =====================================================================
-   Demo overview block
+   Saved-schedule overview block
    ===================================================================== */
 #orar .orar-overview-block {
     margin-top: 1.5rem;
@@ -238,17 +266,11 @@
     margin-bottom: 1rem;
 }
 
-/* "Sample data" badge — clearly marks the overview as non-real */
-#orar .orar-demo-badge {
-    display: inline-block;
+/* "Updated at" info line under the overview title (filled by schedule.js) */
+#orar .orar-overview-info {
     align-self: flex-start;
-    padding: 0.3rem 0.75rem;
-    border-radius: 16px;
-    background: var(--today-highlight-bg);
-    border: 1px dashed var(--today-highlight-border);
-    color: var(--today-highlight-text);
-    font-size: 0.75rem;
-    font-weight: 600;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
 }
 
 #orar .orar-stats {
