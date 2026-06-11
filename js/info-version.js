@@ -16,7 +16,6 @@ export function initializeInfoVersion(root = (typeof document !== 'undefined' ? 
     if (!root) return;
 
     const version = SHERPA_VERSION;
-    setText(root, 'versionCodename', version.codename);
     setText(root, 'versionNumber', `v${version.number}`);
 
     // Also surface it in the console so the live build is verifiable without

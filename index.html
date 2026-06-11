@@ -608,21 +608,33 @@
 
                     <div class="version-stage" id="versionStage">
                         <div class="version-liquid" aria-hidden="true">
-                            <span class="version-blob b1"></span>
-                            <span class="version-blob b2"></span>
-                            <span class="version-blob b3"></span>
-                            <span class="version-blob b4"></span>
-                            <span class="version-blob b5"></span>
-                            <span class="version-blob version-cursor"></span>
+                            <div class="version-goo">
+                                <span class="version-blob b1"></span>
+                                <span class="version-blob b2"></span>
+                                <span class="version-blob b3"></span>
+                                <span class="version-blob b4"></span>
+                                <span class="version-blob b5"></span>
+                                <span class="version-blob b6"></span>
+                                <span class="version-blob version-cursor"></span>
+                            </div>
                         </div>
 
-                        <div class="version-card">
-                            <span class="version-card-sheen" aria-hidden="true"></span>
-                            <div class="version-mark">Sherpa</div>
-                            <div class="version-codename" id="versionCodename">—</div>
+                        <div class="version-hero">
+                            <div class="version-wordmark">Sherpa</div>
                             <div class="version-number" id="versionNumber">—</div>
                         </div>
                     </div>
+
+                    <!-- Metaball ("goo") filter for the liquid: gaussian blur + alpha-contrast
+                         matrix, so nearby blobs visibly merge and split like mercury. -->
+                    <svg class="version-goo-defs" width="0" height="0" aria-hidden="true" focusable="false" style="position: absolute;">
+                        <defs>
+                            <filter id="versionGoo">
+                                <feGaussianBlur in="SourceGraphic" stdDeviation="16" />
+                                <feColorMatrix mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 22 -11" />
+                            </filter>
+                        </defs>
+                    </svg>
 
                 </div>
             </section>
