@@ -1,9 +1,18 @@
 /* css/info.css
  *
- * Info section — the Sherpa version panel and its liquid (lava-lamp / metaball)
- * background. Theme-aware via the app's CSS variables; the blobs blend with
- * `screen` in dark mode and `multiply` in light mode so they read as glowing
- * liquid on either background. Honors prefers-reduced-motion.
+ * Info section — a full-bleed liquid (metaball) playground with the Sherpa
+ * wordmark and version as hero-scale typography on top.
+ *
+ * The liquid is the real deal, not a blurred wash: the blobs render inside a
+ * `.version-goo` layer that runs through an SVG filter (#versionGoo, defined in
+ * index.html) — a gaussian blur followed by an alpha-contrast color matrix.
+ * Wherever two blobs come close, their blurred alpha sums past the threshold
+ * and the filter snaps it back to solid, so they visibly fuse, neck, and split
+ * apart like mercury. The pointer drags its own droplet (.version-cursor)
+ * through the mass via js/info-interactive.js.
+ *
+ * Theme-aware (screen blend in dark, multiply in light) and honors
+ * prefers-reduced-motion.
  */
 
 /* ---- Section fills the viewport so the liquid has the whole space ----
@@ -28,7 +37,7 @@
     padding: 1.5rem 3rem 2.25rem;
 }
 
-/* ---- Stage: rounded frame that clips the liquid; now fills the content ---- */
+/* ---- Stage: rounded frame that clips the liquid ---- */
 .version-stage {
     position: relative;
     overflow: hidden;
@@ -38,115 +47,150 @@
     min-height: 360px;                  /* fallback when not in a flex context */
     display: grid;
     place-items: center;
-    padding: 2.5rem 1.5rem;
+    padding: 1.5rem;
     border: 1px solid var(--border);
     border-radius: 24px;
     background: var(--primary-light);
     box-shadow: var(--card-shadow);
-    perspective: 1200px;                /* depth for the interactive card tilt */
+    perspective: 1200px;                /* depth for the hero's pointer tilt */
 }
 
-/* ---- Liquid background ---- */
+/* ---- Liquid background ----
+ * Outer layer: pointer parallax + a slow hue cycle so the palette breathes.
+ * Inner .version-goo layer: the metaball filter itself. Splitting them keeps
+ * the hue animation from re-declaring the url() filter every frame. */
 .version-liquid {
     position: absolute;
-    inset: -15%;
+    inset: -12%;
     z-index: 0;
-    filter: blur(52px) saturate(140%);  /* heavy blur fuses the blobs into liquid */
+    opacity: 0.95;
     pointer-events: none;
-    /* Pointer parallax — the whole mass drifts a touch against the cursor. */
     transform: translate3d(var(--liquid-px, 0px), var(--liquid-py, 0px), 0);
-    will-change: transform;
+    animation: liquid-hue 16s ease-in-out infinite alternate;
+    will-change: transform, filter;
 }
 
+[data-theme="light"] .version-liquid {
+    opacity: 0.6;                       /* ink pools, not paint spills */
+}
+
+.version-goo {
+    position: absolute;
+    inset: 0;
+    /* The metaball trick: #versionGoo blurs + alpha-contrasts so blobs merge;
+     * a touch more blur softens the snapped edge back into liquid. */
+    filter: url(#versionGoo) blur(8px) saturate(150%);
+}
+
+@keyframes liquid-hue {
+    from { filter: hue-rotate(-18deg); }
+    to   { filter: hue-rotate(26deg); }
+}
+
+/* ---- Blobs ----
+ * Solid-core radial fills (alpha must reach ~1 at the center or the goo
+ * filter's contrast pass erases them — intensity is themed on .version-liquid
+ * AFTER the filter instead). Each drifts on its own large path and wobbles
+ * its silhouette so the mass never repeats. */
 .version-blob {
     position: absolute;
-    width: 42%;
+    width: 40%;
     aspect-ratio: 1;
     border-radius: 50%;
     mix-blend-mode: screen;
-    opacity: 0.85;
     will-change: transform, border-radius;
 }
 
 [data-theme="light"] .version-blob {
     mix-blend-mode: multiply;
-    opacity: 0.55;
 }
 
-/* Each blob: a soft radial puff in an accent-family hue, drifting + morphing on
- * its own clock so the mass never repeats exactly. */
 .version-blob.b1 {
-    top: 6%; left: 8%;
-    background: radial-gradient(circle at 30% 30%, var(--accent), transparent 70%);
-    animation: blob-drift-1 17s ease-in-out infinite, blob-morph 11s ease-in-out infinite;
+    top: 0%; left: 4%;
+    background: radial-gradient(circle at 32% 32%, var(--accent), color-mix(in srgb, var(--accent) 72%, transparent) 52%, transparent 72%);
+    animation: blob-drift-1 13s ease-in-out infinite, blob-morph 9s ease-in-out infinite;
 }
 .version-blob.b2 {
-    top: 30%; left: 48%;
-    background: radial-gradient(circle at 30% 30%, var(--accent-hover), transparent 70%);
-    animation: blob-drift-2 21s ease-in-out infinite, blob-morph 13s ease-in-out infinite reverse;
+    top: 22%; left: 42%;
+    width: 46%;
+    background: radial-gradient(circle at 32% 32%, var(--accent-hover), color-mix(in srgb, var(--accent-hover) 72%, transparent) 52%, transparent 72%);
+    animation: blob-drift-2 17s ease-in-out infinite, blob-morph 11s ease-in-out infinite reverse;
 }
 .version-blob.b3 {
-    top: 52%; left: 12%;
-    background: radial-gradient(circle at 30% 30%, var(--success), transparent 70%);
-    animation: blob-drift-3 19s ease-in-out infinite, blob-morph 15s ease-in-out infinite;
+    top: 55%; left: 4%;
+    width: 38%;
+    background: radial-gradient(circle at 32% 32%, var(--success), color-mix(in srgb, var(--success) 72%, transparent) 52%, transparent 72%);
+    animation: blob-drift-3 15s ease-in-out infinite, blob-morph 13s ease-in-out infinite;
 }
 .version-blob.b4 {
-    top: 14%; left: 60%;
-    width: 36%;
-    background: radial-gradient(circle at 30% 30%, var(--warning), transparent 70%);
-    animation: blob-drift-4 23s ease-in-out infinite, blob-morph 12s ease-in-out infinite reverse;
+    top: 4%; left: 64%;
+    width: 34%;
+    background: radial-gradient(circle at 32% 32%, var(--warning), color-mix(in srgb, var(--warning) 72%, transparent) 52%, transparent 72%);
+    animation: blob-drift-4 19s ease-in-out infinite, blob-morph 10s ease-in-out infinite reverse;
 }
 .version-blob.b5 {
-    top: 58%; left: 54%;
-    width: 38%;
-    background: radial-gradient(circle at 30% 30%, var(--accent), transparent 70%);
-    animation: blob-drift-1 25s ease-in-out infinite reverse, blob-morph 14s ease-in-out infinite;
+    top: 56%; left: 56%;
+    width: 42%;
+    background: radial-gradient(circle at 32% 32%, var(--accent), color-mix(in srgb, var(--accent) 72%, transparent) 52%, transparent 72%);
+    animation: blob-drift-5 21s ease-in-out infinite, blob-morph 12s ease-in-out infinite;
+}
+.version-blob.b6 {
+    top: 30%; left: 20%;
+    width: 30%;
+    background: radial-gradient(circle at 32% 32%, var(--accent-hover), color-mix(in srgb, var(--accent-hover) 72%, transparent) 52%, transparent 72%);
+    animation: blob-drift-6 16s ease-in-out infinite, blob-morph 8s ease-in-out infinite reverse;
 }
 
-/* Interactive glow — a blob of light that tracks the cursor through the liquid.
- * Position (--cursor-x / --cursor-y, in px) and presence are driven by JS;
- * it fades in only while the pointer is over the stage. No auto-animation, so
- * the JS lerp owns all of its movement. */
+/* Interactive droplet — tracks the cursor through the goo layer, so it
+ * physically merges with whatever blob it touches. Position comes from JS
+ * (--cursor-x / --cursor-y, lerped); only its presence is CSS. The opacity
+ * fade runs BEFORE the goo contrast, so it reads as the droplet shrinking
+ * into / out of the liquid rather than a crossfade. */
 .version-cursor {
     top: 0; left: 0;
-    width: 40%;
-    background: radial-gradient(circle at 50% 50%, var(--accent-hover), transparent 66%);
+    width: 24%;
+    background: radial-gradient(circle, var(--accent-hover), color-mix(in srgb, var(--accent-hover) 72%, transparent) 46%, transparent 68%);
     opacity: 0;
-    transform: translate3d(var(--cursor-x, 50%), var(--cursor-y, 50%), 0) translate(-50%, -50%) scale(0.7);
+    transform: translate3d(var(--cursor-x, 50%), var(--cursor-y, 50%), 0) translate(-50%, -50%);
     animation: none;                    /* movement comes from JS, not keyframes */
-    transition: opacity 0.5s ease;
+    transition: opacity 0.45s ease;
 }
 
 .version-stage.is-hovering .version-cursor {
-    opacity: 0.95;
-    transform: translate3d(var(--cursor-x, 50%), var(--cursor-y, 50%), 0) translate(-50%, -50%) scale(1);
+    opacity: 1;
 }
 
-[data-theme="light"] .version-cursor {
-    opacity: 0;
-}
-
-[data-theme="light"] .version-stage.is-hovering .version-cursor {
-    opacity: 0.6;
-}
-
+/* Big, deliberate journeys — translate % is relative to the blob's own size
+ * (~40% of the stage), so ±70% sweeps roughly a third of the stage. */
 @keyframes blob-drift-1 {
-    0%, 100% { transform: translate(0, 0) scale(1); }
-    33%      { transform: translate(26%, 18%) scale(1.18); }
-    66%      { transform: translate(-14%, 24%) scale(0.9); }
+    0%, 100% { transform: translate(0%, 0%) scale(1); }
+    25%      { transform: translate(55%, 30%) scale(1.2); }
+    50%      { transform: translate(20%, 70%) scale(0.85); }
+    75%      { transform: translate(-25%, 35%) scale(1.1); }
 }
 @keyframes blob-drift-2 {
-    0%, 100% { transform: translate(0, 0) scale(1.05); }
-    50%      { transform: translate(-30%, -16%) scale(0.85); }
+    0%, 100% { transform: translate(0%, 0%) scale(1.05); }
+    30%      { transform: translate(-60%, 25%) scale(0.8); }
+    60%      { transform: translate(-30%, -45%) scale(1.25); }
 }
 @keyframes blob-drift-3 {
-    0%, 100% { transform: translate(0, 0) scale(0.95); }
-    40%      { transform: translate(22%, -20%) scale(1.2); }
-    80%      { transform: translate(8%, 14%) scale(1); }
+    0%, 100% { transform: translate(0%, 0%) scale(0.9); }
+    35%      { transform: translate(65%, -35%) scale(1.25); }
+    70%      { transform: translate(15%, 40%) scale(1); }
 }
 @keyframes blob-drift-4 {
-    0%, 100% { transform: translate(0, 0) scale(1); }
-    50%      { transform: translate(-22%, 26%) scale(1.15); }
+    0%, 100% { transform: translate(0%, 0%) scale(1.1); }
+    40%      { transform: translate(-50%, 55%) scale(0.85); }
+    80%      { transform: translate(35%, 20%) scale(1.2); }
+}
+@keyframes blob-drift-5 {
+    0%, 100% { transform: translate(0%, 0%) scale(0.95); }
+    50%      { transform: translate(-70%, -30%) scale(1.3); }
+}
+@keyframes blob-drift-6 {
+    0%, 100% { transform: translate(0%, 0%) scale(1); }
+    33%      { transform: translate(40%, -55%) scale(0.8); }
+    66%      { transform: translate(-45%, -20%) scale(1.15); }
 }
 /* Organic wobble — nudge the border-radius so the puffs aren't perfect circles. */
 @keyframes blob-morph {
@@ -154,84 +198,56 @@
     50%      { border-radius: 62% 38% 37% 63% / 58% 63% 37% 42%; }
 }
 
-/* ---- Foreground card ---- */
-.version-card {
+/* ---- Hero typography — the version IS the page ---- */
+.version-hero {
     position: relative;
     z-index: 1;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.65rem;
-    max-width: 460px;
-    padding: 2.25rem 2.5rem;
+    gap: clamp(0.5rem, 2.5vh, 1.75rem);
     text-align: center;
-    border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
-    border-radius: 20px;
-    background: color-mix(in srgb, var(--primary-light) 55%, transparent);
-    -webkit-backdrop-filter: blur(10px);
-    backdrop-filter: blur(10px);
-    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.18);
-    /* Interactive 3D tilt toward the cursor (vars set by JS; lerped there). */
+    pointer-events: none;               /* the stage owns the pointer */
     transform-style: preserve-3d;
     transform: rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg));
-    transition: box-shadow 0.4s ease;
     will-change: transform;
+    filter: drop-shadow(0 18px 50px rgba(0, 0, 0, 0.4));
 }
 
-.version-stage.is-hovering .version-card {
-    box-shadow: 0 26px 70px rgba(0, 0, 0, 0.32);
+[data-theme="light"] .version-hero {
+    filter: drop-shadow(0 14px 36px rgba(31, 41, 55, 0.22));
 }
 
-/* Specular sheen — a soft reflection that slides under the cursor. Sits behind
- * the card's text (z-index: -1) so it never hurts legibility. */
-.version-card-sheen {
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    border-radius: inherit;
-    pointer-events: none;
-    background: radial-gradient(
-        240px circle at var(--sheen-x, 50%) var(--sheen-y, 50%),
-        color-mix(in srgb, var(--accent-hover) 55%, transparent),
-        transparent 60%
+.version-wordmark {
+    font-size: clamp(3.5rem, 17vw, 16rem);
+    font-weight: 900;
+    line-height: 0.95;
+    letter-spacing: -0.04em;
+    background: linear-gradient(
+        105deg,
+        var(--text-primary) 28%,
+        var(--accent) 46%,
+        var(--accent-hover) 54%,
+        var(--text-primary) 72%
     );
-    opacity: 0;
-    transition: opacity 0.4s ease;
-}
-
-.version-stage.is-hovering .version-card-sheen {
-    opacity: 0.85;
-}
-
-.version-mark {
-    font-size: 0.78rem;
-    font-weight: 700;
-    letter-spacing: 0.32em;
-    text-transform: uppercase;
-    color: var(--text-secondary);
-}
-
-.version-codename {
-    font-size: clamp(2rem, 6vw, 3rem);
-    font-weight: 800;
-    line-height: 1.05;
-    letter-spacing: -0.01em;
-    background: linear-gradient(100deg, var(--accent), var(--accent-hover), var(--accent));
-    background-size: 220% auto;
+    background-size: 230% auto;
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
-    color: var(--accent);                /* fallback if background-clip unsupported */
-    animation: version-shimmer 6s linear infinite;
+    color: var(--text-primary);          /* fallback if background-clip unsupported */
+    animation: version-shimmer 8s linear infinite;
 }
 
 @keyframes version-shimmer {
-    to { background-position: 220% center; }
+    to { background-position: 230% center; }
 }
 
 .version-number {
     font-family: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
-    font-size: 0.95rem;
+    font-size: clamp(1.4rem, 5vw, 4.25rem);
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: 0.06em;
     color: var(--text-secondary);
 }
 
@@ -244,19 +260,19 @@
     /* Let the section breathe and scroll rather than locking to the viewport. */
     #info.section.active { height: auto; min-height: 100vh; overflow: visible; }
     .version-stage { min-height: 72vh; border-radius: 18px; }
-    .version-card { padding: 1.75rem 1.4rem; }
-    .version-liquid { filter: blur(40px) saturate(140%); }
+    .version-goo { filter: url(#versionGoo) blur(6px) saturate(150%); }
 }
 
 /* ---- Accessibility: hold still if the user prefers reduced motion ----
  * Kill the auto-animations and neutralize the pointer tilt/parallax. The
- * cursor glow still fades in on hover (user-driven, gentle), but nothing
+ * cursor droplet still fades in on hover (user-driven, gentle), but nothing
  * moves on its own. */
 @media (prefers-reduced-motion: reduce) {
     .version-blob,
-    .version-codename {
+    .version-liquid,
+    .version-wordmark {
         animation: none;
     }
-    .version-card { transform: none; }
+    .version-hero { transform: none; }
     .version-liquid { transform: none; }
 }

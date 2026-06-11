@@ -1,24 +1,23 @@
 // js/info-interactive.js
 //
-// Makes the Info version panel feel alive. The liquid background reacts to the
-// pointer (a glow of light tracks the cursor; the whole mass drifts with a bit
-// of parallax) and the glass card tilts in 3D toward the mouse with a moving
-// specular sheen.
+// Makes the Info version panel feel alive. The pointer drags a droplet through
+// the liquid (it merges with the blobs via the goo filter), the whole mass
+// drifts with a bit of parallax, and the hero typography tilts gently in 3D
+// toward the mouse.
 //
 // Pure DOM + CSS custom properties: every visual lives in css/info.css, and
 // this module only feeds it numbers. All smoothing is one requestAnimationFrame
 // lerp, and every layout read + style write happens inside that frame so there
 // is no read/write thrash. Idempotent (safe to call again) and DOM-only — no
 // listeners that outlive the page, nothing to clean up. Honors
-// prefers-reduced-motion by dropping the tilt/parallax and keeping only a gentle
-// pointer glow.
+// prefers-reduced-motion by dropping the tilt/parallax and keeping only the
+// pointer droplet.
 
-const TILT_MAX = 7;      // max card rotation (deg) at the edge of the stage
-const PARALLAX = 14;     // px the liquid drifts against the pointer
+const TILT_MAX = 4.5;    // max hero rotation (deg) at the edge of the stage
+const PARALLAX = 20;     // px the liquid drifts against the pointer
 const EASE = 0.16;       // lerp factor per frame (higher = snappier)
 
 function lerp(a, b, t) { return a + (b - a) * t; }
-function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
 
 export function initializeInfoInteractive(root = (typeof document !== 'undefined' ? document : null)) {
     if (!root || !root.getElementById) return;
@@ -30,14 +29,12 @@ export function initializeInfoInteractive(root = (typeof document !== 'undefined
     if (!win || !win.requestAnimationFrame) return;     // SSR / unsupported: leave the static panel
     stage.dataset.interactiveBound = '1';
 
-    const card = stage.querySelector('.version-card');
-
     const reduce = !!(win.matchMedia && win.matchMedia('(prefers-reduced-motion: reduce)').matches);
     const tiltMax = reduce ? 0 : TILT_MAX;
     const parallaxMax = reduce ? 0 : PARALLAX;
 
     // Rendered values (cur) eased toward their targets (tgt) each frame.
-    const cur = { cx: 0, cy: 0, tx: 0, ty: 0, lx: 0, ly: 0, sx: 50, sy: 50 };
+    const cur = { cx: 0, cy: 0, tx: 0, ty: 0, lx: 0, ly: 0 };
     const tgt = { ...cur };
     const pointer = { x: 0, y: 0 };
     let active = false;
@@ -56,24 +53,14 @@ export function initializeInfoInteractive(root = (typeof document !== 'undefined
         tgt.tx = -ny * tiltMax;                      // rotateX tracks vertical motion
         tgt.lx = -nx * parallaxMax;                  // liquid drifts opposite the pointer
         tgt.ly = -ny * parallaxMax;
-        tgt.cx = px - tgt.lx;                        // glow sits under the cursor after parallax
+        tgt.cx = px - tgt.lx;                        // droplet sits under the cursor after parallax
         tgt.cy = py - tgt.ly;
-
-        if (card) {                                  // sheen: pointer position relative to the card
-            const cw = card.offsetWidth || rect.width;
-            const ch = card.offsetHeight || rect.height;
-            const cardLeft = rect.left + (rect.width - cw) / 2;   // card is centered in the stage
-            const cardTop = rect.top + (rect.height - ch) / 2;
-            tgt.sx = clamp(((pointer.x - cardLeft) / cw) * 100, -10, 110);
-            tgt.sy = clamp(((pointer.y - cardTop) / ch) * 100, -10, 110);
-        }
     }
 
     function aimAtRest() {
         const rect = stage.getBoundingClientRect();
         tgt.tx = 0; tgt.ty = 0; tgt.lx = 0; tgt.ly = 0;
         tgt.cx = rect.width / 2; tgt.cy = rect.height / 2;
-        tgt.sx = 50; tgt.sy = 50;
     }
 
     function settled() {
@@ -100,8 +87,6 @@ export function initializeInfoInteractive(root = (typeof document !== 'undefined
         cur.ty = lerp(cur.ty, tgt.ty, EASE);
         cur.lx = lerp(cur.lx, tgt.lx, EASE);
         cur.ly = lerp(cur.ly, tgt.ly, EASE);
-        cur.sx = lerp(cur.sx, tgt.sx, EASE);
-        cur.sy = lerp(cur.sy, tgt.sy, EASE);
 
         const s = stage.style;
         s.setProperty('--cursor-x', cur.cx.toFixed(1) + 'px');
@@ -110,8 +95,6 @@ export function initializeInfoInteractive(root = (typeof document !== 'undefined
         s.setProperty('--tilt-y', cur.ty.toFixed(2) + 'deg');
         s.setProperty('--liquid-px', cur.lx.toFixed(1) + 'px');
         s.setProperty('--liquid-py', cur.ly.toFixed(1) + 'px');
-        s.setProperty('--sheen-x', cur.sx.toFixed(1) + '%');
-        s.setProperty('--sheen-y', cur.sy.toFixed(1) + '%');
 
         raf = (active || !settled()) ? win.requestAnimationFrame(frame) : 0;
     }
