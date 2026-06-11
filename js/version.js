@@ -16,8 +16,8 @@
 // =============================================================================
 
 export const SHERPA_VERSION = Object.freeze({
-    number: '2026.06.11',
-    codename: 'Quicksilver Drift',
+    number: '2026.06.11.2',
+    codename: 'Magma Bloom',
     released: '2026-06-11'
 });
 
