@@ -16,9 +16,9 @@
 // =============================================================================
 
 export const SHERPA_VERSION = Object.freeze({
-    number: '2026.06.10',
-    codename: 'Liquid Aurora',
-    released: '2026-06-10'
+    number: '2026.06.11',
+    codename: 'Quicksilver Drift',
+    released: '2026-06-11'
 });
 
 // FNV-1a (32-bit) over the identifying fields -> short, stable hex fingerprint.
