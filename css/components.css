@@ -751,6 +751,41 @@ input:focus, select:focus, textarea:focus {
     animation: spin 0.8s linear infinite;
 }
 
+.productivity-export-btn {
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    flex: 0 0 auto;
+    padding: 0 0.9rem;
+    border: 1px solid rgba(242, 184, 75, 0.55);
+    border-radius: 8px;
+    background: linear-gradient(180deg, rgba(242, 184, 75, 0.18), rgba(242, 184, 75, 0.08));
+    color: var(--accent);
+    font-size: 0.82rem;
+    font-weight: 800;
+    cursor: pointer;
+    box-shadow: 0 0 0 1px rgba(242, 184, 75, 0.04), 0 8px 20px rgba(0, 0, 0, 0.18);
+    transition: border-color var(--transition-fast), color var(--transition-fast), background var(--transition-fast), transform var(--transition-fast), box-shadow var(--transition-fast);
+    white-space: nowrap;
+}
+
+.productivity-export-btn:hover {
+    border-color: var(--accent);
+    color: #111;
+    background: var(--accent);
+    transform: translateY(-1px);
+    box-shadow: 0 0 0 1px rgba(242, 184, 75, 0.18), 0 10px 24px rgba(242, 184, 75, 0.22);
+}
+
+.productivity-export-icon {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+    flex: 0 0 18px;
+}
+
 .upload-calendar-panel {
     flex: 1;
     min-width: 320px;

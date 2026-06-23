@@ -9,6 +9,7 @@ export function bindProductivityControls({
     hasAnyData = () => false,
     renderCurrentView = () => {},
     refreshProductivityData = async () => {},
+    exportCurrentSelection = () => {},
     showTemporaryMessage = () => {},
     log = () => {},
     refreshMessage = 'Productivity data refreshed.'
@@ -52,6 +53,10 @@ export function bindProductivityControls({
         await refreshProductivityData();
         refreshButton.classList.remove('is-loading');
         showTemporaryMessage(refreshMessage, 'success', 1500);
+    });
+
+    getById('productivityExportBtn')?.addEventListener('click', () => {
+        exportCurrentSelection();
     });
 
     return true;

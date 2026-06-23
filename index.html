@@ -483,6 +483,12 @@
                             <button type="button" id="viewOverview" data-translate="prod-summary" style="padding: 0.6rem 1rem; border: none; cursor: pointer; font-size: 0.85rem; background: var(--accent); color: #000; font-weight: 600; transition: all 0.2s; outline: none;">Sumar</button>
                             <button type="button" id="viewDetail" data-translate="prod-per-agent" style="padding: 0.6rem 1rem; border: none; cursor: pointer; font-size: 0.85rem; background: var(--primary-dark); color: var(--text-secondary); transition: all 0.2s; outline: none;">Per Agent</button>
                         </div>
+                        <button type="button" id="productivityExportBtn" class="productivity-export-btn" title="Download current selection as XLSX" aria-label="Download current selection as XLSX" data-translate-title="prod-export-selection-title">
+                            <svg class="productivity-export-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M5 20h14v-2H5v2zM13 4h-2v8.17L7.41 8.59 6 10l6 6 6-6-1.41-1.41L13 12.17V4z"/>
+                            </svg>
+                            <span data-translate="prod-export-selection">Export XLSX</span>
+                        </button>
                         <button type="button" id="productivityRefreshBtn" class="productivity-refresh-btn" title="Refresh productivity data" aria-label="Refresh productivity data">&#8635;</button>
                     </div>
                 </header>

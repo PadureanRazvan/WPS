@@ -149,6 +149,23 @@ test('productivity controls bind refresh button loading and success message', as
   ]);
 });
 
+test('productivity controls bind selection export button', async () => {
+  const { bindProductivityControls } = await loadControlsModule();
+  const exportButton = fakeElement();
+  const calls = [];
+
+  bindProductivityControls({
+    doc: fakeDocument({ productivityExportBtn: exportButton }),
+    exportCurrentSelection: () => calls.push(['exportCurrentSelection'])
+  });
+
+  exportButton.dispatch('click');
+
+  assert.deepEqual(calls, [
+    ['exportCurrentSelection']
+  ]);
+});
+
 test('productivity control binding tolerates missing controls', async () => {
   const { bindProductivityControls } = await loadControlsModule();
 

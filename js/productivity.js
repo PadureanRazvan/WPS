@@ -17,6 +17,10 @@ import { createProductivityFirestoreStore } from './productivity-persistence.js'
 import { buildAverageProductivitySummary, buildProductivityTrendData } from './productivity-dashboard-metrics.js';
 import { buildProductivityDetailView, buildProductivityOverviewView } from './productivity-view.js';
 import { buildProductivityDetailRows } from './productivity-detail-rows.js';
+import {
+    buildProductivitySelectionWorkbookModel,
+    exportProductivityWorkbook
+} from './productivity-export-command.js';
 import { bindProductivityDateRangePicker } from './productivity-date-range-picker.js';
 import { bindProductivityControls } from './productivity-controls.js';
 import { bindProductivityAgentActions, createProductivityAgentActions } from './productivity-agent-actions.js';
@@ -377,6 +381,76 @@ export async function refreshProductivityData() {
     refreshProductivityViews({ source: 'manual-refresh' });
 }
 
+function exportCurrentSelection() {
+    if (!hasAnyData()) {
+        showTemporaryMessage(t('prod-no-results'), 'error');
+        return;
+    }
+
+    try {
+        if (currentView === 'detail') {
+            if (selectedAgents.size > 0) {
+                pruneSelectedAgents();
+            }
+            if (!detailSearchCommitted || selectedAgents.size === 0) {
+                showTemporaryMessage(t('prod-select-agent'), 'error');
+                return;
+            }
+
+            const detailRows = buildProductivityDetailRows({
+                dataByDate,
+                agents: getUsersData(),
+                selectedAgents,
+                start: dateStart,
+                end: dateEnd,
+                teamFilter: 'all'
+            });
+            if (detailRows.length === 0) {
+                showTemporaryMessage(t('prod-no-results'), 'error');
+                return;
+            }
+
+            const model = buildProductivitySelectionWorkbookModel({
+                view: 'detail',
+                detailRows,
+                selectedCount: selectedAgents.size,
+                start: dateStart,
+                end: dateEnd,
+                teamFilter: 'all',
+                daysInRange: getProductivityDaysInRange(dateStart, dateEnd),
+                datesWithData: new Set(detailRows.filter(row => row.hasData).map(row => row.dateKey)).size,
+                t
+            });
+            exportProductivityWorkbook({ model });
+            showTemporaryMessage(t('prod-export-success'), 'success', 1800);
+            return;
+        }
+
+        const overview = calculateProductivity();
+        if (!overview.rows || overview.rows.length === 0) {
+            showTemporaryMessage(t('prod-no-results'), 'error');
+            return;
+        }
+
+        const model = buildProductivitySelectionWorkbookModel({
+            view: 'overview',
+            rows: overview.rows,
+            summary: overview.summary,
+            start: dateStart,
+            end: dateEnd,
+            teamFilter: currentTeamFilter,
+            daysInRange: getProductivityDaysInRange(dateStart, dateEnd),
+            datesWithData: overview.datesWithData,
+            t
+        });
+        exportProductivityWorkbook({ model });
+        showTemporaryMessage(t('prod-export-success'), 'success', 1800);
+    } catch (err) {
+        console.error('[Productivity] Export error:', err);
+        showTemporaryMessage(t('prod-export-error'), 'error');
+    }
+}
+
 // --- Upload date UI ---
 
 function updateUploadDateStatus() {
@@ -548,6 +622,7 @@ export async function initializeProductivity() {
         hasAnyData,
         renderCurrentView,
         refreshProductivityData,
+        exportCurrentSelection: exportCurrentSelection,
         showTemporaryMessage,
         log: message => console.log(message)
     });

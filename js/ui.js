@@ -213,6 +213,16 @@ export function translatePage(langCode) {
     });
 
     // Translate title attributes
+    document.querySelectorAll('[data-translate-title]').forEach(element => {
+        const key = element.getAttribute('data-translate-title');
+        if (dict[key]) {
+            element.title = dict[key];
+            if (element.hasAttribute('aria-label')) {
+                element.setAttribute('aria-label', dict[key]);
+            }
+        }
+    });
+
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn && dict['logout']) logoutBtn.title = dict['logout'];
 }
