@@ -30,6 +30,12 @@ test('app head exposes the Sherpa favicon for browser tabs', () => {
     indexSource,
     /<link rel="apple-touch-icon" sizes="180x180" href="assets\/sherpa-apple-touch-icon\.png\?v=20260626-global-centered-fallback">/
   );
+
+  const inlineFavicon = indexSource.match(
+    /<link rel="icon" type="image\/png" sizes="32x32" href="data:image\/png;base64,([^"]+)">/
+  );
+  assert.ok(inlineFavicon);
+  assert.equal(Buffer.from(inlineFavicon[1], 'base64').compare(faviconPng), 0);
 });
 
 test('Sherpa favicon is a compact branded SVG mark', () => {
