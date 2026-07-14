@@ -72,7 +72,15 @@
 }
 
 .login-logo canvas {
-    filter: drop-shadow(0 0 15px rgba(255, 215, 0, 0.4));
+    filter: drop-shadow(0 7px 15px rgba(0, 0, 0, 0.3));
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.login-logo canvas:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 5px;
+    border-radius: 50%;
 }
 
 .login-title {
