@@ -1,6 +1,6 @@
 // js/users.js
 import { db } from './firebase-config.js';
-import { collection, onSnapshot, Timestamp } from "https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore.js";
+import { collection, onSnapshot, Timestamp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 import { addAgent, updateAgent, deleteAgent } from './planner.js';
 import { showTemporaryMessage, t } from './ui.js';
 import { logActivity } from './logs.js';

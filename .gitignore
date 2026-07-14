@@ -1,6 +1,9 @@
 serve.ps1
 .claude/
 node_modules/
+functions/.env
+functions/.env.*
+.secret.local
 .DS_Store
 Thumbs.db
 server*.log

@@ -44,6 +44,7 @@ export const translations = {
         'auth-cancelled': 'Cererea de autentificare a fost anulată.',
         'auth-network-error': 'Eroare de rețea. Verifică conexiunea la internet.',
         'auth-unauthorized-domain': 'Domeniul nu este autorizat. Contactează administratorul.',
+        'auth-unauthorized-user': 'Acest cont nu este autorizat pentru Sherpa. Folosește contul FSP Global.',
         'auth-generic-error': 'Eroare la autentificare. Încearcă din nou.',
 
         // Planner
@@ -243,8 +244,12 @@ export const translations = {
         // Chat
         'chat-welcome': 'Salut! Sunt Sherpa AI. Întreabă-mă orice despre planificarea echipei sau cere-mi să fac modificări.',
         'chat-error': 'Eroare la comunicarea cu AI. Încearcă din nou.',
-        'chat-invalid-key': 'Cheia API este invalidă. Verifică setările.',
         'chat-rate-limit': 'Prea multe cereri. Așteaptă câteva secunde.',
+        'chat-service-setup-pending': 'Sherpa AI este în curs de configurare securizată. Încearcă din nou după activare.',
+        'chat-service-configuration-error': 'Accesul serviciului AI este blocat. Administratorul trebuie să verifice proiectul Gemini.',
+        'chat-service-unavailable': 'Serviciul Sherpa AI este temporar indisponibil. Încearcă din nou.',
+        'chat-access-denied': 'Contul tău nu are acces la Sherpa AI.',
+        'chat-invalid-request': 'Cererea AI nu a putut fi procesată în siguranță. Reformulează și încearcă din nou.',
         'chat-delete-cancelled': 'Ștergerea a fost anulată.',
 
         // Nav items
@@ -416,6 +421,7 @@ export const translations = {
         'auth-cancelled': 'The authentication request was cancelled.',
         'auth-network-error': 'Network error. Please check your internet connection.',
         'auth-unauthorized-domain': 'Domain not authorized. Contact the administrator.',
+        'auth-unauthorized-user': 'This account is not authorized for Sherpa. Use your FSP Global account.',
         'auth-generic-error': 'Authentication error. Please try again.',
 
         // Planner
@@ -615,8 +621,12 @@ export const translations = {
         // Chat
         'chat-welcome': 'Hi! I\'m Sherpa AI. Ask me anything about team planning or request changes.',
         'chat-error': 'Error communicating with AI. Please try again.',
-        'chat-invalid-key': 'Invalid API key. Check your settings.',
         'chat-rate-limit': 'Too many requests. Wait a few seconds.',
+        'chat-service-setup-pending': 'Sherpa AI is undergoing secure setup. Try again after activation.',
+        'chat-service-configuration-error': 'AI service access is blocked. An administrator must check the Gemini project.',
+        'chat-service-unavailable': 'Sherpa AI is temporarily unavailable. Please try again.',
+        'chat-access-denied': 'Your account does not have access to Sherpa AI.',
+        'chat-invalid-request': 'The AI request could not be processed safely. Rephrase it and try again.',
         'chat-delete-cancelled': 'Deletion cancelled.',
 
         // Nav items
@@ -789,6 +799,7 @@ export const translations = {
         'auth-cancelled': 'La richiesta di autenticazione è stata annullata.',
         'auth-network-error': 'Errore di rete. Controlla la connessione internet.',
         'auth-unauthorized-domain': 'Dominio non autorizzato. Contatta l\'amministratore.',
+        'auth-unauthorized-user': 'Questo account non è autorizzato per Sherpa. Usa il tuo account FSP Global.',
         'auth-generic-error': 'Errore di autenticazione. Riprova.',
 
         // Planner
@@ -988,8 +999,12 @@ export const translations = {
         // Chat
         'chat-welcome': 'Ciao! Sono Sherpa AI. Chiedimi qualsiasi cosa sulla pianificazione del team o richiedi modifiche.',
         'chat-error': 'Errore nella comunicazione con l\'AI. Riprova.',
-        'chat-invalid-key': 'Chiave API non valida. Controlla le impostazioni.',
         'chat-rate-limit': 'Troppe richieste. Attendi qualche secondo.',
+        'chat-service-setup-pending': 'Sherpa AI è in fase di configurazione sicura. Riprova dopo l\'attivazione.',
+        'chat-service-configuration-error': 'L\'accesso al servizio AI è bloccato. Un amministratore deve verificare il progetto Gemini.',
+        'chat-service-unavailable': 'Sherpa AI non è temporaneamente disponibile. Riprova.',
+        'chat-access-denied': 'Il tuo account non ha accesso a Sherpa AI.',
+        'chat-invalid-request': 'La richiesta AI non può essere elaborata in sicurezza. Riformulala e riprova.',
         'chat-delete-cancelled': 'Eliminazione annullata.',
 
         // Nav items

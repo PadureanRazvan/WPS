@@ -11,6 +11,8 @@ This flow is for production changes to `https://padureanrazvan.github.io/WPS/`.
 
 ```powershell
 node --test tests/*.test.mjs
+npm --prefix functions run check
+npm --prefix functions audit --omit=dev
 ```
 
 5. Run whitespace checks before commit:
@@ -19,6 +21,18 @@ node --test tests/*.test.mjs
 git diff --check HEAD
 git diff --cached --check
 ```
+
+6. For AI or authorization changes, review `docs/ai-security.md`. Never place the Gemini key in Firestore, a local environment file, Git, or a browser prompt.
+
+## Firebase Backend
+
+Deploy Firestore Rules independently when their tests pass:
+
+```powershell
+npx firebase-tools@15.23.0 deploy --only firestore:rules --project wps-sherpa-database
+```
+
+The AI function requires the client-owned billing profile and the `GEMINI_API_KEY` Secret Manager secret. Set and deploy it using the hidden CLI prompt documented in `docs/ai-security.md`.
 
 ## Production Merge
 

@@ -2,7 +2,7 @@
 
 // --- Firestore & Application Imports ---
 import { db } from './firebase-config.js';
-import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, Timestamp } from "https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore.js";
+import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, Timestamp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 import { showTemporaryMessage } from './ui.js';
 
 // --- Local State Management ---
@@ -1086,4 +1086,4 @@ export function renderPlannerIfActive() {
 export function exportToCSV() {
     console.log('Exporting to CSV...');
     showTemporaryMessage("CSV export functionality coming soon!", "info");
-} 
+}

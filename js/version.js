@@ -16,9 +16,9 @@
 // =============================================================================
 
 export const SHERPA_VERSION = Object.freeze({
-    number: '2026.06.11.2',
-    codename: 'Magma Bloom',
-    released: '2026-06-11'
+    number: '2026.07.14',
+    codename: 'Verdant Shield',
+    released: '2026-07-14'
 });
 
 // FNV-1a (32-bit) over the identifying fields -> short, stable hex fingerprint.

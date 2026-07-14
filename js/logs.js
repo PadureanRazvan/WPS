@@ -1,6 +1,6 @@
 // js/logs.js — Activity Logging Module
 import { db } from './firebase-config.js';
-import { collection, addDoc, query, orderBy, limit, getDocs, Timestamp, where } from "https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore.js";
+import { collection, addDoc, query, orderBy, limit, getDocs, Timestamp, where } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 import { translations } from './config.js';
 
 function getLang() { return localStorage.getItem('language') || 'ro'; }

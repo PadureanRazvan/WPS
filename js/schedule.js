@@ -25,7 +25,7 @@ import { showTemporaryMessage } from './ui.js';
 import { getUsersData } from './users.js';
 import { getPlannerData } from './planner.js';
 import { db } from './firebase-config.js';
-import { collection, doc, setDoc, deleteDoc, getDocs, onSnapshot } from "https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore.js";
+import { collection, doc, setDoc, deleteDoc, getDocs, onSnapshot } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 
 import {
     buildScheduleTemplateCsv,

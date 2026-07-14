@@ -23,6 +23,7 @@ test('production Firebase config preserves the live Sherpa project', async () =>
   assert.equal(config.projectId, 'wps-sherpa-database');
   assert.equal(config.authDomain, 'wps-sherpa-database.firebaseapp.com');
   assert.equal(config.storageBucket, 'wps-sherpa-database.appspot.com');
+  assert.equal(config.appCheckSiteKey, '');
 });
 
 test('development Firebase environment is explicit but not silently usable yet', async () => {

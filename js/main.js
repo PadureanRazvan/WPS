@@ -91,7 +91,10 @@ async function initializeApp() {
                 }
             }),
             toggleSidebar,
-            logout,
+            logout: async () => {
+                await logActivity('auth', 'logout');
+                await logout();
+            },
             setAppInitialized: value => { appInitialized = value; }
         },
         getCurrentLanguage: () => currentLanguage,
@@ -123,7 +126,6 @@ bindAppLifecycleEvents({
             logActivity('auth', 'login', { email: user.email, name: user.displayName || '' });
         },
         onLogout: () => {
-            logActivity('auth', 'logout');
             setLogUser(null);
             showLoginScreen(document);
             // Clean up listeners

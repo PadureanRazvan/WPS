@@ -8,7 +8,8 @@ const FIREBASE_ENVIRONMENTS = {
     storageBucket: 'wps-sherpa-database.appspot.com',
     messagingSenderId: '897978989234',
     appId: '1:897978989234:web:f2869963eb261af70ce7ab',
-    measurementId: 'G-NBPVK629X4'
+    measurementId: 'G-NBPVK629X4',
+    appCheckSiteKey: ''
   },
   development: null
 };

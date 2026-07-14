@@ -1,46 +1,42 @@
 rules_version = '2';
 
-// Sherpa (WPS) Firestore security rules.
-//
-// Baseline policy: every document requires an authenticated user. Sherpa signs
-// in with Google (Firebase Auth) and performs ALL Firestore reads/writes only
-// after login — see js/main.js: onAuthChange -> onLogin -> initializeApp(),
-// which is the sole entry point for the data modules (planner, users,
-// productivity, schedule, reports, chat). Activity logging (js/logs.js) is
-// best-effort and already swallows write errors, so an authenticated-only
-// policy does not break normal use.
-//
-// SCOPE NOTE: `request.auth != null` allows ANY authenticated Google account.
-// For an internal tool you almost certainly want to restrict to specific people
-// or a domain — enable the allowlist below and fill it in.
-
 service cloud.firestore {
   match /databases/{database}/documents {
+    function isAuthorizedStaff() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && (
+          request.auth.token.email == 'reizvanmail@gmail.com'
+          || request.auth.token.email.matches('^[^@]+@fspglobal[.]com$')
+        );
+    }
 
-    // ---- Optional allowlist (DISABLED) -------------------------------------
-    // To restrict access to known users, uncomment isAuthorized() and the
-    // match block below, then DELETE the baseline match block further down.
-    //
-    // function isAuthorized() {
-    //   return request.auth != null && request.auth.token.email in [
-    //     'person.one@example.com',
-    //     'person.two@example.com'
-    //   ];
-    //   // Or, for a Google Workspace domain (replace example.com):
-    //   // return request.auth != null
-    //   //   && request.auth.token.email_verified
-    //   //   && request.auth.token.email.matches('.*@example[.]com$');
-    // }
-    //
-    // match /{document=**} {
-    //   allow read, write: if isAuthorized();
-    // }
-    // ------------------------------------------------------------------------
+    match /agents/{agentId} {
+      allow read, create, update, delete: if isAuthorizedStaff();
+    }
 
-    // Baseline: any authenticated user. Covers every collection
-    // (agents, productivity, config, schedules, activity_logs, ...).
-    match /{document=**} {
-      allow read, write: if request.auth != null;
+    match /productivity/{dateId} {
+      allow read, create, update, delete: if isAuthorizedStaff();
+    }
+
+    match /schedules/{monthId} {
+      allow read, create, update, delete: if isAuthorizedStaff();
+    }
+
+    match /activity_logs/{logId} {
+      allow read: if isAuthorizedStaff();
+      allow create: if isAuthorizedStaff()
+        && request.resource.data.user.uid == request.auth.uid;
+    }
+
+    // Gemini credentials are server secrets. Clients must never read or write them.
+    match /config/{configId} {
+      allow read, write: if false;
+    }
+
+    // Written only by the Admin SDK in the callable function.
+    match /_server_ai_rate_limits/{userId} {
+      allow read, write: if false;
     }
   }
 }

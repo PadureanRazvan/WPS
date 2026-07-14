@@ -297,65 +297,6 @@
     padding-left: 0.2rem;
 }
 
-/* API Key Prompt */
-.chat-api-key {
-    padding: 1rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    border-top: 1px solid var(--border);
-    background: rgba(232, 168, 73, 0.03);
-}
-
-[data-theme="light"] .chat-api-key {
-    background: rgba(59, 93, 171, 0.02);
-}
-
-.chat-api-key label {
-    font-size: 0.82rem;
-    color: var(--text-secondary);
-}
-
-.chat-api-key input {
-    padding: 0.55rem 0.75rem;
-    background: var(--primary-dark);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    color: var(--text-primary);
-    font-size: 0.85rem;
-    outline: none;
-    transition: border-color 0.15s;
-}
-
-[data-theme="light"] .chat-api-key input {
-    background: #ffffff;
-}
-
-.chat-api-key input:focus {
-    border-color: var(--accent);
-}
-
-.chat-api-key button {
-    padding: 0.55rem;
-    background: var(--accent);
-    color: #000;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: 600;
-    font-size: 0.85rem;
-    transition: opacity 0.15s, transform 0.1s;
-}
-
-[data-theme="light"] .chat-api-key button {
-    color: #fff;
-}
-
-.chat-api-key button:hover {
-    opacity: 0.9;
-    transform: translateY(-1px);
-}
-
 /* Input Area */
 .chat-input-area {
     display: flex;

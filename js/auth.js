@@ -2,6 +2,20 @@
 
 import { auth, googleProvider, signInWithPopup, signOut, onAuthStateChanged } from './firebase-config.js';
 import { t } from './ui.js';
+import { isAuthorizedUser } from './auth-policy.js';
+
+function createAuthError(code) {
+    const error = new Error(code);
+    error.code = code;
+    return error;
+}
+
+function showLoginError(errorCode) {
+    const loginError = document.getElementById('loginError');
+    if (!loginError) return;
+    loginError.textContent = getErrorMessage(errorCode);
+    loginError.style.display = 'block';
+}
 
 /**
  * Sign in with Google popup
@@ -21,6 +35,10 @@ export async function loginWithGoogle() {
         if (loginError) loginError.style.display = 'none';
 
         const result = await signInWithPopup(auth, googleProvider);
+        if (!isAuthorizedUser(result.user)) {
+            await signOut(auth);
+            throw createAuthError('auth/unauthorized-user');
+        }
         console.log("✅ Logged in as:", result.user.email);
         return result.user;
     } catch (error) {
@@ -61,8 +79,13 @@ export async function logout() {
  * Listen for auth state changes and call appropriate callbacks
  */
 export function onAuthChange(onLogin, onLogout) {
-    onAuthStateChanged(auth, (user) => {
+    onAuthStateChanged(auth, async (user) => {
         if (user) {
+            if (!isAuthorizedUser(user)) {
+                showLoginError('auth/unauthorized-user');
+                await signOut(auth);
+                return;
+            }
             console.log("🔐 Auth state: Logged in as", user.email);
             onLogin(user);
         } else {
@@ -94,6 +117,8 @@ function getErrorMessage(errorCode) {
             return t('auth-network-error');
         case 'auth/unauthorized-domain':
             return t('auth-unauthorized-domain');
+        case 'auth/unauthorized-user':
+            return t('auth-unauthorized-user');
         default:
             return t('auth-generic-error');
     }
