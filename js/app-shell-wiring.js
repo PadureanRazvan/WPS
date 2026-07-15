@@ -91,9 +91,39 @@ export function bindAppShellInteractions({
         }, bindings);
     });
 
-    bindEvent(query(root, '.theme-toggle'), 'click', () => {
-        const current = root?.documentElement?.getAttribute?.('data-theme') || 'dark';
-        actions.setTheme?.(current === 'dark' ? 'light' : 'dark');
+    const themeToggle = query(root, '.theme-toggle');
+    const themeMenu = byId(root, 'themeMenu');
+    const closeThemeMenu = () => {
+        themeMenu?.classList?.remove('open');
+        themeToggle?.setAttribute?.('aria-expanded', 'false');
+    };
+
+    bindEvent(themeToggle, 'click', event => {
+        event.stopPropagation?.();
+        const isOpen = themeMenu?.classList?.toggle('open') || false;
+        themeToggle?.setAttribute?.('aria-expanded', String(isOpen));
+    }, bindings);
+
+    bindEvent(themeMenu, 'click', event => {
+        const target = event.target?.closest?.('.theme-option');
+        if (!target) return;
+
+        actions.setTheme?.(target.dataset.themeChoice, {
+            x: Number.isFinite(event.clientX) ? event.clientX : undefined,
+            y: Number.isFinite(event.clientY) ? event.clientY : undefined
+        });
+        closeThemeMenu();
+        themeToggle?.focus?.();
+    }, bindings);
+
+    bindEvent(root, 'click', event => {
+        if (!event.target?.closest?.('.theme-selector')) closeThemeMenu();
+    }, bindings);
+
+    bindEvent(root, 'keydown', event => {
+        if (event.key !== 'Escape') return;
+        closeThemeMenu();
+        themeToggle?.focus?.();
     }, bindings);
 
     const languageDropdown = query(root, '.language-dropdown');

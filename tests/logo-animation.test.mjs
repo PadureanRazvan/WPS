@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-import { getHeartBeatScale, getLogoMotion, getLogoShapePresence } from '../js/logo-animation.js';
+import { getHeartBeatScale, getInterfacePulseScale, getLogoMotion, getLogoShapePresence } from '../js/logo-animation.js';
 import { SHERPA_VERSION } from '../js/version.js';
 
 const TWO_PI = Math.PI * 2;
@@ -76,6 +76,12 @@ test('heart beat has a softer second pulse and a calm resting phase', () => {
   assert.ok(rest < 1.002);
 });
 
+test('interface pulse lifts the identity briefly and returns to rest', () => {
+  assert.equal(getInterfacePulseScale(-1), 1);
+  assert.ok(getInterfacePulseScale(450) > 1.04);
+  assert.equal(getInterfacePulseScale(901), 1);
+});
+
 test('infinity ribbon settles front-biased while retaining a gentle 3D sway', () => {
   let rotY = Math.PI * 0.7;
   const startError = Math.abs(rotY);
@@ -139,6 +145,12 @@ test('all four figures have a dedicated depth core', () => {
   for (const name of ['Globe', 'Heart', 'Summit', 'Infinity']) {
     assert.match(animationSource, new RegExp(`function create${name}Core\\(THREE\\)`));
   }
+});
+
+test('logo reacts to navigation and theme events without another renderer', () => {
+  assert.match(animationSource, /sherpa:navigation/);
+  assert.match(animationSource, /sherpa-theme-changed/);
+  assert.equal((animationSource.match(/new THREE\.WebGLRenderer/g) || []).length, 1);
 });
 
 test('logo module graph uses the current release number as its browser cache key', () => {

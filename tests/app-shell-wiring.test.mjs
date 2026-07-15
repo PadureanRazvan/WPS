@@ -44,6 +44,8 @@ class FakeElement {
     this.src = '';
     this.textContent = '';
     this.style = { display: '' };
+    this.attributes = {};
+    this.focused = false;
     this.listeners = new Map();
     this.added = [];
     this.classList = new FakeClassList(classes);
@@ -60,6 +62,7 @@ class FakeElement {
   dispatch(type, event = {}) {
     const handlers = this.listeners.get(type) || [];
     handlers.forEach(handler => handler({
+      ...event,
       currentTarget: this,
       target: event.target || this,
       preventDefault: event.preventDefault || (() => {}),
@@ -69,7 +72,21 @@ class FakeElement {
 
   closest(selector) {
     if (selector === '.language-option' && this.classList.contains('language-option')) return this;
+    if (selector === '.theme-option' && this.classList.contains('theme-option')) return this;
+    if (selector === '.theme-selector' && this.classList.contains('theme-selector')) return this;
     return null;
+  }
+
+  setAttribute(name, value) {
+    this.attributes[name] = String(value);
+  }
+
+  getAttribute(name) {
+    return this.attributes[name] ?? null;
+  }
+
+  focus() {
+    this.focused = true;
   }
 }
 
@@ -138,6 +155,8 @@ test('bindAppShellInteractions wires navigation, theme, language, planner contro
   const navPlanner = new FakeElement({ dataset: { tooltip: 'planner' } });
   const navUsers = new FakeElement({ dataset: { tooltip: 'users' } });
   const themeToggle = new FakeElement();
+  const themeMenu = new FakeElement();
+  const auroraOption = new FakeElement({ classes: ['theme-option'], dataset: { themeChoice: 'aurora' } });
   const languageDropdown = new FakeElement();
   const languageMenu = new FakeElement();
   const englishOption = new FakeElement({ classes: ['language-option'], dataset: { lang: 'en' } });
@@ -151,7 +170,7 @@ test('bindAppShellInteractions wires navigation, theme, language, planner contro
   };
   const root = makeRoot({
     documentElement,
-    ids: { languageMenu, logoutBtn },
+    ids: { themeMenu, languageMenu, logoutBtn },
     selectors: {
       '.theme-toggle': themeToggle,
       '.language-dropdown': languageDropdown,
@@ -187,7 +206,13 @@ test('bindAppShellInteractions wires navigation, theme, language, planner contro
   assert.equal(actions.showSection.calls[0][1], navPlanner);
 
   themeToggle.dispatch('click');
-  assert.deepEqual(actions.setTheme.calls[0], ['light']);
+  assert.equal(themeMenu.classList.contains('open'), true);
+  assert.equal(themeToggle.getAttribute('aria-expanded'), 'true');
+  themeMenu.dispatch('click', { target: auroraOption, clientX: 110, clientY: 40 });
+  assert.deepEqual(actions.setTheme.calls[0], ['aurora', { x: 110, y: 40 }]);
+  assert.equal(themeMenu.classList.contains('open'), false);
+  assert.equal(themeToggle.getAttribute('aria-expanded'), 'false');
+  assert.equal(themeToggle.focused, true);
 
   languageDropdown.dispatch('click');
   assert.equal(languageMenu.classList.contains('open'), true);

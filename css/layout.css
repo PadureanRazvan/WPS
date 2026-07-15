@@ -6,7 +6,7 @@
 
 .sidebar {
     width: var(--sidebar-expanded-width);
-    background: var(--primary-light);
+    background: var(--surface-elevated, var(--primary-light));
     border-right: 1px solid var(--border);
     display: flex;
     flex-direction: column;
@@ -131,7 +131,7 @@
     width: 88px;
     height: 88px;
     margin-bottom: 0;
-    transition: all 0.3s ease;
+    transition: transform 0.2s ease, filter 0.2s ease, opacity 0.2s ease;
     cursor: pointer;
     touch-action: manipulation;
     filter: drop-shadow(0 7px 15px rgba(0, 0, 0, 0.28));
@@ -233,7 +233,7 @@
     padding: 0.72rem 0.9rem;
     color: var(--text-secondary);
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: background-color 0.18s ease, color 0.18s ease, transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
     position: relative;
     white-space: nowrap;
     font-weight: 500;
@@ -243,7 +243,7 @@
 .nav-item:hover {
     background: var(--hover);
     color: var(--text-primary);
-    transform: translateX(4px);
+    transform: translateX(2px);
 }
 
 .nav-item.active {
@@ -256,10 +256,12 @@
     content: '';
     position: absolute;
     left: 0;
-    top: 0;
-    bottom: 0;
-    width: 4px;
+    top: 8px;
+    bottom: 8px;
+    width: 3px;
     background: var(--accent);
+    border-radius: 0 3px 3px 0;
+    box-shadow: 0 0 12px rgba(var(--theme-accent-rgb), 0.35);
 }
 
 .nav-icon {
@@ -268,10 +270,15 @@
     margin-right: 0.7rem;
     fill: currentColor;
     flex-shrink: 0;
+    transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.nav-item.active .nav-icon {
+    transform: scale(1.08);
 }
 
 .nav-item span {
-    transition: all 0.3s ease;
+    transition: opacity 0.3s ease;
 }
 
 .sidebar.collapsed .nav-item span {
@@ -346,7 +353,7 @@
 }
 
 .header {
-    background: var(--primary-light);
+    background: var(--header-surface, var(--primary-light));
     border-bottom: 1px solid var(--border);
     padding: 1.5rem 3rem;
     display: flex;
@@ -357,11 +364,12 @@
     z-index: 40;
     height: 80px;
     box-sizing: border-box;
-    transition: all 0.3s ease;
+    backdrop-filter: blur(14px);
+    transition: background-color 0.25s ease, height 0.3s ease, padding 0.3s ease, box-shadow 0.25s ease;
 }
 
 .header.scrolled {
-    background: rgba(26, 35, 62, 0.95);
+    background: var(--header-surface, var(--primary-light));
     backdrop-filter: blur(10px);
     height: 60px;
     padding: 1rem 3rem;
@@ -383,7 +391,7 @@
     font-size: 1.6rem;
     font-weight: 700;
     color: var(--text-primary);
-    letter-spacing: -0.3px;
+    letter-spacing: 0;
 }
 
 .header-title-group {

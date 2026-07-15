@@ -16,8 +16,8 @@
 // =============================================================================
 
 export const SHERPA_VERSION = Object.freeze({
-    number: '2026.07.15',
-    codename: 'Trusted Passage',
+    number: '2026.07.15.2',
+    codename: 'Aurora Motion',
     released: '2026-07-15'
 });
 

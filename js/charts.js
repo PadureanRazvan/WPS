@@ -3,11 +3,27 @@ import { chartColors, translations } from './config.js';
 import { getProductivityTrendData } from './productivity.js';
 
 let productivityChartInstance = null;
+let hoursChartInstance = null;
 let chartMonth = new Date().getMonth();   // 0-indexed
 let chartYear = new Date().getFullYear();
 
 // Attach chart nav listeners once
 let chartNavInitialized = false;
+
+export function getThemeChartColors(style = null) {
+    const resolvedStyle = style || (typeof getComputedStyle === 'function'
+        ? getComputedStyle(document.documentElement)
+        : null);
+    const token = (name, fallback) => resolvedStyle?.getPropertyValue?.(name)?.trim() || fallback;
+
+    return {
+        primary: token('--accent', chartColors.primary),
+        text: token('--text-secondary', chartColors.text),
+        grid: token('--border', chartColors.grid),
+        tooltip: token('--primary-dark', 'rgba(10, 14, 39, 0.95)'),
+        surface: token('--primary-light', '#1a2332')
+    };
+}
 
 // Initialize all charts
 export function initializeCharts() {
@@ -33,6 +49,7 @@ export function initializeCharts() {
 export function initializeProductivityChart() {
     const ctx = document.getElementById('productivityChart');
     if (!ctx) return;
+    const themeColors = getThemeChartColors();
 
     // Always update the chart title to show the viewed month
     const lang = localStorage.getItem('language') || 'ro';
@@ -115,7 +132,7 @@ export function initializeProductivityChart() {
                     display: true,
                     position: 'top',
                     labels: {
-                        color: chartColors.text,
+                        color: themeColors.text,
                         font: { size: 12, weight: '600' },
                         padding: 20,
                         usePointStyle: true,
@@ -123,10 +140,10 @@ export function initializeProductivityChart() {
                     }
                 },
                 tooltip: {
-                    backgroundColor: 'rgba(10, 14, 39, 0.95)',
-                    titleColor: chartColors.primary,
-                    bodyColor: chartColors.text,
-                    borderColor: chartColors.primary,
+                    backgroundColor: themeColors.tooltip,
+                    titleColor: themeColors.primary,
+                    bodyColor: themeColors.text,
+                    borderColor: themeColors.primary,
                     borderWidth: 1,
                     cornerRadius: 8,
                     displayColors: true,
@@ -148,16 +165,16 @@ export function initializeProductivityChart() {
             },
             scales: {
                 x: {
-                    grid: { color: chartColors.grid, display: false },
+                    grid: { color: themeColors.grid, display: false },
                     ticks: {
-                        color: chartColors.text,
+                        color: themeColors.text,
                         font: { size: 11 }
                     }
                 },
                 y: {
-                    grid: { color: chartColors.grid },
+                    grid: { color: themeColors.grid },
                     ticks: {
-                        color: chartColors.text,
+                        color: themeColors.text,
                         callback: function(value) { return value + ' t/h'; },
                         font: { size: 11 }
                     },
@@ -172,8 +189,11 @@ export function initializeProductivityChart() {
 function initializeHoursChart() {
     const ctx = document.getElementById('hoursChart');
     if (!ctx) return;
+    const themeColors = getThemeChartColors();
 
-    new Chart(ctx.getContext('2d'), {
+    hoursChartInstance?.destroy();
+
+    hoursChartInstance = new Chart(ctx.getContext('2d'), {
         type: 'doughnut',
         data: {
             labels: ['RO zooplus', 'HU zooplus', 'IT zooplus', 'NL zooplus', 'DE zooplus'],
@@ -186,7 +206,7 @@ function initializeHoursChart() {
                     chartColors.teams['NL zooplus'],
                     chartColors.teams['DE zooplus']
                 ],
-                borderColor: '#1a2332',
+                borderColor: themeColors.surface,
                 borderWidth: 3
             }]
         },
@@ -197,17 +217,17 @@ function initializeHoursChart() {
                 legend: {
                     position: 'bottom',
                     labels: {
-                        color: chartColors.text,
+                        color: themeColors.text,
                         font: { size: 12, weight: '600' },
                         padding: 15,
                         usePointStyle: true
                     }
                 },
                 tooltip: {
-                    backgroundColor: 'rgba(10, 14, 39, 0.95)',
-                    titleColor: chartColors.primary,
-                    bodyColor: chartColors.text,
-                    borderColor: chartColors.primary,
+                    backgroundColor: themeColors.tooltip,
+                    titleColor: themeColors.primary,
+                    bodyColor: themeColors.text,
+                    borderColor: themeColors.primary,
                     borderWidth: 1,
                     cornerRadius: 8,
                     callbacks: {

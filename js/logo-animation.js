@@ -4,7 +4,7 @@ import {
     buildLogoConnections,
     createLogoShape,
     matchLogoShape
-} from './logo-shapes.js?v=2026.07.15';
+} from './logo-shapes.js?v=2026.07.15.2';
 
 const TAU = Math.PI * 2;
 const HEART_REVEAL_ANGLE = 0.48;
@@ -108,6 +108,11 @@ export function getHeartBeatScale(now = 0) {
     const firstBeat = Math.exp(-Math.pow(wrappedDistance(0.08) / 0.045, 2)) * 0.055;
     const secondBeat = Math.exp(-Math.pow(wrappedDistance(0.24) / 0.06, 2)) * 0.032;
     return 1 + firstBeat + secondBeat;
+}
+
+export function getInterfacePulseScale(age = Infinity) {
+    if (!Number.isFinite(age) || age < 0 || age > 900) return 1;
+    return 1 + Math.sin(age / 900 * Math.PI) * 0.045;
 }
 
 export function getLogoShapePresence(shapeName, currentName, targetName = null, progress = 0) {
@@ -551,12 +556,13 @@ function createLogoScene(THREE, canvas, size) {
     let visible = true;
     let running = true;
     let frameId = 0;
+    let interactionPulseStartedAt = -Infinity;
 
     function applyGlow(glowColor, orbitOpacity, transitionAmount = 0) {
         colorScratch.setRGB(glowColor[0], glowColor[1], glowColor[2]);
         glowMaterial.color.copy(colorScratch);
         orbit.material.color.copy(colorScratch);
-        const darkTheme = document.documentElement.getAttribute('data-theme') === 'dark'
+        const darkTheme = ['dark', 'aurora'].includes(document.documentElement.getAttribute('data-theme'))
             || document.body.classList.contains('dark-theme');
         glowMaterial.opacity = (darkTheme ? 0.24 : 0.15) * (1 - transitionAmount * 0.22);
         orbit.material.opacity = orbitOpacity * (1 - transitionAmount * 0.7);
@@ -682,12 +688,13 @@ function createLogoScene(THREE, canvas, size) {
 
         const beat = 1 + (getHeartBeatScale(now) - 1) * heartPresence;
         const settle = transition ? 1 + Math.sin(progress * Math.PI) * 0.025 : 1;
-        root.scale.setScalar(beat * settle);
+        const interfacePulse = reducedMotion ? 1 : getInterfacePulseScale(now - interactionPulseStartedAt);
+        root.scale.setScalar(beat * settle * interfacePulse);
         root.position.y = Math.sin(now * 0.00105) * (heartPresence > 0.1 ? 0.045 : 0.022);
         for (const name of LOGO_SHAPE_NAMES) {
             setCorePresence(cores[name], shapePresences[name], name === 'heart' ? (beat - 1) * 4.2 : 0);
         }
-        glow.scale.setScalar((3.18 + Math.sin(now * 0.0014) * 0.08) * beat);
+        glow.scale.setScalar((3.18 + Math.sin(now * 0.0014) * 0.08) * beat * (1 + (interfacePulse - 1) * 1.8));
         pointMaterial.uniforms.uTime.value = now / 1000;
         pointMaterial.uniforms.uBreath.value = targetName === 'infinity'
             ? 0.32
@@ -715,6 +722,12 @@ function createLogoScene(THREE, canvas, size) {
         beginMorph();
     }
 
+    function handleInterfaceMotion() {
+        if (reducedMotion) return;
+        interactionPulseStartedAt = performance.now();
+        beginMorph(interactionPulseStartedAt);
+    }
+
     const observer = typeof IntersectionObserver === 'function'
         ? new IntersectionObserver(entries => {
             visible = entries.some(entry => entry.isIntersecting);
@@ -726,6 +739,8 @@ function createLogoScene(THREE, canvas, size) {
     canvas.addEventListener('pointerleave', resetPointer);
     canvas.addEventListener('click', beginMorph);
     canvas.addEventListener('keydown', handleKeydown);
+    window.addEventListener('sherpa:navigation', handleInterfaceMotion);
+    window.addEventListener('sherpa-theme-changed', handleInterfaceMotion);
     canvas.addEventListener('webglcontextlost', event => {
         event.preventDefault();
         running = false;
@@ -748,6 +763,8 @@ function createLogoScene(THREE, canvas, size) {
             canvas.removeEventListener('pointerleave', resetPointer);
             canvas.removeEventListener('click', beginMorph);
             canvas.removeEventListener('keydown', handleKeydown);
+            window.removeEventListener('sherpa:navigation', handleInterfaceMotion);
+            window.removeEventListener('sherpa-theme-changed', handleInterfaceMotion);
             pointGeometry.dispose();
             lineGeometry.dispose();
             pointMaterial.dispose();

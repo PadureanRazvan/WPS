@@ -7,21 +7,78 @@ export function t(key) { const l = getLang(); return (translations[l] && transla
 // Import the new Firestore functions from planner.js
 import { addAgent, applyChangesToSelectedCells, renderPlannerTable, clearSelection } from './planner.js';
 import { updateDashboard, updateAverageProductivityCard } from './dashboard.js';
-import { initializeCharts } from './charts.js';
+import { initializeCharts } from './charts.js?v=2026.07.15.2';
 import { getPlannerData } from './planner.js';
 import { renderLogsSection } from './logs.js';
 import { renderCurrentView as rerenderProductivity } from './productivity.js';
 import { renderUsersTable } from './users.js';
+import {
+    getNextTheme,
+    getThemeMeta,
+    getThemeRevealRadius,
+    normalizeTheme
+} from './theme-system.js?v=2026.07.15.2';
 
 // Theme and language state
-let currentTheme = localStorage.getItem('theme') || 'dark';
+let currentTheme = normalizeTheme(localStorage.getItem('theme'));
 let currentLanguage = localStorage.getItem('language') || 'ro';
 
-export function setTheme(theme) {
-    currentTheme = theme;
+function prefersReducedMotion() {
+    return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+}
+
+function notifyInterface(eventName, detail = {}) {
+    if (typeof window.CustomEvent !== 'function') return;
+    window.dispatchEvent(new CustomEvent(eventName, { detail }));
+}
+
+function applyThemeState(theme, shouldRefreshCharts = false) {
+    currentTheme = normalizeTheme(theme);
     document.documentElement.setAttribute('data-theme', currentTheme);
     localStorage.setItem('theme', currentTheme);
+
+    const themeMeta = getThemeMeta(currentTheme);
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', themeMeta.metaColor);
     updateThemeIcon();
+
+    if (shouldRefreshCharts && globalThis.Chart) {
+        requestAnimationFrame(() => {
+            try { initializeCharts(); } catch (_) { /* Charts may not be initialized yet. */ }
+        });
+    }
+    notifyInterface('sherpa-theme-changed', { theme: currentTheme });
+}
+
+export function setTheme(theme, origin = {}) {
+    const nextTheme = normalizeTheme(theme);
+    const shouldRefreshCharts = nextTheme !== currentTheme;
+    const commit = () => applyThemeState(nextTheme, shouldRefreshCharts);
+
+    if (!shouldRefreshCharts || prefersReducedMotion() || typeof document.startViewTransition !== 'function') {
+        commit();
+        return;
+    }
+
+    document.documentElement.dataset.transitionKind = 'theme';
+    const transition = document.startViewTransition(commit);
+    transition.ready.then(() => {
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+        const x = Number.isFinite(origin.x) ? origin.x : width - 64;
+        const y = Number.isFinite(origin.y) ? origin.y : 40;
+        const radius = getThemeRevealRadius({ x, y, width, height });
+
+        document.documentElement.animate(
+            { clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${radius}px at ${x}px ${y}px)`] },
+            {
+                duration: 560,
+                easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
+                pseudoElement: '::view-transition-new(root)'
+            }
+        );
+    }).catch(() => {});
+    const clearThemeTransition = () => { delete document.documentElement.dataset.transitionKind; };
+    transition.finished.then(clearThemeTransition, clearThemeTransition);
 }
 
 // Language Management
@@ -80,41 +137,43 @@ window.addEventListener('orientationchange', () => {
 
 // Navigation
 export function showSection(sectionId, clickedElement) {
-    currentSectionId = sectionId;
-
-    // Update active nav
-    document.querySelectorAll('.nav-item').forEach(item => {
-        item.classList.remove('active');
-    });
-    if (clickedElement) {
-        clickedElement.classList.add('active');
-    } else {
-        const correspondingNavItem = document.querySelector(`.nav-item[data-tooltip="${sectionId}"]`);
-        if(correspondingNavItem) correspondingNavItem.classList.add('active');
-    }
-
-    // Show section
-    document.querySelectorAll('.section').forEach(section => {
-        section.classList.remove('active');
-    });
     const targetSection = document.getElementById(sectionId);
-    if (targetSection) {
-        targetSection.classList.add('active');
+    if (!targetSection) return;
 
-        // Check if planner needs landscape overlay
-        checkPlannerLandscape();
-
-        // If switching to planner section, trigger a render
-        if (sectionId === 'planner') {
-            // Use setTimeout to ensure the section is visible first
-            setTimeout(() => {
-                renderPlannerTable();
-            }, 10);
+    const previousSectionId = currentSectionId;
+    const applySectionState = () => {
+        currentSectionId = sectionId;
+        document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+        if (clickedElement) {
+            clickedElement.classList.add('active');
+        } else {
+            document.querySelector(`.nav-item[data-tooltip="${sectionId}"]`)?.classList.add('active');
         }
-        // If switching to logs section, fetch and render logs
+
+        document.querySelectorAll('.section').forEach(section => section.classList.remove('active'));
+        targetSection.classList.add('active');
+    };
+
+    const finishSectionChange = () => {
+        checkPlannerLandscape();
+        if (sectionId === 'planner') {
+            setTimeout(renderPlannerTable, 10);
+        }
         if (sectionId === 'logs') {
             renderLogsSection();
         }
+        notifyInterface('sherpa:navigation', { sectionId, previousSectionId });
+    };
+
+    if (sectionId !== previousSectionId && !prefersReducedMotion() && typeof document.startViewTransition === 'function') {
+        document.documentElement.dataset.transitionKind = 'section';
+        const transition = document.startViewTransition(applySectionState);
+        transition.updateCallbackDone.then(finishSectionChange).catch(finishSectionChange);
+        const clearSectionTransition = () => { delete document.documentElement.dataset.transitionKind; };
+        transition.finished.then(clearSectionTransition, clearSectionTransition);
+    } else {
+        applySectionState();
+        finishSectionChange();
     }
 }
 
@@ -135,27 +194,25 @@ export function initializeThemeAndLanguage() {
 
 // Theme Management
 export function toggleTheme() {
-    currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
-    document.documentElement.setAttribute('data-theme', currentTheme);
-    localStorage.setItem('theme', currentTheme);
-    updateThemeIcon();
-    
-    // Add a smooth transition effect
-    document.body.style.transition = 'all 0.3s ease';
-    setTimeout(() => {
-        document.body.style.transition = '';
-    }, 300);
+    setTheme(getNextTheme(currentTheme));
 }
 
 export function updateThemeIcon() {
     const themeIcon = document.getElementById('themeIcon');
-    if (currentTheme === 'dark') {
-        // Sun icon (for switching to light)
-        themeIcon.innerHTML = `<path d="M12 17.5c-3.04 0-5.5-2.46-5.5-5.5S8.96 6.5 12 6.5s5.5 2.46 5.5 5.5-2.46 5.5-5.5 5.5zM12 9c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3zm0-7c-.55 0-1 .45-1 1v1c0 .55.45 1 1 1s1-.45 1-1V3c0-.55-.45-1-1-1zm0 16c-.55 0-1 .45-1 1v1c0 .55.45 1 1 1s1-.45 1-1v-1c0-.55-.45-1-1-1zM6 12c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1s.45 1 1 1h1c.55 0 1-.45 1-1zm14 0c0-.55-.45-1-1-1h-1c-.55 0-1 .45-1 1s.45 1 1 1h1c.55 0 1-.45 1-1zm-2.64-6.36c.39-.39.39-1.02 0-1.41l-.71-.71c-.39-.39-1.02-.39-1.41 0-.39.39-.39 1.02 0 1.41l.71.71c.39.39 1.02.39 1.41 0zM6.05 17.66c.39-.39.39-1.02 0-1.41l-.71-.71c-.39-.39-1.02-.39-1.41 0-.39.39-.39 1.02 0 1.41l.71.71c.39.39 1.02.39 1.41 0zm0-11.32c-.39-.39-1.02-.39-1.41 0l-.71.71c-.39.39-.39 1.02 0 1.41.39.39 1.02.39 1.41 0l.71-.71c.39-.39.39-1.02 0-1.41zm11.32 11.32c-.39-.39-1.02-.39-1.41 0l-.71.71c-.39.39-.39 1.02 0 1.41.39.39 1.02.39 1.41 0l.71-.71c.39-.39.39-1.02 0-1.41z"/>`;
-    } else {
-        // Moon icon (for switching to dark)
-        themeIcon.innerHTML = `<path d="M9 2c-1.05 0-2.05.16-3 .46 4.06 1.27 7 5.06 7 9.54 0 4.48-2.94 8.27-7 9.54.95.3 1.95.46 3 .46 5.52 0 10-4.48 10-10S14.52 2 9 2z"/>`;
+    if (themeIcon) {
+        themeIcon.innerHTML = `<circle cx="13.5" cy="6.5" r="1.25"/><circle cx="17.5" cy="10.5" r="1.25"/><circle cx="8.5" cy="7.5" r="1.25"/><circle cx="6.5" cy="12.5" r="1.25"/><path d="M12 3a9 9 0 0 0 0 18h1.5a2.5 2.5 0 0 0 0-5H12a1.5 1.5 0 0 1 0-3h2a7 7 0 0 0-2-10Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>`;
     }
+
+    const themeMeta = getThemeMeta(currentTheme);
+    const toggle = document.getElementById('themeToggle');
+    toggle?.setAttribute('aria-label', `Theme: ${themeMeta.name}`);
+    toggle?.setAttribute('title', `Theme: ${themeMeta.name}`);
+
+    document.querySelectorAll('.theme-option').forEach(option => {
+        const active = option.dataset.themeChoice === currentTheme;
+        option.classList.toggle('active', active);
+        option.setAttribute('aria-checked', String(active));
+    });
 }
 
 // Language Management

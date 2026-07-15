@@ -8,6 +8,8 @@
 
 **App Shell Wiring** — the rules for binding Sherpa app boot, authenticated shell visibility, navigation, theme and language controls, logout, before-unload cleanup, and cross-module refresh events while keeping feature Modules responsible for their own business rules and Firestore writes.
 
+**Interface Theme System** — the named Sherpa palettes, live chart colors, browser theme color, progressive view transitions, and reduced-motion fallback that keep every operational Module visually consistent without changing its domain behavior.
+
 **Runtime Deploy Hardening** — the rules for proving a deployed Sherpa build is the intended version, reusing one external Chrome session for read-only production smoke checks, confirming GitHub Pages serves new Modules, and rolling back production without touching Firestore data.
 
 **Users Command** — the rules for turning Users form input, inline Agent edits, contract changes, primary team changes, deactivation, and reactivation into validated Agent update payloads, activity metadata, and user-facing diagnostics while keeping the Users shell responsible for DOM modals and Firestore writes.
