@@ -48,6 +48,26 @@ test('header menus use native popovers with anchored entry motion', () => {
   assert.match(componentsSource, /\.sidebar-utilities \.theme-menu\[popover\]\s*\{[^}]*bottom:\s*anchor\(bottom\)/s);
 });
 
+test('closed preference popovers cannot cover sibling controls', () => {
+  assert.match(
+    componentsSource,
+    /\.theme-menu\[popover\]:not\(:popover-open\),\s*\.language-menu\[popover\]:not\(:popover-open\)\s*\{[^}]*visibility:\s*hidden[^}]*pointer-events:\s*none/s
+  );
+  assert.match(
+    componentsSource,
+    /\.theme-menu\[popover\]:popover-open,\s*\.language-menu\[popover\]:popover-open\s*\{[^}]*visibility:\s*visible[^}]*pointer-events:\s*auto/s
+  );
+});
+
+test('language control has matching hover and expanded feedback', () => {
+  assert.match(
+    componentsSource,
+    /\.language-dropdown:hover,\s*\.language-dropdown\[aria-expanded="true"\]\s*\{[^}]*border-color:\s*var\(--accent\)[^}]*color:\s*var\(--accent\)/s
+  );
+  assert.match(componentsSource, /\.language-text\s*\{[^}]*color:\s*inherit/s);
+  assert.match(componentsSource, /\.dropdown-arrow\s*\{[^}]*fill:\s*currentColor/s);
+});
+
 test('dashboard reflows by content width and mobile controls preserve usable targets', () => {
   assert.match(layoutSource, /container:\s*sherpa-content\s*\/\s*inline-size/);
   assert.match(componentsSource, /@container sherpa-content \(max-width: 560px\)/);

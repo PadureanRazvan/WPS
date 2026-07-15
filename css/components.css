@@ -3098,7 +3098,7 @@ input:focus, select:focus, textarea:focus {
     border: 1px solid var(--border);
     border-radius: 8px;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease, transform 0.18s ease;
     min-width: 120px;
     min-height: 44px;
     color: var(--text-primary);
@@ -3107,9 +3107,12 @@ input:focus, select:focus, textarea:focus {
     anchor-name: --sherpa-language-toggle;
 }
 
-.language-dropdown:hover {
+.language-dropdown:hover,
+.language-dropdown[aria-expanded="true"] {
     background: var(--hover);
     border-color: var(--accent);
+    color: var(--accent);
+    transform: translateY(-1px);
 }
 
 .flag-icon {
@@ -3122,14 +3125,14 @@ input:focus, select:focus, textarea:focus {
 .language-text {
     font-size: 0.875rem;
     font-weight: 500;
-    color: var(--text-primary);
+    color: inherit;
     flex: 1;
 }
 
 .dropdown-arrow {
     width: 12px;
     height: 12px;
-    fill: var(--text-secondary);
+    fill: currentColor;
     transition: transform 0.3s ease;
 }
 
@@ -3209,8 +3212,6 @@ input:focus, select:focus, textarea:focus {
         top: 72px;
         right: 24px;
         left: auto;
-        visibility: visible;
-        pointer-events: auto;
         opacity: 0;
         margin: 0;
         transition:
@@ -3232,8 +3233,16 @@ input:focus, select:focus, textarea:focus {
         transform-origin: top right;
     }
 
+    .theme-menu[popover]:not(:popover-open),
+    .language-menu[popover]:not(:popover-open) {
+        visibility: hidden;
+        pointer-events: none;
+    }
+
     .theme-menu[popover]:popover-open,
     .language-menu[popover]:popover-open {
+        visibility: visible;
+        pointer-events: auto;
         opacity: 1;
         transform: translateY(0) scale(1);
     }

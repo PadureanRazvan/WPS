@@ -30,6 +30,6 @@ test('compact calendar navigation and actions retain stable touch targets', () =
 });
 
 test('current release cache-busts the upload calendar modules', () => {
-  assert.match(productivitySource, /from '\.\/productivity-upload-calendar-view\.js\?v=2026\.07\.15\.17'/);
-  assert.match(productivitySource, /from '\.\/productivity-upload-calendar-actions\.js\?v=2026\.07\.15\.17'/);
+  assert.match(productivitySource, /from '\.\/productivity-upload-calendar-view\.js\?v=2026\.07\.15\.18'/);
+  assert.match(productivitySource, /from '\.\/productivity-upload-calendar-actions\.js\?v=2026\.07\.15\.18'/);
 });

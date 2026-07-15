@@ -18,10 +18,10 @@ test('users directory exposes searchable and filterable controls with a live res
   assert.match(usersSource, /usersDirectoryState\.query\s*=\s*searchInput\.value/);
   assert.match(usersSource, /usersDirectoryState\.team\s*=\s*teamFilter\.value/);
   assert.match(usersSource, /usersDirectoryState\.status\s*=\s*button\.dataset\.usersStatus/);
-  assert.match(mainSource, /from '\.\/users\.js\?v=2026\.07\.15\.17'/);
-  assert.match(uiSource, /from '\.\/users\.js\?v=2026\.07\.15\.17'/);
-  assert.match(usersSource, /from '\.\/ui\.js\?v=2026\.07\.15\.17'/);
-  assert.match(usersSource, /from '\.\/users-directory\.js\?v=2026\.07\.15\.17'/);
+  assert.match(mainSource, /from '\.\/users\.js\?v=2026\.07\.15\.18'/);
+  assert.match(uiSource, /from '\.\/users\.js\?v=2026\.07\.15\.18'/);
+  assert.match(usersSource, /from '\.\/ui\.js\?v=2026\.07\.15\.18'/);
+  assert.match(usersSource, /from '\.\/users-directory\.js\?v=2026\.07\.15\.18'/);
 });
 
 test('users directory translations cover controls, counts and empty states in every language', () => {

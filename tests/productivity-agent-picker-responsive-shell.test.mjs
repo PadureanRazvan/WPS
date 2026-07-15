@@ -37,21 +37,21 @@ test('productivity agent picker has responsive fallback and progressive anchor p
   assert.match(comboboxSource, /Escape/);
 });
 
-test('Agent Compass cache-busts the productivity picker and shared shell', async () => {
+test('Popover Clarity cache-busts the productivity picker and shared shell', async () => {
   const [html, productivitySource, versionSource] = await Promise.all([
     read('../index.html'),
     read('../js/productivity.js'),
     read('../js/version.js')
   ]);
 
-  assert.match(versionSource, /number:\s*'2026\.07\.15\.17'/);
-  assert.match(versionSource, /codename:\s*'Agent Compass'/);
-  assert.match(productivitySource, /config\.js\?v=2026\.07\.15\.17/);
-  assert.match(productivitySource, /productivity-controls\.js\?v=2026\.07\.15\.17/);
-  assert.match(productivitySource, /productivity-agent-actions\.js\?v=2026\.07\.15\.17/);
-  assert.match(productivitySource, /productivity-agent-selection-view\.js\?v=2026\.07\.15\.17/);
-  assert.match(productivitySource, /productivity-agent-combobox\.js\?v=2026\.07\.15\.17/);
-  assert.match(html, /components\.css\?v=2026\.07\.15\.17/);
-  assert.match(html, /main\.js\?v=2026\.07\.15\.17/);
+  assert.match(versionSource, /number:\s*'2026\.07\.15\.18'/);
+  assert.match(versionSource, /codename:\s*'Popover Clarity'/);
+  assert.match(productivitySource, /config\.js\?v=2026\.07\.15\.18/);
+  assert.match(productivitySource, /productivity-controls\.js\?v=2026\.07\.15\.18/);
+  assert.match(productivitySource, /productivity-agent-actions\.js\?v=2026\.07\.15\.18/);
+  assert.match(productivitySource, /productivity-agent-selection-view\.js\?v=2026\.07\.15\.18/);
+  assert.match(productivitySource, /productivity-agent-combobox\.js\?v=2026\.07\.15\.18/);
+  assert.match(html, /components\.css\?v=2026\.07\.15\.18/);
+  assert.match(html, /main\.js\?v=2026\.07\.15\.18/);
   assert.doesNotMatch(html, /<script src="js\/(?:config|ui|charts|planner|dashboard|users|productivity|logo-animation)\.js/);
 });

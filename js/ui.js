@@ -1,25 +1,25 @@
 // js/ui.js
 
 // === THEME AND LANGUAGE FUNCTIONALITY ===
-import { languageConfig, translations, PLANNER_TEAMS, TEAM_DISPLAY_NAMES, extractHoursFromDay, formatPlannerHoursValue, getMonthKey, getAgentNotesForMonth, isValidPlannerHoursValue } from './config.js?v=2026.07.15.17';
+import { languageConfig, translations, PLANNER_TEAMS, TEAM_DISPLAY_NAMES, extractHoursFromDay, formatPlannerHoursValue, getMonthKey, getAgentNotesForMonth, isValidPlannerHoursValue } from './config.js?v=2026.07.15.18';
 function getLang() { return localStorage.getItem('language') || 'ro'; }
 export function t(key) { const l = getLang(); return (translations[l] && translations[l][key]) || key; }
 // Import the new Firestore functions from planner.js
 import { addAgent, applyChangesToSelectedCells, renderPlannerTable, clearSelection } from './planner.js';
-import { updateDashboard, updateAverageProductivityCard } from './dashboard.js?v=2026.07.15.17';
-import { initializeCharts } from './charts.js?v=2026.07.15.17';
+import { updateDashboard, updateAverageProductivityCard } from './dashboard.js?v=2026.07.15.18';
+import { initializeCharts } from './charts.js?v=2026.07.15.18';
 import { getPlannerData } from './planner.js';
-import { renderLogsSection } from './logs.js?v=2026.07.15.17';
-import { renderCurrentView as rerenderProductivity } from './productivity.js?v=2026.07.15.17';
-import { renderUsersTable } from './users.js?v=2026.07.15.17';
+import { renderLogsSection } from './logs.js?v=2026.07.15.18';
+import { renderCurrentView as rerenderProductivity } from './productivity.js?v=2026.07.15.18';
+import { renderUsersTable } from './users.js?v=2026.07.15.18';
 import {
     getNextTheme,
     getThemeMeta,
     getThemeRevealRadius,
     normalizeThemePreference,
     resolveThemePreference
-} from './theme-system.js?v=2026.07.15.17';
-import { showToastNotification } from './toast-notifications.js?v=2026.07.15.17';
+} from './theme-system.js?v=2026.07.15.18';
+import { showToastNotification } from './toast-notifications.js?v=2026.07.15.18';
 
 // Theme and language state
 let currentThemePreference = normalizeThemePreference(localStorage.getItem('theme'));

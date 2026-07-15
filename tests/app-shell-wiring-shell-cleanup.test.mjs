@@ -6,7 +6,7 @@ const mainSource = readFileSync(new URL('../js/main.js', import.meta.url), 'utf8
 const indexSource = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 
 test('main shell delegates app visibility and DOM lifecycle wiring to App Shell Wiring', () => {
-  assert.match(mainSource, /from\s+'\.\/app-shell-wiring\.js\?v=2026\.07\.15\.17';/);
+  assert.match(mainSource, /from\s+'\.\/app-shell-wiring\.js\?v=2026\.07\.15\.18';/);
 
   [
     'bindAppLifecycleEvents',
