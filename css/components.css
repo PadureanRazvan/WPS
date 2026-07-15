@@ -8,6 +8,8 @@
     left: 0;
     width: 100vw;
     height: 100vh;
+    height: 100dvh;
+    padding: max(1rem, var(--safe-area-top)) max(1rem, var(--safe-area-right)) max(1rem, var(--safe-area-bottom)) max(1rem, var(--safe-area-left));
     background: var(--space-gradient);
     z-index: 9999;
     overflow: hidden;
@@ -1736,6 +1738,7 @@ input:focus, select:focus, textarea:focus {
     opacity: 0;
     visibility: hidden;
     transition: all var(--transition-normal);
+    padding: max(1rem, var(--safe-area-top)) max(1rem, var(--safe-area-right)) max(1rem, var(--safe-area-bottom)) max(1rem, var(--safe-area-left));
 }
 
 .edit-modal.active {
@@ -1751,6 +1754,7 @@ input:focus, select:focus, textarea:focus {
     width: 90%;
     max-width: 600px;
     max-height: 80vh;
+    max-height: min(80dvh, calc(100dvh - var(--safe-area-top) - var(--safe-area-bottom) - 2rem));
     overflow-y: auto;
     transform: translateY(-20px) scale(0.97);
     transition: transform var(--transition-slow), opacity var(--transition-slow);
@@ -1966,8 +1970,8 @@ input:focus, select:focus, textarea:focus {
 /* Selection counter */
 .selection-counter {
     position: fixed;
-    bottom: 2rem;
-    right: 7.5rem;
+    bottom: calc(2rem + var(--safe-area-bottom));
+    right: calc(7.5rem + var(--safe-area-right));
     background: var(--primary-dark);
     padding: 1rem;
     border-radius: 8px;

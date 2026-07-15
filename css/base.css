@@ -7,6 +7,10 @@
 /* ===== DARK MODE — True dark with warm amber accents ===== */
 :root {
     color-scheme: dark;
+    --safe-area-top: env(safe-area-inset-top, 0px);
+    --safe-area-right: env(safe-area-inset-right, 0px);
+    --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-area-left: env(safe-area-inset-left, 0px);
     --primary: #1a1a1a;
     --primary-dark: #0d0d0d;
     --primary-light: #1e1e1e;
@@ -216,6 +220,8 @@ body {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
+    min-height: 100vh;
+    min-height: 100dvh;
 }
 
 ::selection {
@@ -257,7 +263,8 @@ body {
 .app-container {
     display: flex;
     min-height: 100vh;
-    width: 100vw;
+    min-height: 100dvh;
+    width: 100%;
     overflow-x: hidden;
 }
 

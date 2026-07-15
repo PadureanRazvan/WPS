@@ -23,6 +23,7 @@
     display: flex;
     flex-direction: column;
     height: 100vh;
+    height: 100dvh;
     overflow: hidden;
 }
 
@@ -258,8 +259,8 @@
 
 @media (max-width: 600px) {
     /* Let the section breathe and scroll rather than locking to the viewport. */
-    #info.section.active { height: auto; min-height: 100vh; overflow: visible; }
-    .version-stage { min-height: 72vh; border-radius: 18px; }
+    #info.section.active { height: auto; min-height: 100vh; min-height: 100dvh; overflow: visible; }
+    .version-stage { min-height: 72vh; min-height: 72dvh; border-radius: 18px; }
     .version-goo { filter: url(#versionGoo) blur(6px) saturate(150%); }
 }
 

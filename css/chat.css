@@ -3,8 +3,8 @@
 /* Floating Bubble with Canvas */
 .chat-bubble {
     position: fixed;
-    bottom: 24px;
-    right: 24px;
+    bottom: calc(24px + var(--safe-area-bottom));
+    right: calc(24px + var(--safe-area-right));
     width: 60px;
     height: 60px;
     border-radius: 50%;
@@ -53,10 +53,11 @@
 /* Chat Panel */
 .chat-panel {
     position: fixed;
-    bottom: 90px;
-    right: 24px;
+    bottom: calc(90px + var(--safe-area-bottom));
+    right: calc(24px + var(--safe-area-right));
     width: 420px;
     max-height: 580px;
+    max-height: min(580px, calc(100dvh - 120px - var(--safe-area-top) - var(--safe-area-bottom)));
     background: var(--primary-dark);
     border: 1px solid var(--border);
     border-radius: 20px;
@@ -157,6 +158,7 @@
 .chat-messages {
     flex: 1;
     overflow-y: auto;
+    overscroll-behavior: contain;
     padding: 1rem;
     display: flex;
     flex-direction: column;
@@ -369,18 +371,19 @@
 /* Mobile responsive */
 @media (max-width: 768px) {
     .chat-panel {
-        width: calc(100vw - 16px);
-        right: 8px !important;
-        bottom: 80px !important;
-        left: auto !important;
+        width: auto;
+        right: calc(8px + var(--safe-area-right)) !important;
+        bottom: calc(76px + var(--safe-area-bottom)) !important;
+        left: calc(8px + var(--safe-area-left)) !important;
         top: auto !important;
         max-height: 70vh;
+        max-height: min(70dvh, calc(100dvh - 96px - var(--safe-area-top) - var(--safe-area-bottom)));
         border-radius: 16px;
     }
 
     .chat-bubble {
-        bottom: 16px;
-        right: 16px;
+        bottom: calc(16px + var(--safe-area-bottom));
+        right: calc(16px + var(--safe-area-right));
         width: 52px;
         height: 52px;
     }

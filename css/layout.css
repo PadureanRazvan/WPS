@@ -12,8 +12,11 @@
     flex-direction: column;
     position: fixed;
     height: 100vh;
+    height: 100dvh;
     top: 0;
     left: 0;
+    padding-top: var(--safe-area-top);
+    padding-bottom: var(--safe-area-bottom);
     z-index: 100;
     transition: width 0.3s ease, box-shadow 0.3s ease;
 }
@@ -28,7 +31,7 @@
 
 .sidebar-toggle {
     position: absolute;
-    top: 1rem;
+    top: max(1rem, var(--safe-area-top));
     right: -15px;
     width: 32px;
     height: 32px;
@@ -356,6 +359,7 @@
     flex-direction: column;
     margin-left: var(--sidebar-expanded-width);
     min-height: 100vh;
+    min-height: 100dvh;
     transition: margin-left 0.3s ease;
     overflow-x: hidden;
 }

@@ -10,7 +10,7 @@
 
 **Accessible App Navigation** — the semantic button controls, current-page state, keyboard activation, named icon actions, and responsive operational toolbars that keep every Sherpa Module reachable across pointer, keyboard, mobile, and assistive-technology use.
 
-**Interface Theme System** — the named Sherpa palettes, System color preference, live chart colors, browser theme color, native disclosure popovers, container-driven reflow, progressive view transitions, and accessibility fallbacks that keep every operational Module visually consistent without changing its domain behavior.
+**Interface Theme System** — the named Sherpa palettes, System color preference, live chart colors, browser theme color, native disclosure popovers, container-driven reflow, dynamic viewport sizing, safe-area-aware fixed surfaces, progressive view transitions, and accessibility fallbacks that keep every operational Module visually consistent without changing its domain behavior.
 
 **Runtime Deploy Hardening** — the rules for proving a deployed Sherpa build is the intended version, reusing one external Chrome session for read-only production smoke checks, confirming GitHub Pages serves new Modules, and rolling back production without touching Firestore data.
 

@@ -7,7 +7,7 @@ export function t(key) { const l = getLang(); return (translations[l] && transla
 // Import the new Firestore functions from planner.js
 import { addAgent, applyChangesToSelectedCells, renderPlannerTable, clearSelection } from './planner.js';
 import { updateDashboard, updateAverageProductivityCard } from './dashboard.js';
-import { initializeCharts } from './charts.js?v=2026.07.15.5';
+import { initializeCharts } from './charts.js?v=2026.07.15.6';
 import { getPlannerData } from './planner.js';
 import { renderLogsSection } from './logs.js';
 import { renderCurrentView as rerenderProductivity } from './productivity.js';
@@ -18,7 +18,7 @@ import {
     getThemeRevealRadius,
     normalizeThemePreference,
     resolveThemePreference
-} from './theme-system.js?v=2026.07.15.5';
+} from './theme-system.js?v=2026.07.15.6';
 
 // Theme and language state
 let currentThemePreference = normalizeThemePreference(localStorage.getItem('theme'));

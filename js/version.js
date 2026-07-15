@@ -16,8 +16,8 @@
 // =============================================================================
 
 export const SHERPA_VERSION = Object.freeze({
-    number: '2026.07.15.5',
-    codename: 'Adaptive Orbit',
+    number: '2026.07.15.6',
+    codename: 'Safe Horizon',
     released: '2026-07-15'
 });
 
