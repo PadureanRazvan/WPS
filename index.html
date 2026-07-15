@@ -15,11 +15,11 @@
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
     
     <!-- CSS Files -->
-    <link rel="stylesheet" href="css/base.css?v=2026.07.15.2">
-    <link rel="stylesheet" href="css/layout.css?v=2026.07.15.2">
-    <link rel="stylesheet" href="css/components.css?v=2026.07.15.2">
+    <link rel="stylesheet" href="css/base.css?v=2026.07.15.5">
+    <link rel="stylesheet" href="css/layout.css?v=2026.07.15.5">
+    <link rel="stylesheet" href="css/components.css?v=2026.07.15.5">
     <link rel="stylesheet" href="css/planner.css">
-    <link rel="stylesheet" href="css/responsive.css">
+    <link rel="stylesheet" href="css/responsive.css?v=2026.07.15.5">
     <link rel="stylesheet" href="css/chat.css">
     <link rel="stylesheet" href="css/schedule.css">
     <link rel="stylesheet" href="css/info.css">
@@ -67,73 +67,73 @@
     <div class="app-container" id="appContainer" style="display: none;">
         <!-- Sidebar -->
         <aside class="sidebar" id="sidebar">
-            <button class="sidebar-toggle">
-                <div class="hamburger-icon">
+            <button type="button" class="sidebar-toggle" aria-label="Collapse navigation" aria-expanded="true" aria-controls="sidebarNavigation">
+                <span class="hamburger-icon" aria-hidden="true">
                     <span></span>
                     <span></span>
                     <span></span>
-                </div>
+                </span>
             </button>
             <div class="logo">
-                <canvas id="sherpaLogo" class="logo-canvas" width="120" height="120"></canvas>
+                <canvas id="sherpaLogo" class="logo-canvas" width="120" height="120" aria-label="Sherpa animated mark. Activate to show the next shape." role="button" tabindex="0"></canvas>
                 <h1>Sherpa</h1>
                 <p id="sidebarGreeting">Workforce Planning System</p>
             </div>
-            <nav class="nav-menu">
-                <div class="nav-item active" data-tooltip="dashboard">
-                    <svg class="nav-icon" viewBox="0 0 24 24">
+            <nav class="nav-menu" id="sidebarNavigation" aria-label="Main navigation">
+                <button type="button" class="nav-item active" data-tooltip="dashboard" aria-labelledby="navDashboardLabel" aria-current="page">
+                    <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                         <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/>
                     </svg>
-                    <span>Dashboard</span>
-                </div>
-                <div class="nav-item" data-tooltip="users">
-                    <svg class="nav-icon" viewBox="0 0 24 24">
+                    <span id="navDashboardLabel">Dashboard</span>
+                </button>
+                <button type="button" class="nav-item" data-tooltip="users" aria-labelledby="navUsersLabel">
+                    <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                         <path d="M16 21v-2c0-2.21-1.79-4-4-4H5c-2.21 0-4 1.79-4 4v2h2v-2c0-1.1.9-2 2-2h7c1.1 0 2 .9 2 2v2h2zm-4-6c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0-6c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zm8 8h4v2h-4v-2zm0-4h4v2h-4v-2zm0-4h4v2h-4v-2z"/>
                     </svg>
-                    <span>Users</span>
-                </div>
-                <div class="nav-item" data-tooltip="planner">
-                    <svg class="nav-icon" viewBox="0 0 24 24">
+                    <span id="navUsersLabel">Users</span>
+                </button>
+                <button type="button" class="nav-item" data-tooltip="planner" aria-labelledby="navPlannerLabel">
+                    <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                         <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/>
                     </svg>
-                    <span>Planner</span>
-                </div>
-                <div class="nav-item" data-tooltip="orar">
-                    <svg class="nav-icon" viewBox="0 0 24 24">
+                    <span id="navPlannerLabel">Planner</span>
+                </button>
+                <button type="button" class="nav-item" data-tooltip="orar" aria-labelledby="navScheduleLabel">
+                    <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                         <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM5 6V5h14v1H5zm7.5 5.5l-1 1v3.5h1v-3.09l2.79-2.79-.71-.71-2.08 2.09zM12 9c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1z"/>
                     </svg>
-                    <span data-translate="nav-orar">Orar</span>
-                </div>
-                <div class="nav-item" data-tooltip="productivity">
-                    <svg class="nav-icon" viewBox="0 0 24 24">
+                    <span id="navScheduleLabel" data-translate="nav-orar">Orar</span>
+                </button>
+                <button type="button" class="nav-item" data-tooltip="productivity" aria-labelledby="navProductivityLabel">
+                    <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                         <path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z"/>
                     </svg>
-                    <span>Productivity</span>
-                </div>
-                <div class="nav-item" data-tooltip="upload">
-                    <svg class="nav-icon" viewBox="0 0 24 24">
+                    <span id="navProductivityLabel">Productivity</span>
+                </button>
+                <button type="button" class="nav-item" data-tooltip="upload" aria-labelledby="navUploadLabel">
+                    <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                         <path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/>
                     </svg>
-                    <span>Upload File</span>
-                </div>
-                <div class="nav-item" data-tooltip="reports">
-                    <svg class="nav-icon" viewBox="0 0 24 24">
+                    <span id="navUploadLabel">Upload File</span>
+                </button>
+                <button type="button" class="nav-item" data-tooltip="reports" aria-labelledby="navReportsLabel">
+                    <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                         <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>
                     </svg>
-                    <span>Reports</span>
-                </div>
-                <div class="nav-item" data-tooltip="logs">
-                    <svg class="nav-icon" viewBox="0 0 24 24">
+                    <span id="navReportsLabel">Reports</span>
+                </button>
+                <button type="button" class="nav-item" data-tooltip="logs" aria-labelledby="navLogsLabel">
+                    <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                         <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
                     </svg>
-                    <span data-translate="nav-logs">Jurnal</span>
-                </div>
-                <div class="nav-item" data-tooltip="info" style="margin-top: auto;">
-                    <svg class="nav-icon" viewBox="0 0 24 24">
+                    <span id="navLogsLabel" data-translate="nav-logs">Jurnal</span>
+                </button>
+                <button type="button" class="nav-item nav-item--bottom" data-tooltip="info" aria-labelledby="navInfoLabel">
+                    <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                         <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
                     </svg>
-                    <span>Info</span>
-                </div>
+                    <span id="navInfoLabel">Info</span>
+                </button>
             </nav>
             <div class="sidebar-user-info" id="sidebarUserInfo">
                 <img id="userAvatar" class="user-avatar" src="" alt="User">
@@ -162,12 +162,16 @@
                             <div class="theme-selector">
                                 <button type="button" class="theme-toggle" id="themeToggle"
                                         aria-haspopup="true" aria-expanded="false" aria-controls="themeMenu"
+                                        popovertarget="themeMenu"
                                         aria-label="Choose theme" title="Choose theme">
                                 <svg class="theme-icon" id="themeIcon" viewBox="0 0 24 24" aria-hidden="true">
                                     <path d="M12 17.5c-3.04 0-5.5-2.46-5.5-5.5S8.96 6.5 12 6.5s5.5 2.46 5.5 5.5-2.46 5.5-5.5 5.5zM12 9c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3zm0-7c-.55 0-1 .45-1 1v1c0 .55.45 1 1 1s1-.45 1-1V3c0-.55-.45-1-1-1zm0 16c-.55 0-1 .45-1 1v1c0 .55.45 1 1 1s1-.45 1-1v-1c0-.55-.45-1-1-1zM6 12c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1s.45 1 1 1h1c.55 0 1-.45 1-1zm14 0c0-.55-.45-1-1-1h-1c-.55 0-1 .45-1 1s.45 1 1 1h1c.55 0 1-.45 1-1zm-2.64-6.36c.39-.39.39-1.02 0-1.41l-.71-.71c-.39-.39-1.02-.39-1.41 0-.39.39-.39 1.02 0 1.41l.71.71c.39.39 1.02.39 1.41 0zM6.05 17.66c.39-.39.39-1.02 0-1.41l-.71-.71c-.39-.39-1.02-.39-1.41 0-.39.39-.39 1.02 0 1.41l.71.71c.39.39 1.02.39 1.41 0zm0-11.32c-.39-.39-1.02-.39-1.41 0l-.71.71c-.39.39-.39 1.02 0 1.41.39.39 1.02.39 1.41 0l.71-.71c.39-.39.39-1.02 0-1.41zm11.32 11.32c-.39-.39-1.02-.39-1.41 0l-.71.71c-.39.39-.39 1.02 0 1.41.39.39 1.02.39 1.41 0l.71-.71c.39-.39.39-1.02 0-1.41z"/>
                                 </svg>
                                 </button>
-                                <div class="theme-menu" id="themeMenu" role="menu" aria-label="Theme">
+                                <div class="theme-menu" id="themeMenu" role="menu" aria-label="Theme" popover="auto">
+                                    <button type="button" class="theme-option" role="menuitemradio" aria-checked="false" data-theme-choice="system">
+                                        <span class="theme-swatch theme-swatch--system" aria-hidden="true"></span><span>System</span>
+                                    </button>
                                     <button type="button" class="theme-option" role="menuitemradio" aria-checked="false" data-theme-choice="dark">
                                         <span class="theme-swatch theme-swatch--dark" aria-hidden="true"></span><span>Midnight</span>
                                     </button>
@@ -180,31 +184,36 @@
                                     <button type="button" class="theme-option" role="menuitemradio" aria-checked="false" data-theme-choice="coral">
                                         <span class="theme-swatch theme-swatch--coral" aria-hidden="true"></span><span>Coral</span>
                                     </button>
+                                    <button type="button" class="theme-option" role="menuitemradio" aria-checked="false" data-theme-choice="fsp">
+                                        <span class="theme-swatch theme-swatch--fsp" aria-hidden="true"></span><span>FSP Global</span>
+                                    </button>
                                 </div>
                             </div>
 
                             <!-- Language Selector -->
                             <div class="language-selector">
-                                <div class="language-dropdown">
-                                    <div class="flag-icon" id="currentFlag">🇷🇴</div>
+                                <button type="button" class="language-dropdown" id="languageToggle"
+                                        aria-haspopup="menu" aria-expanded="false" aria-controls="languageMenu"
+                                        popovertarget="languageMenu" aria-label="Language: Română" title="Language: Română">
+                                    <span class="flag-icon" id="currentFlag">🇷🇴</span>
                                     <span class="language-text" id="currentLanguage">Română</span>
-                                    <svg class="dropdown-arrow" viewBox="0 0 24 24">
+                                    <svg class="dropdown-arrow" viewBox="0 0 24 24" aria-hidden="true">
                                         <path d="M7 10l5 5 5-5z"/>
                                     </svg>
-                                </div>
-                                <div class="language-menu" id="languageMenu">
-                                    <div class="language-option active" data-lang="ro">
-                                        <div class="flag-icon">🇷🇴</div>
+                                </button>
+                                <div class="language-menu" id="languageMenu" role="menu" aria-label="Language" popover="auto">
+                                    <button type="button" class="language-option active" role="menuitemradio" aria-checked="true" data-lang="ro">
+                                        <span class="flag-icon">🇷🇴</span>
                                         <span class="language-option-text">Română</span>
-                                    </div>
-                                    <div class="language-option" data-lang="en">
-                                        <div class="flag-icon">🇺🇸</div>
+                                    </button>
+                                    <button type="button" class="language-option" role="menuitemradio" aria-checked="false" data-lang="en">
+                                        <span class="flag-icon">🇺🇸</span>
                                         <span class="language-option-text">English</span>
-                                    </div>
-                                    <div class="language-option" data-lang="it">
-                                        <div class="flag-icon">🇮🇹</div>
+                                    </button>
+                                    <button type="button" class="language-option" role="menuitemradio" aria-checked="false" data-lang="it">
+                                        <span class="flag-icon">🇮🇹</span>
                                         <span class="language-option-text">Italiano</span>
-                                    </div>
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -265,9 +274,9 @@
                     <!-- Productivity Chart -->
                     <div class="chart-container">
                         <div class="chart-header" style="display: flex; align-items: center; gap: 0.5rem;">
-                            <button id="chartPrevMonth" class="btn btn-secondary" style="padding: 0.3rem 0.5rem; min-width: auto; font-size: 0.9rem; line-height: 1;">&#9664;</button>
+                            <button id="chartPrevMonth" class="btn btn-secondary chart-month-btn" title="Previous month" aria-label="Previous month"><span aria-hidden="true">&#9664;</span></button>
                             <h3 class="chart-title" data-translate="productivity-trend">Trend Productivitate</h3>
-                            <button id="chartNextMonth" class="btn btn-secondary" style="padding: 0.3rem 0.5rem; min-width: auto; font-size: 0.9rem; line-height: 1;">&#9654;</button>
+                            <button id="chartNextMonth" class="btn btn-secondary chart-month-btn" title="Next month" aria-label="Next month"><span aria-hidden="true">&#9654;</span></button>
                         </div>
                         <canvas id="productivityChart" height="100"></canvas>
                     </div>
@@ -375,9 +384,9 @@
                     </div>
                     <div class="header-actions">
                         <div class="date-range-picker" style="display: flex; align-items: center; gap: 0.25rem;">
-                            <button id="prevMonthBtn" class="btn btn-secondary" style="padding: 0.4rem 0.6rem; min-width: auto; font-size: 1.1rem; line-height: 1;" title="Previous month">&#9664;</button>
+                            <button id="prevMonthBtn" class="btn btn-secondary" style="padding: 0.4rem 0.6rem; min-width: auto; font-size: 1.1rem; line-height: 1;" title="Previous month" aria-label="Previous month">&#9664;</button>
                             <input id="dateRangePickerInput" class="date-display" style="text-align: center;"/>
-                            <button id="nextMonthBtn" class="btn btn-secondary" style="padding: 0.4rem 0.6rem; min-width: auto; font-size: 1.1rem; line-height: 1;" title="Next month">&#9654;</button>
+                            <button id="nextMonthBtn" class="btn btn-secondary" style="padding: 0.4rem 0.6rem; min-width: auto; font-size: 1.1rem; line-height: 1;" title="Next month" aria-label="Next month">&#9654;</button>
                         </div>
                         <button id="undoBtn" class="btn btn-secondary planner-undo-btn" title="Undo last change" data-translate="undo-button">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="margin-right: 0.4rem;">
@@ -422,12 +431,12 @@
 
             <!-- Orar (Schedule) Section -->
             <section id="orar" class="section">
-                <header class="header">
+                <header class="header header--adaptive">
                     <div class="header-title-group">
                         <h2 class="header-title" data-translate="orar-title">Orar</h2>
                         <p class="header-subtitle" data-translate="orar-subtitle">Importă orarul lunar al agenților și previzualizează turele înainte de salvare.</p>
                     </div>
-                    <div class="header-actions" style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                    <div class="header-actions orar-toolbar">
                         <label class="orar-month-field">
                             <span class="orar-month-label" data-translate="orar-month-label">Luna</span>
                             <select id="orarMonth" class="orar-month-select"></select>
@@ -489,13 +498,13 @@
 
             <!-- Productivity Section -->
             <section id="productivity" class="section">
-                <header class="header">
+                <header class="header header--adaptive">
                     <h2 class="header-title" data-translate="productivity-title">Productivitate</h2>
-                    <div class="header-actions" style="display: flex; align-items: center; gap: 0.75rem;">
-                        <div class="date-range-picker">
-                            <input id="productivityDateRange" class="date-display" style="text-align: center; min-width: 200px;" readonly data-translate="prod-select-period" placeholder="Selectează perioada..."/>
+                    <div class="header-actions productivity-toolbar">
+                        <div class="date-range-picker productivity-date-range">
+                            <input id="productivityDateRange" class="date-display productivity-date-input" readonly data-translate="prod-select-period" placeholder="Selectează perioada..." aria-label="Productivity date range"/>
                         </div>
-                        <select id="productivityTeamFilter" style="padding: 0.6rem 0.75rem; background: var(--primary-dark); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary); font-size: 0.85rem;">
+                        <select id="productivityTeamFilter" class="toolbar-select productivity-team-filter" aria-label="Productivity team">
                             <option value="all" data-translate="prod-all-teams">Toate</option>
                             <option value="RO">RO</option>
                             <option value="HU">HU</option>
@@ -504,9 +513,9 @@
                             <option value="CS">CS</option>
                             <option value="SV-SE">SV-SE</option>
                         </select>
-                        <div id="prodViewToggle" style="display: inline-flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; flex-shrink: 0;">
-                            <button type="button" id="viewOverview" data-translate="prod-summary" style="padding: 0.6rem 1rem; border: none; cursor: pointer; font-size: 0.85rem; background: var(--accent); color: #000; font-weight: 600; transition: all 0.2s; outline: none;">Sumar</button>
-                            <button type="button" id="viewDetail" data-translate="prod-per-agent" style="padding: 0.6rem 1rem; border: none; cursor: pointer; font-size: 0.85rem; background: var(--primary-dark); color: var(--text-secondary); transition: all 0.2s; outline: none;">Per Agent</button>
+                        <div id="prodViewToggle" class="segmented-control" role="group" aria-label="Productivity view">
+                            <button type="button" id="viewOverview" class="segmented-control-btn" data-translate="prod-summary">Sumar</button>
+                            <button type="button" id="viewDetail" class="segmented-control-btn" data-translate="prod-per-agent">Per Agent</button>
                         </div>
                         <button type="button" id="productivityExportBtn" class="productivity-export-btn" title="Download current selection as XLSX" aria-label="Download current selection as XLSX" data-translate-title="prod-export-selection-title">
                             <svg class="productivity-export-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -594,11 +603,11 @@
 
             <!-- Reports Section -->
             <section id="reports" class="section">
-                <header class="header">
+                <header class="header header--adaptive">
                     <h2 class="header-title" data-translate="reports-title">Rapoarte</h2>
-                    <div class="header-actions" style="display: flex; align-items: center; gap: 0.75rem;">
+                    <div class="header-actions reports-toolbar">
                         <input type="text" id="reportsDateRange" placeholder="Selectează interval..."
-                            style="padding: 0.6rem 1rem; background: var(--primary-dark); border: 1px solid var(--border); border-radius: 6px; color: white; cursor: pointer; min-width: 240px; font-size: 0.9rem;">
+                            class="toolbar-input reports-date-input" aria-label="Reports date range">
                         <button type="button" id="reportsRefreshBtn" class="reports-refresh-btn" title="Reîmprospătează" aria-label="Reîmprospătează">&#8635;</button>
                     </div>
                 </header>
@@ -611,16 +620,16 @@
 
             <!-- Logs Section -->
             <section id="logs" class="section">
-                <header class="header">
+                <header class="header header--adaptive">
                     <h2 class="header-title" data-translate="logs-title">Jurnal Activitate</h2>
-                    <div class="header-actions" style="display: flex; gap: 0.5rem; align-items: center;">
-                        <select id="logsFilter" style="padding: 0.5rem 0.75rem; background: var(--primary-dark); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary); font-size: 0.85rem;">
+                    <div class="header-actions logs-toolbar">
+                        <select id="logsFilter" class="toolbar-select" aria-label="Activity type">
                             <option value="all" data-translate="logs-filter-all">Toate</option>
                             <option value="auth">Auth</option>
                             <option value="ai">AI</option>
                             <option value="portal">Portal</option>
                         </select>
-                        <button id="logsRefreshBtn" style="padding: 0.5rem 0.75rem; background: var(--accent); color: #000; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 600;" data-translate="logs-refresh">Reîncarcă</button>
+                        <button id="logsRefreshBtn" class="btn btn-primary toolbar-command" data-translate="logs-refresh">Reîncarcă</button>
                     </div>
                 </header>
                 <div class="content" id="logsContent">
@@ -677,7 +686,7 @@
         <div class="edit-modal-content">
             <div class="edit-modal-header">
                 <h3 class="edit-modal-title" data-translate="edit-title">Editează Selecția</h3>
-                <button class="edit-modal-close">&times;</button>
+                <button type="button" class="edit-modal-close" aria-label="Close edit dialog" title="Close">&times;</button>
             </div>
             
             <div class="selection-info" id="selectionInfo">
@@ -797,7 +806,7 @@
                 <button id="chatClearBtn" title="Clear chat">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
                 </button>
-                <button id="chatCloseBtn">
+                <button type="button" id="chatCloseBtn" aria-label="Close Sherpa AI" title="Close Sherpa AI">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
                 </button>
             </div>
@@ -805,7 +814,7 @@
         <div id="chatMessages" class="chat-messages"></div>
         <div class="chat-input-area">
             <input type="text" id="chatInput" placeholder="Ask Sherpa AI..." autocomplete="off">
-            <button id="chatSendBtn">
+            <button type="button" id="chatSendBtn" aria-label="Send message" title="Send message">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
             </button>
         </div>
@@ -816,21 +825,21 @@
     <!-- JavaScript Files -->
     <script src="https://cdn.jsdelivr.net/npm/litepicker/dist/litepicker.js"></script>
     <script src="js/config.js" type="module"></script>
-    <script src="js/ui.js?v=2026.07.15.2" type="module"></script>
-    <script src="js/charts.js?v=2026.07.15.2" type="module"></script>
+    <script src="js/ui.js?v=2026.07.15.5" type="module"></script>
+    <script src="js/charts.js?v=2026.07.15.5" type="module"></script>
     <script src="js/planner.js" type="module"></script>
     <script src="js/dashboard.js" type="module"></script>
     <script src="js/users.js" type="module"></script>
     <script src="js/productivity.js" type="module"></script>
-    <script src="js/logo-animation.js?v=2026.07.15.2" type="module"></script>
-    <script src="js/main.js?v=2026.07.15.2" type="module"></script>
+    <script src="js/logo-animation.js?v=2026.07.15.5" type="module"></script>
+    <script src="js/main.js?v=2026.07.15.5" type="module"></script>
 
     <!-- Deactivate User Modal -->
     <div id="deactivateModal" class="edit-modal">
         <div class="edit-modal-content deactivate-modal-content">
             <div class="edit-modal-header">
                 <h3 class="edit-modal-title" id="deactivateTitle">Dezactivare</h3>
-                <button class="edit-modal-close" id="deactivateClose">&times;</button>
+                <button type="button" class="edit-modal-close" id="deactivateClose" aria-label="Close deactivation dialog" title="Close">&times;</button>
             </div>
             <div class="deactivate-body">
                 <div class="deactivate-dates">
@@ -861,7 +870,7 @@
         <div class="edit-modal-content" style="max-width: 420px;">
             <div class="edit-modal-header">
                 <h3 class="edit-modal-title" id="contractChangeTitle">Schimbare Contract</h3>
-                <button class="edit-modal-close" id="contractChangeClose">&times;</button>
+                <button type="button" class="edit-modal-close" id="contractChangeClose" aria-label="Close contract dialog" title="Close">&times;</button>
             </div>
             <div style="padding: 1.5rem; display: flex; flex-direction: column; gap: 1.25rem;">
                 <div class="form-group" id="contractChangeHoursGroup">
@@ -890,7 +899,7 @@
         <div class="edit-modal-content" style="max-width: 420px;">
             <div class="edit-modal-header">
                 <h3 class="edit-modal-title" id="teamChangeTitle">Schimbare Echipă</h3>
-                <button class="edit-modal-close" id="teamChangeClose">&times;</button>
+                <button type="button" class="edit-modal-close" id="teamChangeClose" aria-label="Close team dialog" title="Close">&times;</button>
             </div>
             <div style="padding: 1.5rem; display: flex; flex-direction: column; gap: 1.25rem;">
                 <div id="teamChangeSummary" style="color: var(--text-secondary); font-size: 0.95rem;"></div>

@@ -232,6 +232,33 @@ test('bindAppShellInteractions wires navigation, theme, language, planner contro
   assert.deepEqual(actions.setAppInitialized.calls, [[false]]);
 });
 
+test('bindAppShellInteractions mirrors native popover state and closes after selection', () => {
+  const themeToggle = new FakeElement();
+  const themeMenu = new FakeElement();
+  const fspOption = new FakeElement({ classes: ['theme-option'], dataset: { themeChoice: 'fsp' } });
+  let nativeOpen = false;
+  themeMenu.showPopover = () => { nativeOpen = true; };
+  themeMenu.hidePopover = () => { nativeOpen = false; };
+  themeMenu.matches = selector => selector === ':popover-open' && nativeOpen;
+
+  const root = makeRoot({
+    ids: { themeMenu },
+    selectors: { '.theme-toggle': themeToggle }
+  });
+  const actions = { setTheme: recorder(), updateLanguageUI: recorder() };
+  bindAppShellInteractions({ root, actions });
+
+  nativeOpen = true;
+  themeMenu.dispatch('toggle', { newState: 'open' });
+  assert.equal(themeToggle.getAttribute('aria-expanded'), 'true');
+
+  themeMenu.dispatch('click', { target: fspOption, clientX: 80, clientY: 40 });
+  assert.deepEqual(actions.setTheme.calls[0], ['fsp', { x: 80, y: 40 }]);
+  assert.equal(nativeOpen, false);
+  assert.equal(themeToggle.getAttribute('aria-expanded'), 'false');
+  assert.equal(themeToggle.focused, true);
+});
+
 test('bindAppLifecycleEvents wires DOM boot, auth callbacks, and unload cleanup', async () => {
   const googleLoginBtn = new FakeElement();
   const rootTarget = makeEventTarget();

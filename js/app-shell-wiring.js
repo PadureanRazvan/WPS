@@ -37,7 +37,43 @@ function queryAll(root, selector) {
 }
 
 function getStoredTheme(storage) {
-    return storage?.getItem?.('theme') || 'dark';
+    return storage?.getItem?.('theme') || 'system';
+}
+
+function supportsNativePopover(menu) {
+    return typeof menu?.showPopover === 'function' && typeof menu?.hidePopover === 'function';
+}
+
+function isNativePopoverOpen(menu) {
+    if (!supportsNativePopover(menu)) return false;
+    try {
+        return menu.matches?.(':popover-open') || false;
+    } catch (_) {
+        return false;
+    }
+}
+
+function setDisclosureState(toggle, menu, isOpen) {
+    if (isOpen) {
+        menu?.classList?.add('open');
+        toggle?.classList?.add('open');
+    } else {
+        menu?.classList?.remove('open');
+        toggle?.classList?.remove('open');
+    }
+    toggle?.setAttribute?.('aria-expanded', String(isOpen));
+}
+
+function closeDisclosure(toggle, menu) {
+    const wasOpen = supportsNativePopover(menu)
+        ? isNativePopoverOpen(menu)
+        : menu?.classList?.contains?.('open');
+
+    if (supportsNativePopover(menu) && wasOpen) {
+        try { menu.hidePopover(); } catch (_) { /* The browser may already be closing it. */ }
+    }
+    setDisclosureState(toggle, menu, false);
+    return Boolean(wasOpen);
 }
 
 export function showLoginScreen(root = currentDocument()) {
@@ -93,15 +129,20 @@ export function bindAppShellInteractions({
 
     const themeToggle = query(root, '.theme-toggle');
     const themeMenu = byId(root, 'themeMenu');
-    const closeThemeMenu = () => {
-        themeMenu?.classList?.remove('open');
-        themeToggle?.setAttribute?.('aria-expanded', 'false');
-    };
+    const nativeThemeMenu = supportsNativePopover(themeMenu);
+    const closeThemeMenu = () => closeDisclosure(themeToggle, themeMenu);
 
     bindEvent(themeToggle, 'click', event => {
+        if (nativeThemeMenu) return;
         event.stopPropagation?.();
         const isOpen = themeMenu?.classList?.toggle('open') || false;
-        themeToggle?.setAttribute?.('aria-expanded', String(isOpen));
+        setDisclosureState(themeToggle, themeMenu, isOpen);
+    }, bindings);
+
+    bindEvent(themeMenu, 'toggle', event => {
+        if (!nativeThemeMenu) return;
+        const isOpen = event.newState ? event.newState === 'open' : isNativePopoverOpen(themeMenu);
+        setDisclosureState(themeToggle, themeMenu, isOpen);
     }, bindings);
 
     bindEvent(themeMenu, 'click', event => {
@@ -117,21 +158,30 @@ export function bindAppShellInteractions({
     }, bindings);
 
     bindEvent(root, 'click', event => {
-        if (!event.target?.closest?.('.theme-selector')) closeThemeMenu();
+        if (!nativeThemeMenu && !event.target?.closest?.('.theme-selector')) closeThemeMenu();
     }, bindings);
 
     bindEvent(root, 'keydown', event => {
         if (event.key !== 'Escape') return;
-        closeThemeMenu();
-        themeToggle?.focus?.();
+        if (closeThemeMenu()) themeToggle?.focus?.();
     }, bindings);
 
     const languageDropdown = query(root, '.language-dropdown');
     const languageMenu = byId(root, 'languageMenu');
+    const nativeLanguageMenu = supportsNativePopover(languageMenu);
+    const closeLanguageMenu = () => closeDisclosure(languageDropdown, languageMenu);
+
     bindEvent(languageDropdown, 'click', event => {
+        if (nativeLanguageMenu) return;
         event.stopPropagation?.();
-        languageMenu?.classList?.toggle('open');
-        languageDropdown?.classList?.toggle('open');
+        const isOpen = languageMenu?.classList?.toggle('open') || false;
+        setDisclosureState(languageDropdown, languageMenu, isOpen);
+    }, bindings);
+
+    bindEvent(languageMenu, 'toggle', event => {
+        if (!nativeLanguageMenu) return;
+        const isOpen = event.newState ? event.newState === 'open' : isNativePopoverOpen(languageMenu);
+        setDisclosureState(languageDropdown, languageMenu, isOpen);
     }, bindings);
 
     bindEvent(languageMenu, 'click', event => {
@@ -140,8 +190,17 @@ export function bindAppShellInteractions({
 
         setCurrentLanguage(target.dataset.lang);
         actions.updateLanguageUI?.(target.dataset.lang);
-        languageMenu?.classList?.remove('open');
-        languageDropdown?.classList?.remove('open');
+        closeLanguageMenu();
+        languageDropdown?.focus?.();
+    }, bindings);
+
+    bindEvent(root, 'click', event => {
+        if (!nativeLanguageMenu && !event.target?.closest?.('.language-selector')) closeLanguageMenu();
+    }, bindings);
+
+    bindEvent(root, 'keydown', event => {
+        if (event.key !== 'Escape') return;
+        if (closeLanguageMenu()) languageDropdown?.focus?.();
     }, bindings);
 
     actions.updateLanguageUI?.(getCurrentLanguage());

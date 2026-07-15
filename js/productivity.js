@@ -350,12 +350,12 @@ function setView(view) {
 
     if (overviewBtn) {
         overviewBtn.style.background = view === 'overview' ? 'var(--accent)' : 'var(--primary-dark)';
-        overviewBtn.style.color = view === 'overview' ? '#000' : 'var(--text-secondary)';
+        overviewBtn.style.color = view === 'overview' ? 'var(--accent-contrast)' : 'var(--text-secondary)';
         overviewBtn.style.fontWeight = view === 'overview' ? '600' : '400';
     }
     if (detailBtn) {
         detailBtn.style.background = view === 'detail' ? 'var(--accent)' : 'var(--primary-dark)';
-        detailBtn.style.color = view === 'detail' ? '#000' : 'var(--text-secondary)';
+        detailBtn.style.color = view === 'detail' ? 'var(--accent-contrast)' : 'var(--text-secondary)';
         detailBtn.style.fontWeight = view === 'detail' ? '600' : '400';
     }
     if (agentSection) agentSection.style.display = view === 'detail' ? 'block' : 'none';

@@ -4,7 +4,7 @@ import {
     buildLogoConnections,
     createLogoShape,
     matchLogoShape
-} from './logo-shapes.js?v=2026.07.15.2';
+} from './logo-shapes.js?v=2026.07.15.5';
 
 const TAU = Math.PI * 2;
 const HEART_REVEAL_ANGLE = 0.48;

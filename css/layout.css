@@ -229,15 +229,27 @@
 .nav-item {
     display: flex;
     align-items: center;
+    width: 100%;
     min-height: 42px;
     padding: 0.72rem 0.9rem;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
     color: var(--text-secondary);
+    font-family: inherit;
+    text-align: left;
+    appearance: none;
     cursor: pointer;
     transition: background-color 0.18s ease, color 0.18s ease, transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
     position: relative;
     white-space: nowrap;
     font-weight: 500;
     font-size: 0.82rem;
+    letter-spacing: 0;
+}
+
+.nav-item--bottom {
+    margin-top: auto;
 }
 
 .nav-item:hover {
@@ -415,6 +427,22 @@
     margin-right: 1rem;
 }
 
+.header--adaptive .header-actions {
+    gap: 0.75rem;
+    margin-right: 0;
+    flex-wrap: wrap;
+}
+
+.header--adaptive {
+    height: auto;
+    min-height: 80px;
+}
+
+.header--adaptive.scrolled {
+    height: auto;
+    min-height: 60px;
+}
+
 .header-controls {
     display: flex;
     align-items: center;
@@ -425,6 +453,7 @@
 .content {
     flex: 1;
     padding: 2rem 3rem;
+    container: sherpa-content / inline-size;
 }
 
 .main-content .header.collapsed {

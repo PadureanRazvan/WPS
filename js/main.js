@@ -8,9 +8,9 @@ import { initializeSchedule, cleanupSchedule } from './schedule.js';
 import { initializeReports, cleanupReports } from './reports.js';
 import { initializeInfoVersion } from './info-version.js';
 import { initializeInfoInteractive } from './info-interactive.js';
-import { initializeCharts, initializeProductivityChart } from './charts.js?v=2026.07.15.2';
+import { initializeCharts, initializeProductivityChart } from './charts.js?v=2026.07.15.5';
 import { updateAverageProductivityCard } from './dashboard.js';
-import { setTheme, updateLanguageUI, showSection, openEditModal, selectEditType, saveModalChanges, closeEditModal, toggleSidebar } from './ui.js?v=2026.07.15.2';
+import { setTheme, updateLanguageUI, showSection, openEditModal, selectEditType, saveModalChanges, closeEditModal, toggleSidebar } from './ui.js?v=2026.07.15.5';
 import { bindPlannerControlInteractions } from './planner-interaction-wiring.js';
 import {
     bindAppLifecycleEvents,
@@ -18,10 +18,10 @@ import {
     bindAppShellInteractions,
     showAuthenticatedShell,
     showLoginScreen
-} from './app-shell-wiring.js?v=2026.07.15.2';
-import { initLogoAnimation } from './logo-animation.js?v=2026.07.15.2';
+} from './app-shell-wiring.js?v=2026.07.15.5';
+import { initLogoAnimation } from './logo-animation.js?v=2026.07.15.5';
 import { initializeChat, cleanupChat } from './chat.js';
-import { loginWithGoogle, logout, onAuthChange } from './auth.js?v=2026.07.15.2';
+import { loginWithGoogle, logout, onAuthChange } from './auth.js?v=2026.07.15.5';
 import { initializeLogs, setLogUser, logActivity } from './logs.js';
 import { applyDailyGreeting } from './daily-greeting.js';
 
@@ -49,8 +49,8 @@ async function initializeApp() {
     // Set dynamic greeting message
     setDynamicGreeting();
 
-    // Set theme from local storage or default to 'dark'
-    setTheme(localStorage.getItem('theme') || 'dark');
+    // Follow the operating-system color scheme until the user chooses a palette.
+    setTheme(localStorage.getItem('theme') || 'system');
 
     // Initialize modules that depend on Firestore data
     initializePlanner();

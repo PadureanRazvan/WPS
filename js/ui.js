@@ -7,7 +7,7 @@ export function t(key) { const l = getLang(); return (translations[l] && transla
 // Import the new Firestore functions from planner.js
 import { addAgent, applyChangesToSelectedCells, renderPlannerTable, clearSelection } from './planner.js';
 import { updateDashboard, updateAverageProductivityCard } from './dashboard.js';
-import { initializeCharts } from './charts.js?v=2026.07.15.2';
+import { initializeCharts } from './charts.js?v=2026.07.15.5';
 import { getPlannerData } from './planner.js';
 import { renderLogsSection } from './logs.js';
 import { renderCurrentView as rerenderProductivity } from './productivity.js';
@@ -16,12 +16,19 @@ import {
     getNextTheme,
     getThemeMeta,
     getThemeRevealRadius,
-    normalizeTheme
-} from './theme-system.js?v=2026.07.15.2';
+    normalizeThemePreference,
+    resolveThemePreference
+} from './theme-system.js?v=2026.07.15.5';
 
 // Theme and language state
-let currentTheme = normalizeTheme(localStorage.getItem('theme'));
+let currentThemePreference = normalizeThemePreference(localStorage.getItem('theme'));
+let currentTheme = resolveThemePreference(currentThemePreference, prefersDarkScheme());
 let currentLanguage = localStorage.getItem('language') || 'ro';
+let systemThemeListenerBound = false;
+
+function prefersDarkScheme() {
+    return window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false;
+}
 
 function prefersReducedMotion() {
     return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
@@ -32,10 +39,12 @@ function notifyInterface(eventName, detail = {}) {
     window.dispatchEvent(new CustomEvent(eventName, { detail }));
 }
 
-function applyThemeState(theme, shouldRefreshCharts = false) {
-    currentTheme = normalizeTheme(theme);
+function applyThemeState(themePreference, shouldRefreshCharts = false) {
+    currentThemePreference = normalizeThemePreference(themePreference);
+    currentTheme = resolveThemePreference(currentThemePreference, prefersDarkScheme());
     document.documentElement.setAttribute('data-theme', currentTheme);
-    localStorage.setItem('theme', currentTheme);
+    document.documentElement.setAttribute('data-theme-preference', currentThemePreference);
+    localStorage.setItem('theme', currentThemePreference);
 
     const themeMeta = getThemeMeta(currentTheme);
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', themeMeta.metaColor);
@@ -46,15 +55,17 @@ function applyThemeState(theme, shouldRefreshCharts = false) {
             try { initializeCharts(); } catch (_) { /* Charts may not be initialized yet. */ }
         });
     }
-    notifyInterface('sherpa-theme-changed', { theme: currentTheme });
+    notifyInterface('sherpa-theme-changed', { theme: currentTheme, preference: currentThemePreference });
 }
 
 export function setTheme(theme, origin = {}) {
-    const nextTheme = normalizeTheme(theme);
+    const nextPreference = normalizeThemePreference(theme);
+    const nextTheme = resolveThemePreference(nextPreference, prefersDarkScheme());
     const shouldRefreshCharts = nextTheme !== currentTheme;
-    const commit = () => applyThemeState(nextTheme, shouldRefreshCharts);
+    const shouldUpdatePreference = nextPreference !== currentThemePreference;
+    const commit = () => applyThemeState(nextPreference, shouldRefreshCharts);
 
-    if (!shouldRefreshCharts || prefersReducedMotion() || typeof document.startViewTransition !== 'function') {
+    if ((!shouldRefreshCharts && !shouldUpdatePreference) || prefersReducedMotion() || typeof document.startViewTransition !== 'function') {
         commit();
         return;
     }
@@ -90,10 +101,12 @@ export function updateLanguageUI(langCode) {
 
     document.querySelectorAll('.language-option').forEach(option => {
         option.classList.remove('active');
+        option.setAttribute('aria-checked', 'false');
     });
     const activeOption = document.querySelector(`[data-lang="${langCode}"]`);
     if (activeOption) {
         activeOption.classList.add('active');
+        activeOption.setAttribute('aria-checked', 'true');
     }
 
     // Re-render ALL dynamic content with new language
@@ -143,12 +156,13 @@ export function showSection(sectionId, clickedElement) {
     const previousSectionId = currentSectionId;
     const applySectionState = () => {
         currentSectionId = sectionId;
-        document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
-        if (clickedElement) {
-            clickedElement.classList.add('active');
-        } else {
-            document.querySelector(`.nav-item[data-tooltip="${sectionId}"]`)?.classList.add('active');
-        }
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.classList.remove('active');
+            item.removeAttribute('aria-current');
+        });
+        const activeNavItem = clickedElement || document.querySelector(`.nav-item[data-tooltip="${sectionId}"]`);
+        activeNavItem?.classList.add('active');
+        activeNavItem?.setAttribute('aria-current', 'page');
 
         document.querySelectorAll('.section').forEach(section => section.classList.remove('active'));
         targetSection.classList.add('active');
@@ -180,9 +194,14 @@ export function showSection(sectionId, clickedElement) {
 
 // Initialize theme and language from localStorage
 export function initializeThemeAndLanguage() {
-    // Set theme
-    document.documentElement.setAttribute('data-theme', currentTheme);
-    updateThemeIcon();
+    applyThemeState(currentThemePreference, false);
+    if (!systemThemeListenerBound) {
+        const colorSchemeQuery = window.matchMedia?.('(prefers-color-scheme: dark)');
+        colorSchemeQuery?.addEventListener?.('change', () => {
+            if (currentThemePreference === 'system') applyThemeState('system', true);
+        });
+        systemThemeListenerBound = true;
+    }
     
     // Set language
     updateLanguageDisplay(currentLanguage);
@@ -194,7 +213,7 @@ export function initializeThemeAndLanguage() {
 
 // Theme Management
 export function toggleTheme() {
-    setTheme(getNextTheme(currentTheme));
+    setTheme(getNextTheme(currentThemePreference));
 }
 
 export function updateThemeIcon() {
@@ -204,24 +223,18 @@ export function updateThemeIcon() {
     }
 
     const themeMeta = getThemeMeta(currentTheme);
+    const themeLabel = currentThemePreference === 'system'
+        ? `System (${themeMeta.name})`
+        : themeMeta.name;
     const toggle = document.getElementById('themeToggle');
-    toggle?.setAttribute('aria-label', `Theme: ${themeMeta.name}`);
-    toggle?.setAttribute('title', `Theme: ${themeMeta.name}`);
+    toggle?.setAttribute('aria-label', `Theme: ${themeLabel}`);
+    toggle?.setAttribute('title', `Theme: ${themeLabel}`);
 
     document.querySelectorAll('.theme-option').forEach(option => {
-        const active = option.dataset.themeChoice === currentTheme;
+        const active = option.dataset.themeChoice === currentThemePreference;
         option.classList.toggle('active', active);
         option.setAttribute('aria-checked', String(active));
     });
-}
-
-// Language Management
-export function toggleLanguageMenu() {
-    const menu = document.getElementById('languageMenu');
-    const dropdown = document.querySelector('.language-dropdown');
-    
-    menu.classList.toggle('open');
-    dropdown.classList.toggle('open');
 }
 
 export function updateLanguageDisplay(langCode) {
@@ -231,6 +244,9 @@ export function updateLanguageDisplay(langCode) {
     
     if (currentFlag) currentFlag.textContent = config.flag;
     if (currentLanguage) currentLanguage.textContent = config.name;
+    const languageToggle = document.getElementById('languageToggle');
+    languageToggle?.setAttribute('aria-label', `Language: ${config.name}`);
+    languageToggle?.setAttribute('title', `Language: ${config.name}`);
 }
 
 export function translatePage(langCode) {
@@ -290,6 +306,10 @@ export function toggleSidebar() {
     const headers = document.querySelectorAll('.main-content .header');
 
     sidebar.classList.toggle('collapsed');
+    const isExpanded = !sidebar.classList.contains('collapsed');
+    const sidebarToggle = document.querySelector('.sidebar-toggle');
+    sidebarToggle?.setAttribute('aria-expanded', String(isExpanded));
+    sidebarToggle?.setAttribute('aria-label', isExpanded ? 'Collapse navigation' : 'Expand navigation');
     
     headers.forEach(header => {
         if (header) {

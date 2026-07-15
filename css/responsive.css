@@ -58,7 +58,7 @@
     }
 
     .sidebar .logo h1 {
-        font-size: 0.9rem;
+        display: none;
     }
 
     .sidebar .logo-canvas {
@@ -69,6 +69,7 @@
     .sidebar .nav-item {
         padding: 0.85rem 0;
         justify-content: center;
+        min-height: 44px;
     }
 
     .sidebar .nav-icon {
@@ -191,6 +192,32 @@
 
     .header-controls {
         gap: 0.5rem;
+    }
+
+    .theme-toggle {
+        width: 44px;
+        height: 44px;
+        padding: 0;
+    }
+
+    .language-dropdown {
+        min-height: 44px;
+        padding: 0.5rem 0.75rem;
+    }
+
+    .day-toggle .toggle-btn,
+    .day-toggle .date-picker-wrapper {
+        min-width: 40px;
+        min-height: 40px;
+    }
+
+    .chart-month-btn {
+        width: 40px;
+        height: 40px;
+        min-width: 40px;
+        padding: 0;
+        font-size: 0.9rem;
+        line-height: 1;
     }
 
     /* Dashboard cards stack vertically */
@@ -377,12 +404,17 @@
         margin-left: 50px;
     }
 
+    .sidebar.collapsed ~ .main-content {
+        margin-left: 50px;
+    }
+
     .sidebar {
         width: 50px;
     }
 
     .sidebar .nav-item {
         padding: 0.75rem 0.25rem;
+        min-height: 44px;
     }
 
     .sidebar .logo-canvas {
@@ -638,6 +670,103 @@
     /* Prevent double-tap zoom on buttons */
     button, .btn, .nav-item, .filter-tab {
         touch-action: manipulation;
+    }
+}
+
+/* Operational headers reflow against their section, independent of sidebar width. */
+@container section-shell (max-width: 900px) {
+    .header--adaptive {
+        height: auto;
+        min-height: 80px;
+        padding: 0.7rem 0.75rem;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+    }
+
+    .header--adaptive > .header-title,
+    .header--adaptive > .header-title-group {
+        width: 100%;
+        flex: 1 0 100%;
+    }
+
+    .header--adaptive .header-actions {
+        width: 100%;
+        margin: 0;
+    }
+
+    .productivity-toolbar {
+        display: grid;
+        grid-template-columns: minmax(52px, 0.7fr) minmax(112px, 1.5fr) 40px 40px;
+        gap: 0.4rem;
+    }
+
+    .productivity-date-range {
+        grid-column: 1 / -1;
+        width: 100%;
+        min-width: 0;
+        padding: 0;
+    }
+
+    .productivity-date-input {
+        width: 100%;
+        min-width: 0;
+        height: 40px;
+        border: 0;
+        padding: 0 0.65rem;
+    }
+
+    .productivity-team-filter {
+        width: 100%;
+        min-width: 0;
+        padding: 0 0.35rem;
+    }
+
+    .segmented-control {
+        width: 100%;
+    }
+
+    .segmented-control-btn {
+        flex: 1 1 50%;
+        min-width: 0;
+        padding: 0.5rem 0.25rem;
+        font-size: 0.72rem;
+    }
+
+    .productivity-export-btn {
+        width: 40px;
+        min-width: 40px;
+        padding: 0;
+    }
+
+    .productivity-export-btn span {
+        display: none;
+    }
+
+    .reports-toolbar {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 40px;
+        gap: 0.5rem;
+    }
+
+    .reports-date-input {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .logs-toolbar {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 0.5rem;
+    }
+
+    .logs-toolbar .toolbar-select {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .orar-toolbar {
+        align-items: end;
     }
 }
 

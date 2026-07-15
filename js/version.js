@@ -16,8 +16,8 @@
 // =============================================================================
 
 export const SHERPA_VERSION = Object.freeze({
-    number: '2026.07.15.2',
-    codename: 'Aurora Motion',
+    number: '2026.07.15.5',
+    codename: 'Adaptive Orbit',
     released: '2026-07-15'
 });
 
