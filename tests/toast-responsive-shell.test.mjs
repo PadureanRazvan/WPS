@@ -54,9 +54,9 @@ test('legacy temporary messages delegate to the shared translated notification s
   }
 });
 
-test('Popover Clarity cache-busts the notification module and browser shell', () => {
-  assert.match(versionSource, /number:\s*'2026\.07\.15\.18'/);
-  assert.match(versionSource, /codename:\s*'Popover Clarity'/);
-  assert.match(mainSource, /ui\.js\?v=2026\.07\.15\.18/);
-  assert.match(uiSource, /toast-notifications\.js\?v=2026\.07\.15\.18/);
+test('Steady Passage cache-busts the notification module and browser shell', () => {
+  assert.match(versionSource, /number:\s*'2026\.07\.16'/);
+  assert.match(versionSource, /codename:\s*'Steady Passage'/);
+  assert.match(mainSource, /ui\.js\?v=2026\.07\.16/);
+  assert.match(uiSource, /toast-notifications\.js\?v=2026\.07\.16/);
 });

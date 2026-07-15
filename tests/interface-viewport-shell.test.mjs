@@ -10,6 +10,8 @@ const infoSource = await readFile(new URL('../css/info.css', import.meta.url), '
 const layoutSource = await readFile(new URL('../css/layout.css', import.meta.url), 'utf8');
 const plannerSource = await readFile(new URL('../css/planner.css', import.meta.url), 'utf8');
 const responsiveSource = await readFile(new URL('../css/responsive.css', import.meta.url), 'utf8');
+const mainSource = await readFile(new URL('../js/main.js', import.meta.url), 'utf8');
+const infoVersionSource = await readFile(new URL('../js/info-version.js', import.meta.url), 'utf8');
 const versionSource = await readFile(new URL('../js/version.js', import.meta.url), 'utf8');
 
 test('viewport opts into device safe areas and exposes shared inset tokens', () => {
@@ -56,10 +58,13 @@ test('fixed interaction surfaces respect safe areas and dynamic viewport height'
 });
 
 test('safe viewport release assets share one cache identity', () => {
-  assert.match(versionSource, /number:\s*'2026\.07\.15\.18'/);
-  assert.match(versionSource, /codename:\s*'Popover Clarity'/);
+  assert.match(versionSource, /number:\s*'2026\.07\.16'/);
+  assert.match(versionSource, /codename:\s*'Steady Passage'/);
 
   for (const asset of ['css/chat.css', 'css/info.css', 'js/main.js']) {
-    assert.match(indexSource, new RegExp(`${asset.replace('.', '\\.')}\\?v=2026\\.07\\.15\\.18`));
+    assert.match(indexSource, new RegExp(`${asset.replace('.', '\\.')}\\?v=2026\\.07\\.16`));
   }
+
+  assert.match(mainSource, /info-version\.js\?v=2026\.07\.16/);
+  assert.match(infoVersionSource, /version\.js\?v=2026\.07\.16/);
 });

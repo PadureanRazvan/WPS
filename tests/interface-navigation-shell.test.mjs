@@ -58,6 +58,22 @@ test('active navigation rail progressively uses Anchor Positioning and View Tran
   assert.match(baseSource, /\.nav-active-rail\s*\{[^}]*view-transition-name:\s*none\s*!important/s);
 });
 
+test('native section transitions do not restart the fallback entrance animation', () => {
+  const activeSectionRule = baseSource.match(/\.section\.active\s*\{([^}]*)\}/)?.[1] || '';
+
+  assert.doesNotMatch(activeSectionRule, /animation:\s*fadeIn/);
+  assert.match(
+    baseSource,
+    /\.section\.active\.section-enter-fallback\s*\{[^}]*animation:\s*fadeIn/s
+  );
+  assert.match(uiSource, /const useNativeSectionTransition\s*=/);
+  assert.match(uiSource, /classList\.remove\('active',\s*'section-enter-fallback'\)/);
+  assert.match(
+    uiSource,
+    /classList\.toggle\('section-enter-fallback',\s*useFallbackSectionTransition\)/
+  );
+});
+
 test('collapsed navigation tooltips work for keyboard and modern anchor layouts', () => {
   assert.match(layoutSource, /\.sidebar\.collapsed \.nav-item:focus-visible::after/);
   assert.match(layoutSource, /@supports \(position-area:\s*right center\)/);

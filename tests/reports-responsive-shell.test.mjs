@@ -29,7 +29,7 @@ test('reports distribution avoids nested scrolling and stale viewport-only card 
 });
 
 test('report atlas cache-busts the complete Reports renderer chain', () => {
-  assert.match(mainSource, /from '\.\/reports\.js\?v=2026\.07\.15\.18'/);
-  assert.match(reportsSource, /from '\.\/report-read-model\.js\?v=2026\.07\.15\.18'/);
-  assert.match(reportsSource, /from '\.\/reports-view\.js\?v=2026\.07\.15\.18'/);
+  assert.match(mainSource, /from '\.\/reports\.js\?v=2026\.07\.16'/);
+  assert.match(reportsSource, /from '\.\/report-read-model\.js\?v=2026\.07\.16'/);
+  assert.match(reportsSource, /from '\.\/reports-view\.js\?v=2026\.07\.16'/);
 });

@@ -1,25 +1,25 @@
 // js/ui.js
 
 // === THEME AND LANGUAGE FUNCTIONALITY ===
-import { languageConfig, translations, PLANNER_TEAMS, TEAM_DISPLAY_NAMES, extractHoursFromDay, formatPlannerHoursValue, getMonthKey, getAgentNotesForMonth, isValidPlannerHoursValue } from './config.js?v=2026.07.15.18';
+import { languageConfig, translations, PLANNER_TEAMS, TEAM_DISPLAY_NAMES, extractHoursFromDay, formatPlannerHoursValue, getMonthKey, getAgentNotesForMonth, isValidPlannerHoursValue } from './config.js?v=2026.07.16';
 function getLang() { return localStorage.getItem('language') || 'ro'; }
 export function t(key) { const l = getLang(); return (translations[l] && translations[l][key]) || key; }
 // Import the new Firestore functions from planner.js
 import { addAgent, applyChangesToSelectedCells, renderPlannerTable, clearSelection } from './planner.js';
-import { updateDashboard, updateAverageProductivityCard } from './dashboard.js?v=2026.07.15.18';
-import { initializeCharts } from './charts.js?v=2026.07.15.18';
+import { updateDashboard, updateAverageProductivityCard } from './dashboard.js?v=2026.07.16';
+import { initializeCharts } from './charts.js?v=2026.07.16';
 import { getPlannerData } from './planner.js';
-import { renderLogsSection } from './logs.js?v=2026.07.15.18';
-import { renderCurrentView as rerenderProductivity } from './productivity.js?v=2026.07.15.18';
-import { renderUsersTable } from './users.js?v=2026.07.15.18';
+import { renderLogsSection } from './logs.js?v=2026.07.16';
+import { renderCurrentView as rerenderProductivity } from './productivity.js?v=2026.07.16';
+import { renderUsersTable } from './users.js?v=2026.07.16';
 import {
     getNextTheme,
     getThemeMeta,
     getThemeRevealRadius,
     normalizeThemePreference,
     resolveThemePreference
-} from './theme-system.js?v=2026.07.15.18';
-import { showToastNotification } from './toast-notifications.js?v=2026.07.15.18';
+} from './theme-system.js?v=2026.07.16';
+import { showToastNotification } from './toast-notifications.js?v=2026.07.16';
 
 // Theme and language state
 let currentThemePreference = normalizeThemePreference(localStorage.getItem('theme'));
@@ -155,6 +155,14 @@ export function showSection(sectionId, clickedElement) {
     if (!targetSection) return;
 
     const previousSectionId = currentSectionId;
+    const sectionChanged = sectionId !== previousSectionId;
+    const reducedMotion = prefersReducedMotion();
+    const useNativeSectionTransition = sectionChanged
+        && !reducedMotion
+        && typeof document.startViewTransition === 'function';
+    const useFallbackSectionTransition = sectionChanged
+        && !reducedMotion
+        && !useNativeSectionTransition;
     const applySectionState = () => {
         currentSectionId = sectionId;
         document.querySelectorAll('.nav-item').forEach(item => {
@@ -165,8 +173,11 @@ export function showSection(sectionId, clickedElement) {
         activeNavItem?.classList.add('active');
         activeNavItem?.setAttribute('aria-current', 'page');
 
-        document.querySelectorAll('.section').forEach(section => section.classList.remove('active'));
+        document.querySelectorAll('.section').forEach(section => {
+            section.classList.remove('active', 'section-enter-fallback');
+        });
         targetSection.classList.add('active');
+        targetSection.classList.toggle('section-enter-fallback', useFallbackSectionTransition);
     };
 
     const finishSectionChange = () => {
@@ -180,7 +191,7 @@ export function showSection(sectionId, clickedElement) {
         notifyInterface('sherpa:navigation', { sectionId, previousSectionId });
     };
 
-    if (sectionId !== previousSectionId && !prefersReducedMotion() && typeof document.startViewTransition === 'function') {
+    if (useNativeSectionTransition) {
         document.documentElement.dataset.transitionKind = 'section';
         const transition = document.startViewTransition(applySectionState);
         transition.updateCallbackDone.then(finishSectionChange).catch(finishSectionChange);

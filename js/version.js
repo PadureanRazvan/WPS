@@ -16,9 +16,9 @@
 // =============================================================================
 
 export const SHERPA_VERSION = Object.freeze({
-    number: '2026.07.15.18',
-    codename: 'Popover Clarity',
-    released: '2026-07-15'
+    number: '2026.07.16',
+    codename: 'Steady Passage',
+    released: '2026-07-16'
 });
 
 // FNV-1a (32-bit) over the identifying fields -> short, stable hex fingerprint.
