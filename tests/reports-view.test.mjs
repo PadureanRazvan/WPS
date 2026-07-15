@@ -21,6 +21,7 @@ const labels = {
   agentCount: 'Agents',
   agentsHours: 'agents',
   hoursUnit: 'hours',
+  period: 'Reporting period',
   total: 'TOTAL'
 };
 
@@ -65,7 +66,7 @@ function makeReportModel() {
 test('renders report placeholders for missing ranges and empty read models', async () => {
   const { buildReportsHtml } = await loadReportsViewModule();
 
-  assert.match(buildReportsHtml(null, labels), /Select a range/);
+  assert.match(buildReportsHtml(null, labels), /class="reports-status" role="status">Select a range/);
   assert.match(
     buildReportsHtml({ hasData: false, range: { label: '01.05.2026 - 02.05.2026' }, shop: { buckets: [] }, roles: { buckets: [] } }, labels),
     /No planned data/
@@ -76,15 +77,28 @@ test('renders shop and Report Role sections from a Report Read Model', async () 
   const { buildReportsHtml } = await loadReportsViewModule();
   const html = buildReportsHtml(makeReportModel(), labels);
 
-  assert.match(html, /Planned Hours per Shop &mdash; 01\.05\.2026 - 02\.05\.2026/);
-  assert.match(html, /Agent Distribution per Shop &mdash; 01\.05\.2026 - 02\.05\.2026/);
-  assert.match(html, /Planned TL\/QA Hours &mdash; 01\.05\.2026 - 02\.05\.2026/);
-  assert.match(html, /TL\/QA Agent Distribution &mdash; 01\.05\.2026 - 02\.05\.2026/);
+  assert.match(html, /<span>Reporting period<\/span>/);
+  assert.match(html, /<strong>01\.05\.2026 - 02\.05\.2026<\/strong>/);
+  assert.match(html, /id="report-domain-shops"[^>]*>Planned Hours per Shop/);
+  assert.match(html, /id="report-distribution-shops"[^>]*>Agent Distribution per Shop/);
+  assert.match(html, /id="report-domain-roles"[^>]*>Planned TL\/QA Hours/);
+  assert.match(html, /id="report-distribution-roles"[^>]*>TL\/QA Agent Distribution/);
   assert.match(html, /RO &lt;Shop&gt;/);
   assert.match(html, /12\.5/);
   assert.match(html, /16\.5/);
-  assert.match(html, /4\.5h/);
+  assert.match(html, /4\.5 <span>hours<\/span>/);
   assert.match(html, /2 agents &middot; 12\.5 hours/);
+});
+
+test('uses semantic report tables and native collapsible distribution groups', async () => {
+  const { buildReportsHtml } = await loadReportsViewModule();
+  const html = buildReportsHtml(makeReportModel(), labels);
+
+  assert.match(html, /<caption class="visually-hidden">Planned Hours per Shop &mdash; 01\.05\.2026 - 02\.05\.2026<\/caption>/);
+  assert.equal((html.match(/<th scope="col">/g) || []).length, 6);
+  assert.ok((html.match(/<th scope="row">/g) || []).length >= 5);
+  assert.equal((html.match(/<details class="report-team-card" open>/g) || []).length, 3);
+  assert.doesNotMatch(html, /class="chart-container"|class="stat-card"|style="/);
 });
 
 test('escapes report labels, bucket names, and agent names', async () => {

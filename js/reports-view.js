@@ -13,6 +13,7 @@ const DEFAULT_LABELS = {
     agentCount: 'Nr. Agents',
     agentsHours: 'agents',
     hoursUnit: 'hours',
+    period: 'Reporting period',
     total: 'TOTAL'
 };
 
@@ -37,28 +38,22 @@ function formatHours(value) {
 }
 
 function buildPlaceholderHtml(message) {
-    return `<div style="text-align: center; padding: 3rem; color: var(--text-secondary);">
-            ${escapeHtml(message)}
-        </div>`;
-}
-
-function buildTitle(title, rangeLabel) {
-    return `${escapeHtml(title)} &mdash; ${escapeHtml(rangeLabel)}`;
+    return `<div class="reports-status" role="status">${escapeHtml(message)}</div>`;
 }
 
 export function buildReportHoursTableRows(buckets = [], grandTotal = 0, labels = {}) {
     const normalizedLabels = normalizeLabels(labels);
     const bucketRows = buckets.map(bucket => `
-            <tr>
-                <td>${escapeHtml(bucket.name)}</td>
-                <td style="color: var(--accent); font-weight: bold;">${formatHours(bucket.totalHours)}</td>
+            <tr class="report-hours-row">
+                <th scope="row">${escapeHtml(bucket.name)}</th>
+                <td class="report-hours-value">${formatHours(bucket.totalHours)} <span class="report-cell-unit">${escapeHtml(normalizedLabels.hoursUnit)}</span></td>
                 <td>${escapeHtml(bucket.agentCount)}</td>
             </tr>`).join('');
 
     return `${bucketRows}
-        <tr style="border-top: 2px solid var(--border); font-weight: bold;">
-            <td>${escapeHtml(normalizedLabels.total)}</td>
-            <td style="color: var(--accent);">${formatHours(grandTotal)}</td>
+        <tr class="report-hours-total">
+            <th scope="row">${escapeHtml(normalizedLabels.total)}</th>
+            <td class="report-hours-value">${formatHours(grandTotal)} <span class="report-cell-unit">${escapeHtml(normalizedLabels.hoursUnit)}</span></td>
             <td></td>
         </tr>`;
 }
@@ -68,36 +63,36 @@ export function buildReportDistributionCards(buckets = [], labels = {}) {
 
     return buckets.map(bucket => {
         const agentRows = (bucket.agents || []).map(agent => `
-            <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid var(--border);">
-                <span>${escapeHtml(agent.name)}</span>
-                <span style="color: var(--text-secondary)">${formatHours(agent.hours)}h</span>
-            </div>`).join('');
+                    <li class="report-agent-row">
+                        <span class="report-agent-name">${escapeHtml(agent.name)}</span>
+                        <span class="report-agent-hours">${formatHours(agent.hours)} <span>${escapeHtml(normalizedLabels.hoursUnit)}</span></span>
+                    </li>`).join('');
 
         return `
-            <div class="stat-card">
-                <h4 style="color: var(--accent); margin-bottom: 0.5rem;">${escapeHtml(bucket.name)}</h4>
-                <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.75rem;">
-                    ${escapeHtml(bucket.agentCount)} ${escapeHtml(normalizedLabels.agentsHours)} &middot; ${formatHours(bucket.totalHours)} ${escapeHtml(normalizedLabels.hoursUnit)}
-                </div>
-                <div style="max-height: 250px; overflow-y: auto; padding-right: 0.75rem;">
-                    ${agentRows}
-                </div>
-            </div>`;
+            <details class="report-team-card" open>
+                <summary class="report-team-summary">
+                    <span class="report-team-identity">
+                        <strong>${escapeHtml(bucket.name)}</strong>
+                        <span class="report-team-meta">${escapeHtml(bucket.agentCount)} ${escapeHtml(normalizedLabels.agentsHours)} &middot; ${formatHours(bucket.totalHours)} ${escapeHtml(normalizedLabels.hoursUnit)}</span>
+                    </span>
+                    <span class="report-team-chevron" aria-hidden="true"></span>
+                </summary>
+                <ul class="report-agent-list">${agentRows}
+                </ul>
+            </details>`;
     }).join('');
 }
 
-function buildHoursSection(title, rangeLabel, buckets, grandTotal, labels, style = '') {
-    if (!buckets.length) return '';
-
+function buildHoursPanel(title, rangeLabel, buckets, grandTotal, labels) {
     return `
-        <div class="chart-container"${style ? ` style="${escapeHtml(style)}"` : ''}>
-            <h3 class="chart-title">${buildTitle(title, rangeLabel)}</h3>
-            <table style="margin-top: 1rem;">
+        <div class="report-table-surface">
+            <table class="report-hours-table">
+                <caption class="visually-hidden">${escapeHtml(title)} &mdash; ${escapeHtml(rangeLabel)}</caption>
                 <thead>
                     <tr>
-                        <th>${escapeHtml(labels.shop)}</th>
-                        <th>${escapeHtml(labels.totalHours)}</th>
-                        <th>${escapeHtml(labels.agentCount)}</th>
+                        <th scope="col">${escapeHtml(labels.shop)}</th>
+                        <th scope="col">${escapeHtml(labels.totalHours)}</th>
+                        <th scope="col">${escapeHtml(labels.agentCount)}</th>
                     </tr>
                 </thead>
                 <tbody>${buildReportHoursTableRows(buckets, grandTotal, labels)}</tbody>
@@ -105,16 +100,36 @@ function buildHoursSection(title, rangeLabel, buckets, grandTotal, labels, style
         </div>`;
 }
 
-function buildDistributionSection(title, rangeLabel, buckets, labels) {
-    if (!buckets.length) return '';
-
+function buildDistributionPanel(title, buckets, labels, titleId) {
     return `
-        <div class="chart-container" style="margin-top: 1.5rem;">
-            <h3 class="chart-title">${buildTitle(title, rangeLabel)}</h3>
-            <div class="dashboard-grid" style="margin-top: 1rem;">
+        <section class="report-distribution" aria-labelledby="${titleId}">
+            <h4 id="${titleId}" class="report-distribution-title">${escapeHtml(title)}</h4>
+            <div class="report-distribution-grid">
                 ${buildReportDistributionCards(buckets, labels)}
             </div>
-        </div>`;
+        </section>`;
+}
+
+function buildReportDomain({ id, hoursTitle, distributionTitle, rangeLabel, buckets, grandTotal, labels }) {
+    if (!buckets.length) return '';
+
+    const titleId = `report-domain-${id}`;
+    const distributionTitleId = `report-distribution-${id}`;
+
+    return `
+        <section class="report-domain" aria-labelledby="${titleId}">
+            <header class="report-domain-header">
+                <h3 id="${titleId}" class="report-domain-title">${escapeHtml(hoursTitle)}</h3>
+                <div class="report-domain-total" aria-label="${escapeHtml(labels.totalHours)}: ${formatHours(grandTotal)} ${escapeHtml(labels.hoursUnit)}">
+                    <span>${escapeHtml(labels.totalHours)}</span>
+                    <strong>${formatHours(grandTotal)} <small>${escapeHtml(labels.hoursUnit)}</small></strong>
+                </div>
+            </header>
+            <div class="report-domain-layout">
+                ${buildHoursPanel(hoursTitle, rangeLabel, buckets, grandTotal, labels)}
+                ${buildDistributionPanel(distributionTitle, buckets, labels, distributionTitleId)}
+            </div>
+        </section>`;
 }
 
 export function buildReportsHtml(reportModel = null, labels = {}) {
@@ -132,12 +147,31 @@ export function buildReportsHtml(reportModel = null, labels = {}) {
     const shopBuckets = reportModel.shop?.buckets || [];
     const roleBuckets = reportModel.roles?.buckets || [];
 
-    return [
-        buildHoursSection(normalizedLabels.hoursPerShop, rangeLabel, shopBuckets, reportModel.shop?.grandTotal || 0, normalizedLabels),
-        buildDistributionSection(normalizedLabels.distribution, rangeLabel, shopBuckets, normalizedLabels),
-        buildHoursSection(normalizedLabels.roleHours, rangeLabel, roleBuckets, reportModel.roles?.grandTotal || 0, normalizedLabels, 'margin-top: 1.5rem;'),
-        buildDistributionSection(normalizedLabels.roleDistribution, rangeLabel, roleBuckets, normalizedLabels)
-    ].join('');
+    return `
+        <div class="reports-workspace">
+            <header class="reports-workspace-header">
+                <span>${escapeHtml(normalizedLabels.period)}</span>
+                <strong>${escapeHtml(rangeLabel)}</strong>
+            </header>
+            ${buildReportDomain({
+                id: 'shops',
+                hoursTitle: normalizedLabels.hoursPerShop,
+                distributionTitle: normalizedLabels.distribution,
+                rangeLabel,
+                buckets: shopBuckets,
+                grandTotal: reportModel.shop?.grandTotal || 0,
+                labels: normalizedLabels
+            })}
+            ${buildReportDomain({
+                id: 'roles',
+                hoursTitle: normalizedLabels.roleHours,
+                distributionTitle: normalizedLabels.roleDistribution,
+                rangeLabel,
+                buckets: roleBuckets,
+                grandTotal: reportModel.roles?.grandTotal || 0,
+                labels: normalizedLabels
+            })}
+        </div>`;
 }
 
 export function renderReportsView(container, reportModel = null, labels = {}) {

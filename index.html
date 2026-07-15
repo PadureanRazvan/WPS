@@ -15,14 +15,14 @@
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
     
     <!-- CSS Files -->
-    <link rel="stylesheet" href="css/base.css?v=2026.07.15.13">
-    <link rel="stylesheet" href="css/layout.css?v=2026.07.15.13">
-    <link rel="stylesheet" href="css/components.css?v=2026.07.15.13">
+    <link rel="stylesheet" href="css/base.css?v=2026.07.15.15">
+    <link rel="stylesheet" href="css/layout.css?v=2026.07.15.15">
+    <link rel="stylesheet" href="css/components.css?v=2026.07.15.15">
     <link rel="stylesheet" href="css/planner.css">
-    <link rel="stylesheet" href="css/responsive.css?v=2026.07.15.13">
-    <link rel="stylesheet" href="css/chat.css?v=2026.07.15.13">
+    <link rel="stylesheet" href="css/responsive.css?v=2026.07.15.15">
+    <link rel="stylesheet" href="css/chat.css?v=2026.07.15.15">
     <link rel="stylesheet" href="css/schedule.css">
-    <link rel="stylesheet" href="css/info.css?v=2026.07.15.13">
+    <link rel="stylesheet" href="css/info.css?v=2026.07.15.15">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/litepicker/dist/css/litepicker.css"/>
     <style>
         /* FIX: Styles for the selection counter visibility */
@@ -629,8 +629,8 @@
                         <button type="button" id="reportsRefreshBtn" class="reports-refresh-btn" title="Reîmprospătează" aria-label="Reîmprospătează">&#8635;</button>
                     </div>
                 </header>
-                <div class="content" id="reportsContent">
-                    <div style="text-align: center; padding: 3rem; color: var(--text-secondary);" data-translate="reports-select-range">
+                <div class="content reports-content" id="reportsContent" aria-live="polite">
+                    <div class="reports-status" role="status" data-translate="reports-select-range">
                         Selectează un interval de date pentru a genera rapoartele.
                     </div>
                 </div>
@@ -650,8 +650,8 @@
                         <button id="logsRefreshBtn" class="btn btn-primary toolbar-command" data-translate="logs-refresh">Reîncarcă</button>
                     </div>
                 </header>
-                <div class="content" id="logsContent">
-                    <div style="text-align: center; padding: 3rem; color: var(--text-secondary);" data-translate="logs-empty">
+                <div class="content logs-content" id="logsContent" aria-live="polite" aria-busy="false">
+                    <div class="activity-status activity-status--empty" role="status" data-translate="logs-empty">
                         Nu există activitate înregistrată.
                     </div>
                 </div>
@@ -843,14 +843,14 @@
     <!-- JavaScript Files -->
     <script src="https://cdn.jsdelivr.net/npm/litepicker/dist/litepicker.js"></script>
     <script src="js/config.js" type="module"></script>
-    <script src="js/ui.js?v=2026.07.15.13" type="module"></script>
-    <script src="js/charts.js?v=2026.07.15.13" type="module"></script>
+    <script src="js/ui.js?v=2026.07.15.15" type="module"></script>
+    <script src="js/charts.js?v=2026.07.15.15" type="module"></script>
     <script src="js/planner.js" type="module"></script>
     <script src="js/dashboard.js" type="module"></script>
     <script src="js/users.js" type="module"></script>
     <script src="js/productivity.js" type="module"></script>
-    <script src="js/logo-animation.js?v=2026.07.15.13" type="module"></script>
-    <script src="js/main.js?v=2026.07.15.13" type="module"></script>
+    <script src="js/logo-animation.js?v=2026.07.15.15" type="module"></script>
+    <script src="js/main.js?v=2026.07.15.15" type="module"></script>
 
     <!-- Deactivate User Modal -->
     <div id="deactivateModal" class="edit-modal">

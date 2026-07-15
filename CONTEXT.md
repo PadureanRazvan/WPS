@@ -18,6 +18,8 @@
 
 **Users Directory View** — the searchable and filterable roster projection of Agents, including query normalization, team/status filters, translated result states, and container-driven table-to-list reflow while preserving inline Users commands.
 
+**Activity Log View** — the chronological, date-grouped projection of Activity Logs into a semantic timeline, including localized timestamps, type badges, safe detail rendering, asynchronous status announcements, and container-driven compact reflow.
+
 **Planner Cell** — one agent/day value in the Planner. A cell can be empty, a leave code such as `Co` or `DZ`, or one or more schedule entries such as `8RO` or `4RO+42L`.
 
 **Schedule Entry** — the smallest working-time expression inside a Planner Cell. It combines hours with an optional team code. `82L` means 8 hours for `2L`, not 82 hours.
@@ -30,7 +32,7 @@
 
 **Report Read Model** — the rules for turning Agents, Schedule Semantics, and a selected date range into report-ready shop and Report Role buckets, sorted agent distributions, totals, and range labels.
 
-**Reports View** — the rules for turning a Report Read Model and translated labels into Reports table and distribution-card HTML, including empty states, range titles, hours formatting, and escaped display text.
+**Reports View** — the rules for turning a Report Read Model and translated labels into a semantic, container-responsive Reports workspace, including status states, reporting periods, scoped hours tables, collapsible team distributions, hours formatting, and escaped display text.
 
 **Planner Read Model** — the rules for turning Agents, Schedule Semantics, Planner filters, date ranges, and view options into table-ready Planner rows, Planner Cells, headers, totals, notes, and display classes.
 

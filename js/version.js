@@ -16,8 +16,8 @@
 // =============================================================================
 
 export const SHERPA_VERSION = Object.freeze({
-    number: '2026.07.15.13',
-    codename: 'Calendar Flow',
+    number: '2026.07.15.15',
+    codename: 'Report Atlas',
     released: '2026-07-15'
 });
 

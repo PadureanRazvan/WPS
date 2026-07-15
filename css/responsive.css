@@ -329,11 +329,6 @@
         font-size: 0.9rem;
     }
 
-    /* Reports */
-    .report-team-card {
-        min-width: 100% !important;
-    }
-
     /* Planner */
     .unified-planner-table th,
     .unified-planner-table td {

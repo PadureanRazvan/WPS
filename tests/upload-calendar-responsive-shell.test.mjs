@@ -29,7 +29,7 @@ test('compact calendar navigation and actions retain stable touch targets', () =
   assert.match(componentsSource, /\.upload-calendar-actions \.btn\s*\{[^}]*min-height:\s*40px/s);
 });
 
-test('calendar-flow release cache-busts the changed calendar module', () => {
-  assert.match(productivitySource, /from '\.\/productivity-upload-calendar-view\.js\?v=2026\.07\.15\.13'/);
-  assert.match(productivitySource, /from '\.\/productivity-upload-calendar-actions\.js\?v=2026\.07\.15\.13'/);
+test('current release cache-busts the upload calendar modules', () => {
+  assert.match(productivitySource, /from '\.\/productivity-upload-calendar-view\.js\?v=2026\.07\.15\.15'/);
+  assert.match(productivitySource, /from '\.\/productivity-upload-calendar-actions\.js\?v=2026\.07\.15\.15'/);
 });
