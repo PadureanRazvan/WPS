@@ -6,8 +6,10 @@ service cloud.firestore {
       return request.auth != null
         && request.auth.token.email_verified == true
         && (
-          request.auth.token.email == 'reizvanmail@gmail.com'
-          || request.auth.token.email.matches('^[^@]+@fspglobal[.]com$')
+          request.auth.token.email == 'rahela231091@gmail.com'
+          || request.auth.token.email == 'rahela.vlasa@gmail.com'
+          || request.auth.token.email == 'reizvanmail@gmail.com'
+          || request.auth.token.email.matches('^[^@]+@(fspglobal[.]com|fsp-global[.]com|sharpmindsglobal[.]com)$')
         );
     }
 

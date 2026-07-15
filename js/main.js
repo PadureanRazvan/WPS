@@ -19,9 +19,9 @@ import {
     showAuthenticatedShell,
     showLoginScreen
 } from './app-shell-wiring.js';
-import { initLogoAnimation } from './logo-animation.js?v=2026.07.14.3';
+import { initLogoAnimation } from './logo-animation.js?v=2026.07.15';
 import { initializeChat, cleanupChat } from './chat.js';
-import { loginWithGoogle, logout, onAuthChange } from './auth.js';
+import { loginWithGoogle, logout, onAuthChange } from './auth.js?v=2026.07.15';
 import { initializeLogs, setLogUser, logActivity } from './logs.js';
 import { applyDailyGreeting } from './daily-greeting.js';
 

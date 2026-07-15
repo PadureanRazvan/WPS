@@ -9,10 +9,15 @@ const {
   sanitizeConversationRequest
 } = require('../sherpa-ai-policy');
 
-test('authorizes verified company accounts and the temporary support account', () => {
+test('authorizes verified accounts from every approved Sherpa identity', () => {
   assert.equal(isAuthorizedEmail('fspsherpa@fspglobal.com', true), true);
+  assert.equal(isAuthorizedEmail('loredana.baba@fsp-global.com', true), true);
+  assert.equal(isAuthorizedEmail('helga.nagy@sharpmindsglobal.com', true), true);
+  assert.equal(isAuthorizedEmail('rahela231091@gmail.com', true), true);
+  assert.equal(isAuthorizedEmail('rahela.vlasa@gmail.com', true), true);
   assert.equal(isAuthorizedEmail('REIZVANMAIL@gmail.com', true), true);
   assert.equal(isAuthorizedEmail('someone@gmail.com', true), false);
+  assert.equal(isAuthorizedEmail('attacker@fsp-global.com.example', true), false);
   assert.equal(isAuthorizedEmail('fspsherpa@fspglobal.com', false), false);
 });
 

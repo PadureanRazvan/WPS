@@ -4,11 +4,15 @@ import { readFile } from 'node:fs/promises';
 
 const rulesPath = new URL('../firestore.rules', import.meta.url);
 
-test('Firestore rules restrict access to verified FSP Global identities', async () => {
+test('Firestore rules restrict access to every verified approved Sherpa identity', async () => {
   const rules = await readFile(rulesPath, 'utf8');
 
   assert.match(rules, /request[.]auth[.]token[.]email_verified == true/);
-  assert.match(rules, /@fspglobal\[\.\]com/);
+  assert.match(rules, /fspglobal\[\.\]com/);
+  assert.match(rules, /fsp-global\[\.\]com/);
+  assert.match(rules, /sharpmindsglobal\[\.\]com/);
+  assert.match(rules, /rahela231091@gmail[.]com/);
+  assert.match(rules, /rahela[.]vlasa@gmail[.]com/);
   assert.match(rules, /reizvanmail@gmail[.]com/);
   assert.doesNotMatch(rules, /match \/\{document=\*\*\}[\s\S]*allow read, write: if request[.]auth != null/);
 });

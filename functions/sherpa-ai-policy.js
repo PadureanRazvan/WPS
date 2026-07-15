@@ -1,5 +1,13 @@
-const AUTHORIZED_EMAIL_DOMAIN = 'fspglobal.com';
-const SUPPORT_EMAILS = new Set(['reizvanmail@gmail.com']);
+const AUTHORIZED_EMAIL_DOMAINS = new Set([
+  'fspglobal.com',
+  'fsp-global.com',
+  'sharpmindsglobal.com'
+]);
+const AUTHORIZED_EMAILS = new Set([
+  'rahela231091@gmail.com',
+  'rahela.vlasa@gmail.com',
+  'reizvanmail@gmail.com'
+]);
 const SUPPORTED_LANGUAGES = new Set(['ro', 'en', 'it']);
 const ALLOWED_TOOL_NAMES = new Set([
   'get_agent_list',
@@ -32,7 +40,8 @@ function normalizeEmail(email) {
 function isAuthorizedEmail(email, emailVerified = false) {
   if (!emailVerified) return false;
   const normalized = normalizeEmail(email);
-  return SUPPORT_EMAILS.has(normalized) || normalized.endsWith(`@${AUTHORIZED_EMAIL_DOMAIN}`);
+  const domain = normalized.includes('@') ? normalized.split('@').pop() : '';
+  return AUTHORIZED_EMAILS.has(normalized) || AUTHORIZED_EMAIL_DOMAINS.has(domain);
 }
 
 function jsonByteLength(value) {
@@ -295,7 +304,7 @@ function mapGeminiError(status, body = {}) {
 }
 
 module.exports = {
-  AUTHORIZED_EMAIL_DOMAIN,
+  AUTHORIZED_EMAIL_DOMAINS,
   PolicyError,
   buildGeminiRequest,
   buildSystemPrompt,

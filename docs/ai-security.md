@@ -7,7 +7,7 @@ The function runs in `europe-west8` alongside the existing Milan Firestore datab
 ## Security Boundaries
 
 - Firebase Authentication identifies the caller.
-- Both Firestore Rules and the callable function require a verified `@fspglobal.com` account. `reizvanmail@gmail.com` is temporarily allowlisted for transition support.
+- Both Firestore Rules and the callable function require a verified account from `fspglobal.com`, `fsp-global.com`, or `sharpmindsglobal.com`. The approved Gmail identities `rahela231091@gmail.com`, `rahela.vlasa@gmail.com`, and `reizvanmail@gmail.com` are explicitly allowlisted.
 - The callable function owns the system prompt, tool declarations, Gemini model, payload limits, and upstream error mapping.
 - Each user is limited to 30 model rounds per minute. A normal chat request may use several rounds when Sherpa queries live planner data.
 - CORS accepts the production GitHub Pages origin and local development origins.
@@ -39,4 +39,4 @@ Do not enforce App Check before the browser is producing valid tokens; doing so 
 
 ## Ownership Cleanup
 
-The new Gemini project, billing account, Secret Manager secret, and callable function must all belong to the client-controlled Google Cloud organization. After the support period, remove `reizvanmail@gmail.com` from both `js/auth-policy.js`, `functions/sherpa-ai-policy.js`, and `firestore.rules`, then redeploy the frontend, function, and rules together.
+The new Gemini project, billing account, Secret Manager secret, and callable function must all belong to the client-controlled Google Cloud organization. After the support period, review the explicit Gmail exceptions in `js/auth-policy.js`, `functions/sherpa-ai-policy.js`, and `firestore.rules`, then redeploy the frontend, function, and rules together if the allowlist changes.

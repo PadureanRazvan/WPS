@@ -1,5 +1,13 @@
-export const AUTHORIZED_EMAIL_DOMAIN = 'fspglobal.com';
-export const SUPPORT_EMAILS = Object.freeze(['reizvanmail@gmail.com']);
+export const AUTHORIZED_EMAIL_DOMAINS = Object.freeze([
+    'fspglobal.com',
+    'fsp-global.com',
+    'sharpmindsglobal.com'
+]);
+export const AUTHORIZED_EMAILS = Object.freeze([
+    'rahela231091@gmail.com',
+    'rahela.vlasa@gmail.com',
+    'reizvanmail@gmail.com'
+]);
 
 export function normalizeEmail(email) {
     return String(email || '').trim().toLowerCase();
@@ -7,7 +15,9 @@ export function normalizeEmail(email) {
 
 export function isAuthorizedEmail(email) {
     const normalized = normalizeEmail(email);
-    return SUPPORT_EMAILS.includes(normalized) || normalized.endsWith(`@${AUTHORIZED_EMAIL_DOMAIN}`);
+    const domain = normalized.includes('@') ? normalized.split('@').pop() : '';
+    return AUTHORIZED_EMAILS.includes(normalized)
+        || AUTHORIZED_EMAIL_DOMAINS.includes(domain);
 }
 
 export function isAuthorizedUser(user) {
