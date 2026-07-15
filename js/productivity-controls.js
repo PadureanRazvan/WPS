@@ -2,9 +2,6 @@ export function bindProductivityControls({
     doc = globalThis.document,
     getCurrentView = () => 'overview',
     setView = () => {},
-    renderAgentSearchResults = () => {},
-    submitAgentSearch = () => {},
-    markAgentSearchPending = () => {},
     setCurrentTeamFilter = () => {},
     hasAnyData = () => false,
     renderCurrentView = () => {},
@@ -24,21 +21,6 @@ export function bindProductivityControls({
     getById('viewDetail')?.addEventListener('click', () => {
         log('[Productivity] Switching to Per Agent view');
         setView('detail');
-    });
-
-    const agentSearch = getById('prodAgentSearch');
-    agentSearch?.addEventListener('input', () => {
-        markAgentSearchPending();
-        renderAgentSearchResults(agentSearch.value);
-    });
-    agentSearch?.addEventListener('keydown', event => {
-        if (event.key !== 'Enter') return;
-        event.preventDefault();
-        submitAgentSearch(agentSearch.value);
-    });
-
-    getById('prodAgentSearchBtn')?.addEventListener('click', () => {
-        submitAgentSearch(agentSearch?.value || '');
     });
 
     const teamFilter = getById('productivityTeamFilter');

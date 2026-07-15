@@ -1,24 +1,25 @@
 // js/ui.js
 
 // === THEME AND LANGUAGE FUNCTIONALITY ===
-import { languageConfig, translations, PLANNER_TEAMS, TEAM_DISPLAY_NAMES, extractHoursFromDay, formatPlannerHoursValue, getMonthKey, getAgentNotesForMonth, isValidPlannerHoursValue } from './config.js?v=2026.07.15.15';
+import { languageConfig, translations, PLANNER_TEAMS, TEAM_DISPLAY_NAMES, extractHoursFromDay, formatPlannerHoursValue, getMonthKey, getAgentNotesForMonth, isValidPlannerHoursValue } from './config.js?v=2026.07.15.17';
 function getLang() { return localStorage.getItem('language') || 'ro'; }
 export function t(key) { const l = getLang(); return (translations[l] && translations[l][key]) || key; }
 // Import the new Firestore functions from planner.js
 import { addAgent, applyChangesToSelectedCells, renderPlannerTable, clearSelection } from './planner.js';
-import { updateDashboard, updateAverageProductivityCard } from './dashboard.js?v=2026.07.15.15';
-import { initializeCharts } from './charts.js?v=2026.07.15.15';
+import { updateDashboard, updateAverageProductivityCard } from './dashboard.js?v=2026.07.15.17';
+import { initializeCharts } from './charts.js?v=2026.07.15.17';
 import { getPlannerData } from './planner.js';
-import { renderLogsSection } from './logs.js?v=2026.07.15.15';
-import { renderCurrentView as rerenderProductivity } from './productivity.js?v=2026.07.15.15';
-import { renderUsersTable } from './users.js?v=2026.07.15.15';
+import { renderLogsSection } from './logs.js?v=2026.07.15.17';
+import { renderCurrentView as rerenderProductivity } from './productivity.js?v=2026.07.15.17';
+import { renderUsersTable } from './users.js?v=2026.07.15.17';
 import {
     getNextTheme,
     getThemeMeta,
     getThemeRevealRadius,
     normalizeThemePreference,
     resolveThemePreference
-} from './theme-system.js?v=2026.07.15.15';
+} from './theme-system.js?v=2026.07.15.17';
+import { showToastNotification } from './toast-notifications.js?v=2026.07.15.17';
 
 // Theme and language state
 let currentThemePreference = normalizeThemePreference(localStorage.getItem('theme'));
@@ -688,77 +689,18 @@ async function handleCreateAgent() {
 
 // --- Utility Functions ---
 
-export function showTemporaryMessage(message, type) {
-    const messageDiv = document.createElement('div');
-    messageDiv.className = `temporary-message ${type}`;
-    messageDiv.textContent = message;
-    
-    // Style the message
-    messageDiv.style.cssText = `
-        position: fixed;
-        top: 2rem;
-        right: 2rem;
-        padding: 1rem 2rem;
-        border-radius: 8px;
-        font-weight: 600;
-        z-index: 2000;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-        animation: slideIn 0.3s ease-out;
-    `;
-    
-    // Set colors based on type
-    if (type === 'success') {
-        messageDiv.style.background = 'rgba(76, 175, 80, 0.9)';
-        messageDiv.style.color = 'white';
-    } else if (type === 'error') {
-        messageDiv.style.background = 'rgba(244, 67, 54, 0.9)';
-        messageDiv.style.color = 'white';
-    } else if (type === 'info') {
-        messageDiv.style.background = 'rgba(33, 150, 243, 0.9)';
-        messageDiv.style.color = 'white';
-    }
-    
-    document.body.appendChild(messageDiv);
-    
-    // Auto-remove after 3 seconds
-    setTimeout(() => {
-        if (messageDiv.parentNode) {
-            messageDiv.style.animation = 'slideOut 0.3s ease-out';
-            setTimeout(() => {
-                if (messageDiv.parentNode) {
-                    messageDiv.parentNode.removeChild(messageDiv);
-                }
-            }, 300);
+export function showTemporaryMessage(message, type = 'info', duration) {
+    return showToastNotification(message, {
+        type,
+        duration,
+        labels: {
+            dismiss: t('toast-dismiss'),
+            success: t('toast-success'),
+            error: t('toast-error'),
+            info: t('toast-info')
         }
-    }, 3000);
+    });
 }
-
-// Add CSS animations for the temporary messages
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes slideIn {
-        from {
-            transform: translateX(100%);
-            opacity: 0;
-        }
-        to {
-            transform: translateX(0);
-            opacity: 1;
-        }
-    }
-    
-    @keyframes slideOut {
-        from {
-            transform: translateX(0);
-            opacity: 1;
-        }
-        to {
-            transform: translateX(100%);
-            opacity: 0;
-        }
-    }
-`;
-document.head.appendChild(style);
 
 // Event Listeners
 document.addEventListener('click', function(event) {

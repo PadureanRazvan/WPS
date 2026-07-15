@@ -11,9 +11,9 @@ async function loadAgentSelectionViewModule() {
 
 function t(key) {
   return ({
-    'prod-selected': 'selected',
+    'prod-agent-selected': '1 agent selected',
     'prod-no-results': 'No results for the current selection.',
-    'prod-search-to-select-agent': 'Search for an agent to show matching results.',
+    'prod-search-to-select-agent': 'Start typing an agent name.',
     'prod-keep-typing-agent': 'Type at least 2 characters to search agents.',
     'prod-too-many-agent-matches': 'Showing first 2 matches. Keep typing to narrow results.'
   })[key] || key;
@@ -34,7 +34,10 @@ test('agent selection view does not render every agent before search starts', as
 
   assert.equal(view.visibleAgents.length, 0);
   assert.equal(view.countText, '');
-  assert.match(view.html, /Search for an agent to show matching results\./);
+  assert.equal(view.statusText, 'Start typing an agent name.');
+  assert.equal(view.resultsMetaText, '');
+  assert.equal(view.shouldOpen, false);
+  assert.equal(view.html, '');
   assert.doesNotMatch(view.html, /data-agent-key=/);
   assert.doesNotMatch(view.html, /Ana Pop/);
   assert.doesNotMatch(view.html, /Mihai Popescu/);
@@ -54,7 +57,9 @@ test('agent selection view waits for a useful search term before rendering match
   });
 
   assert.equal(view.visibleAgents.length, 0);
-  assert.match(view.html, /Type at least 2 characters to search agents\./);
+  assert.equal(view.statusText, 'Type at least 2 characters to search agents.');
+  assert.equal(view.shouldOpen, false);
+  assert.equal(view.html, '');
   assert.doesNotMatch(view.html, /data-agent-key=/);
 });
 
@@ -73,11 +78,18 @@ test('agent selection view filters agents and marks selected chips', async () =>
 
   assert.equal(view.visibleAgents.length, 1);
   assert.equal(view.visibleAgents[0][0], 'ana pop');
-  assert.equal(view.countText, '1 selected');
+  assert.equal(view.countText, '1 agent selected');
+  assert.equal(view.shouldOpen, true);
   assert.match(view.html, /data-agent-key="ana pop"/);
+  assert.match(view.html, /role="option"/);
+  assert.match(view.html, /aria-selected="true"/);
+  assert.match(view.html, /aria-posinset="1"/);
+  assert.match(view.html, /aria-setsize="1"/);
+  assert.match(view.html, /class="productivity-agent-option is-selected"/);
+  assert.match(view.html, /class="productivity-agent-option__identity"/);
+  assert.match(view.html, /class="productivity-agent-option__team">IT/);
   assert.match(view.html, /Ana Pop/);
-  assert.match(view.html, />IT<\/span><\/button>/);
-  assert.match(view.html, /background: rgba\(99,102,241,0\.25\)/);
+  assert.doesNotMatch(view.html, /style=/);
   assert.doesNotMatch(view.html, /Mihai Popescu/);
 });
 
@@ -97,7 +109,9 @@ test('agent selection view limits broad search results', async () => {
   });
 
   assert.deepEqual(view.visibleAgents.map(([key]) => key), ['ana one', 'ana two']);
-  assert.match(view.html, /Showing first 2 matches\. Keep typing to narrow results\./);
+  assert.equal(view.resultsMetaText, 'Showing first 2 matches. Keep typing to narrow results.');
+  assert.equal(view.statusText, '');
+  assert.match(view.html, /aria-setsize="3"/);
   assert.match(view.html, /Ana One/);
   assert.match(view.html, /Ana Two/);
   assert.doesNotMatch(view.html, /Ana Three/);
@@ -116,7 +130,9 @@ test('agent selection view shows a no-results message for unmatched searches', a
   });
 
   assert.equal(view.visibleAgents.length, 0);
-  assert.match(view.html, /No results for the current selection\./);
+  assert.equal(view.statusText, 'No results for the current selection.');
+  assert.equal(view.shouldOpen, false);
+  assert.equal(view.html, '');
   assert.doesNotMatch(view.html, /Ana One/);
 });
 
@@ -141,9 +157,20 @@ test('agent selection view escapes chip content and clears empty count text', as
   assert.equal(view.countText, '');
   assert.match(view.html, /data-agent-key="o&quot;connor &lt;qa&gt;"/);
   assert.match(view.html, /O&quot;Connor &lt;QA&gt;/);
-  assert.match(view.html, />QA<\/span><\/button>/);
+  assert.match(view.html, /class="productivity-agent-option__team">QA/);
   assert.doesNotMatch(view.html, /<script>/);
-  assert.match(view.html, /background: rgba\(255,255,255,0\.05\)/);
+  assert.doesNotMatch(view.html, /style=/);
+});
+
+test('agent selection search ignores accents and matches team labels', async () => {
+  const { filterProductivityAgentSelection } = await loadAgentSelectionViewModule();
+  const agents = [
+    ['teodora horja', { fullName: 'Teodóra Horja', primaryTeam: 'HU zooplus' }],
+    ['ana pop', { fullName: 'Ana Pop', primaryTeam: 'IT zooplus' }]
+  ];
+
+  assert.deepEqual(filterProductivityAgentSelection(agents, 'teodora').map(([key]) => key), ['teodora horja']);
+  assert.deepEqual(filterProductivityAgentSelection(agents, 'hu zoo').map(([key]) => key), ['teodora horja']);
 });
 
 test('agent selection reducers toggle, select all visible agents, and clear selection', async () => {

@@ -39,50 +39,30 @@ function fakeDocument(elements) {
   };
 }
 
-test('productivity controls bind view buttons and search-on-submit agent controls', async () => {
+test('productivity controls bind the summary and per-agent view buttons', async () => {
   const { bindProductivityControls } = await loadControlsModule();
   const viewOverview = fakeElement();
   const viewDetail = fakeElement();
-  const agentSearch = fakeElement({ value: 'ana' });
-  const searchButton = fakeElement();
   const calls = [];
-  let prevented = false;
 
   bindProductivityControls({
     doc: fakeDocument({
       viewOverview,
-      viewDetail,
-      prodAgentSearch: agentSearch,
-      prodAgentSearchBtn: searchButton
+      viewDetail
     }),
     setView: view => calls.push(['setView', view]),
-    renderAgentSearchResults: search => calls.push(['renderAgentSearchResults', search]),
-    submitAgentSearch: search => calls.push(['submitAgentSearch', search]),
     log: message => calls.push(['log', message])
   });
 
   viewOverview.dispatch('click');
   viewDetail.dispatch('click');
-  agentSearch.dispatch('input');
-  searchButton.dispatch('click');
-  agentSearch.value = 'mihai';
-  agentSearch.dispatch('keydown', {
-    key: 'Enter',
-    preventDefault: () => {
-      prevented = true;
-    }
-  });
 
   assert.deepEqual(calls, [
     ['log', '[Productivity] Switching to Sumar view'],
     ['setView', 'overview'],
     ['log', '[Productivity] Switching to Per Agent view'],
-    ['setView', 'detail'],
-    ['renderAgentSearchResults', 'ana'],
-    ['submitAgentSearch', 'ana'],
-    ['submitAgentSearch', 'mihai']
+    ['setView', 'detail']
   ]);
-  assert.equal(prevented, true);
 });
 
 test('productivity controls keep team filter scoped to the summary view', async () => {

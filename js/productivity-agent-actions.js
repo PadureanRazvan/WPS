@@ -21,21 +21,28 @@ export function createProductivityAgentActions({
     setAgentSearchTerm = () => {},
     resolveAgentSearch = resolveProductivityAgentSearch,
     renderAgentSearchResults = () => {},
+    closeAgentSearchResults = () => {},
     renderCurrentView = () => {},
     showTemporaryMessage = () => {},
     noResultMessage = 'No matching agent.',
     getNoResultMessage = () => noResultMessage
 } = {}) {
+    const commitAgent = ([agentKey, info]) => {
+        const committedSearchTerm = info?.fullName || agentKey;
+        setSelectedAgents(new Set([agentKey]));
+        setDetailSearchCommitted(true);
+        setAgentSearchTerm(committedSearchTerm);
+        renderAgentSearchResults(committedSearchTerm);
+        closeAgentSearchResults();
+        renderCurrentView();
+    };
+
     return {
         chooseAgentSuggestion(normalizedName) {
             const selectedSuggestion = getVisibleAgents().find(([agentKey]) => agentKey === normalizedName);
             if (!selectedSuggestion) return false;
 
-            const [, info] = selectedSuggestion;
-            const searchTerm = info?.fullName || normalizedName;
-            setAgentSearchTerm(searchTerm);
-            setDetailSearchCommitted(false);
-            renderAgentSearchResults(searchTerm);
+            commitAgent(selectedSuggestion);
             return true;
         },
 
@@ -51,13 +58,7 @@ export function createProductivityAgentActions({
                 return false;
             }
 
-            const [agentKey, info] = match;
-            const committedSearchTerm = info?.fullName || agentKey;
-            setSelectedAgents(new Set([agentKey]));
-            setDetailSearchCommitted(true);
-            setAgentSearchTerm(committedSearchTerm);
-            renderAgentSearchResults(committedSearchTerm);
-            renderCurrentView();
+            commitAgent(match);
             return true;
         }
     };

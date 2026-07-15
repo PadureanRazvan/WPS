@@ -12,6 +12,8 @@
 
 **Interface Theme System** — the named Sherpa palettes, semantic surface and liquid-scene tokens, System color preference, live chart colors, browser theme color, native disclosure popovers, container-driven reflow, dynamic viewport sizing, safe-area-aware fixed surfaces, progressive view transitions, reduced-transparency handling, and accessibility fallbacks that keep every operational Module visually consistent without changing its domain behavior.
 
+**Notification Stack** — the shared non-modal feedback surface used by operational Modules for success, error, and information messages, including top-layer placement, polite and assertive announcements, bounded timing, pause-on-hover or focus, explicit dismissal, safe-area responsiveness, theme tokens, and reduced-motion or transparency fallbacks.
+
 **Runtime Deploy Hardening** — the rules for proving a deployed Sherpa build is the intended version, reusing one external Chrome session for read-only production smoke checks, confirming GitHub Pages serves new Modules, and rolling back production without touching Firestore data.
 
 **Users Command** — the rules for turning Users form input, inline Agent edits, contract changes, primary team changes, deactivation, and reactivation into validated Agent update payloads, activity metadata, and user-facing diagnostics while keeping the Users shell responsible for DOM modals and Firestore writes.
@@ -64,9 +66,11 @@
 
 **Productivity Upload Calendar Actions** — the rules for binding upload-calendar date selection, month navigation, file upload triggers, export, and delete actions to the current Productivity upload date.
 
-**Productivity Agent Selection View** — the rules for turning eligible Agents into searchable, selectable detail-view chips, including selected counts, primary-team labels, and selection state changes.
+**Productivity Agent Selection View** — the rules for turning eligible Agents into searchable detail-view options, including accent-insensitive matching, selected state, primary-team labels, bounded result sets, and safe display text.
 
-**Productivity Agent Actions** — the rules for changing selected Productivity Agents from chip clicks, select-all, and deselect-all controls, then refreshing agent chips and the current Productivity view.
+**Productivity Agent Picker** — the single-action editable combobox used to find and load an Agent's detailed Productivity view, including listbox semantics, active-descendant keyboard navigation, native top-layer placement, progressive CSS anchoring, measured positioning fallback, and compact responsive reflow.
+
+**Productivity Agent Actions** — the rules for resolving, committing, and loading one selected Productivity Agent from suggestion clicks or submitted searches, then refreshing the picker and current Productivity view.
 
 **Productivity Date Commands** — the rules for exporting a selected Productivity date, downloading its CSV, deleting a date snapshot, refreshing Productivity views, and showing command success or error messages.
 
@@ -78,4 +82,4 @@
 
 **Productivity Upload Flow** — the rules for processing a selected Productivity upload file: requiring an upload date, detecting same-type overwrites, running the file parser, saving the date snapshot, showing success or error state, and refreshing upload views.
 
-**Productivity Controls** — the rules for binding Productivity view toggles, agent search and selection controls, team filter changes, and refresh button state to the current Productivity view.
+**Productivity Controls** — the rules for binding Productivity view toggles, team filter changes, export, and refresh button state to the current Productivity view.

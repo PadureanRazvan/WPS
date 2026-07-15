@@ -16,8 +16,8 @@
 // =============================================================================
 
 export const SHERPA_VERSION = Object.freeze({
-    number: '2026.07.15.15',
-    codename: 'Report Atlas',
+    number: '2026.07.15.17',
+    codename: 'Agent Compass',
     released: '2026-07-15'
 });
 

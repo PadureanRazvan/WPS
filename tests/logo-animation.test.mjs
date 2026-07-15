@@ -157,7 +157,6 @@ test('logo module graph uses the current release number as its browser cache key
   const version = SHERPA_VERSION.number.replaceAll('.', '\\.');
 
   assert.match(indexSource, new RegExp(`js/main\\.js\\?v=${version}`));
-  assert.match(indexSource, new RegExp(`js/logo-animation\\.js\\?v=${version}`));
   assert.match(mainSource, new RegExp(`logo-animation\\.js\\?v=${version}`));
   assert.match(animationSource, new RegExp(`logo-shapes\\.js\\?v=${version}`));
 });

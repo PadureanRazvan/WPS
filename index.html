@@ -15,14 +15,14 @@
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
     
     <!-- CSS Files -->
-    <link rel="stylesheet" href="css/base.css?v=2026.07.15.15">
-    <link rel="stylesheet" href="css/layout.css?v=2026.07.15.15">
-    <link rel="stylesheet" href="css/components.css?v=2026.07.15.15">
+    <link rel="stylesheet" href="css/base.css?v=2026.07.15.17">
+    <link rel="stylesheet" href="css/layout.css?v=2026.07.15.17">
+    <link rel="stylesheet" href="css/components.css?v=2026.07.15.17">
     <link rel="stylesheet" href="css/planner.css">
-    <link rel="stylesheet" href="css/responsive.css?v=2026.07.15.15">
-    <link rel="stylesheet" href="css/chat.css?v=2026.07.15.15">
+    <link rel="stylesheet" href="css/responsive.css?v=2026.07.15.17">
+    <link rel="stylesheet" href="css/chat.css?v=2026.07.15.17">
     <link rel="stylesheet" href="css/schedule.css">
-    <link rel="stylesheet" href="css/info.css?v=2026.07.15.15">
+    <link rel="stylesheet" href="css/info.css?v=2026.07.15.17">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/litepicker/dist/css/litepicker.css"/>
     <style>
         /* FIX: Styles for the selection counter visibility */
@@ -43,6 +43,10 @@
     </style>
 </head>
 <body>
+    <div id="toastPoliteAnnouncer" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></div>
+    <div id="toastAssertiveAnnouncer" class="visually-hidden" role="alert" aria-live="assertive" aria-atomic="true"></div>
+    <aside id="toastViewport" class="toast-viewport" popover="manual" aria-label="Notificări" data-translate="toast-notifications"></aside>
+
     <!-- Login Screen -->
     <div id="loginScreen" class="login-screen">
         <div class="login-container">
@@ -546,17 +550,29 @@
                 </header>
                 <div class="content">
                     <!-- Agent Selector (visible in detail view) -->
-                    <div id="agentSelectorSection" style="display: none; margin-bottom: 1.5rem;">
-                        <div class="chart-container" style="padding: 1rem 1.5rem;">
-                            <div style="display: flex; align-items: center; gap: 1rem;">
-                                <div style="position: relative; flex: 1;">
-                                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;">
-                                        <input type="text" id="prodAgentSearch" data-translate="prod-search-agent" placeholder="Caută agent..." style="flex: 1; min-width: 0; padding: 0.5rem 0.75rem; background: var(--primary-dark); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary); font-size: 0.85rem;">
-                                        <button type="button" id="prodAgentSearchBtn" class="btn btn-primary" data-translate="prod-search-btn" style="padding: 0.5rem 0.9rem; font-size: 0.8rem; white-space: nowrap;">Caută</button>
-                                        <span id="prodAgentCount" style="color: var(--text-secondary); font-size: 0.8rem; white-space: nowrap;"></span>
-                                    </div>
-                                    <div id="agentChipsContainer" style="display: flex; flex-wrap: wrap; gap: 0.35rem; max-height: 120px; overflow-y: auto; padding: 0.25rem 0;"></div>
-                                </div>
+                    <div id="agentSelectorSection" class="productivity-agent-selector" hidden>
+                        <div class="productivity-agent-picker">
+                            <label id="prodAgentPickerLabel" class="productivity-agent-picker__label" for="prodAgentSearch">
+                                <span data-translate="prod-agent-picker-label">Agent pentru analiză</span>
+                                <span id="prodAgentCount" class="productivity-agent-picker__selection" role="status"></span>
+                            </label>
+                            <div class="productivity-agent-combobox">
+                                <svg class="productivity-agent-combobox__icon" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path d="M9.5 3a6.5 6.5 0 1 0 3.98 11.64L19.85 21 21 19.85l-6.36-6.37A6.5 6.5 0 0 0 9.5 3zm0 2a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9z"/>
+                                </svg>
+                                <input type="text" id="prodAgentSearch" data-translate="prod-search-agent" placeholder="Caută agent..." role="combobox" aria-autocomplete="list" aria-haspopup="listbox" aria-controls="agentChipsContainer" aria-expanded="false" aria-describedby="prodAgentPickerStatus" autocomplete="off">
+                                <button type="button" id="prodAgentSearchBtn" class="productivity-agent-picker__submit">
+                                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                                        <path d="M5 12h12.17l-4.58-4.59L14 6l7 7-7 7-1.41-1.41L17.17 14H5v-2z"/>
+                                    </svg>
+                                    <span data-translate="prod-search-btn">Caută</span>
+                                </button>
+                            </div>
+                            <p id="prodAgentPickerStatus" class="productivity-agent-picker__status" role="status" aria-live="polite"></p>
+
+                            <div id="prodAgentSuggestionsPopover" class="productivity-agent-popover" popover="auto">
+                                <div id="agentChipsContainer" class="productivity-agent-listbox" role="listbox" aria-labelledby="prodAgentPickerLabel"></div>
+                                <p id="prodAgentResultsMeta" class="productivity-agent-popover__meta" role="status" hidden></p>
                             </div>
                         </div>
                     </div>
@@ -842,15 +858,8 @@
 
     <!-- JavaScript Files -->
     <script src="https://cdn.jsdelivr.net/npm/litepicker/dist/litepicker.js"></script>
-    <script src="js/config.js" type="module"></script>
-    <script src="js/ui.js?v=2026.07.15.15" type="module"></script>
-    <script src="js/charts.js?v=2026.07.15.15" type="module"></script>
-    <script src="js/planner.js" type="module"></script>
-    <script src="js/dashboard.js" type="module"></script>
-    <script src="js/users.js" type="module"></script>
-    <script src="js/productivity.js" type="module"></script>
-    <script src="js/logo-animation.js?v=2026.07.15.15" type="module"></script>
-    <script src="js/main.js?v=2026.07.15.15" type="module"></script>
+    <!-- main.js owns the application module graph so each module has one identity. -->
+    <script src="js/main.js?v=2026.07.15.17" type="module"></script>
 
     <!-- Deactivate User Modal -->
     <div id="deactivateModal" class="edit-modal">

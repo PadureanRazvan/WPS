@@ -7,19 +7,27 @@ function escapeAgentSelectionHtml(value) {
         .replace(/'/g, '&#039;');
 }
 
-function centeredAgentSelectionMessage(message) {
-    return `<p style="color: var(--text-secondary); text-align: center; padding: 0.75rem 0; font-size: 0.85rem;">${escapeAgentSelectionHtml(message)}</p>`;
-}
-
 function getPrimaryTeamCode(primaryTeam) {
     return String(primaryTeam || '').split(' ')[0] || '';
+}
+
+function normalizeAgentSelectionSearch(value) {
+    return String(value ?? '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .trim();
 }
 
 export function filterProductivityAgentSelection(agents = [], searchTerm = '') {
     if (!searchTerm) return agents;
 
-    const lower = searchTerm.toLowerCase();
-    return agents.filter(([, info]) => String(info.fullName || '').toLowerCase().includes(lower));
+    const normalizedTerm = normalizeAgentSelectionSearch(searchTerm);
+    return agents.filter(([agentKey, info]) =>
+        normalizeAgentSelectionSearch(info.fullName).includes(normalizedTerm) ||
+        normalizeAgentSelectionSearch(agentKey).includes(normalizedTerm) ||
+        normalizeAgentSelectionSearch(info.primaryTeam).includes(normalizedTerm)
+    );
 }
 
 export function buildProductivityAgentSelectionView({
@@ -34,32 +42,37 @@ export function buildProductivityAgentSelectionView({
     const canSearch = normalizedSearchTerm.length >= minSearchLength;
     const allMatches = canSearch ? filterProductivityAgentSelection(agents, normalizedSearchTerm) : [];
     const visibleAgents = allMatches.slice(0, resultLimit);
-    let helperHtml = '';
+    let statusText = '';
+    let resultsMetaText = '';
     if (!normalizedSearchTerm) {
-        helperHtml = centeredAgentSelectionMessage(t('prod-search-to-select-agent'));
+        statusText = t('prod-search-to-select-agent');
     } else if (!canSearch) {
-        helperHtml = centeredAgentSelectionMessage(t('prod-keep-typing-agent'));
+        statusText = t('prod-keep-typing-agent');
     } else if (allMatches.length === 0) {
-        helperHtml = centeredAgentSelectionMessage(t('prod-no-results'));
+        statusText = t('prod-no-results');
     } else if (allMatches.length > resultLimit) {
-        helperHtml = centeredAgentSelectionMessage(t('prod-too-many-agent-matches').replace('{count}', resultLimit));
+        resultsMetaText = t('prod-too-many-agent-matches').replace('{count}', resultLimit);
     }
-    const html = visibleAgents.map(([normalizedName, info]) => {
+    const html = visibleAgents.map(([normalizedName, info], index) => {
         const isSelected = selectedAgents.has(normalizedName);
         const teamCode = getPrimaryTeamCode(info.primaryTeam);
-        return `<button type="button" data-agent-key="${escapeAgentSelectionHtml(normalizedName)}" style="
-            background: ${isSelected ? 'rgba(99,102,241,0.25)' : 'rgba(255,255,255,0.05)'};
-            border: 1px solid ${isSelected ? 'var(--accent)' : 'var(--border)'};
-            color: ${isSelected ? 'var(--text-primary)' : 'var(--text-secondary)'};
-            padding: 0.3rem 0.7rem; border-radius: 4px; font-size: 0.8rem; cursor: pointer;
-            transition: all 0.15s;
-        ">${escapeAgentSelectionHtml(info.fullName)} <span style="font-size: 0.7rem; opacity: 0.6;">${escapeAgentSelectionHtml(teamCode)}</span></button>`;
+        const optionId = `prod-agent-option-${index}`;
+        return `<button type="button" id="${optionId}" class="productivity-agent-option${isSelected ? ' is-selected' : ''}" data-agent-key="${escapeAgentSelectionHtml(normalizedName)}" role="option" aria-selected="${isSelected}" aria-posinset="${index + 1}" aria-setsize="${allMatches.length}" tabindex="-1">
+            <span class="productivity-agent-option__identity">
+                <strong>${escapeAgentSelectionHtml(info.fullName)}</strong>
+                <span>${escapeAgentSelectionHtml(info.primaryTeam || teamCode)}</span>
+            </span>
+            <span class="productivity-agent-option__team">${escapeAgentSelectionHtml(teamCode)}</span>
+        </button>`;
     }).join('');
 
     return {
-        html: `${html}${helperHtml}`,
+        html,
         visibleAgents,
-        countText: selectedAgents.size > 0 ? `${selectedAgents.size} ${t('prod-selected')}` : ''
+        countText: selectedAgents.size > 0 ? t('prod-agent-selected') : '',
+        statusText,
+        resultsMetaText,
+        shouldOpen: visibleAgents.length > 0
     };
 }
 

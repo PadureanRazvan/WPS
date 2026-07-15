@@ -27,6 +27,7 @@
     --success: #5bb98c;
     --warning: #e8a849;
     --error: #e85d5d;
+    --info: #61aaf2;
     --hover: rgba(232, 168, 73, 0.15);
     --today-highlight-bg: rgba(232, 168, 73, 0.08);
     --today-highlight-border: rgba(232, 168, 73, 0.35);
@@ -74,6 +75,7 @@
     --success: #22c55e;
     --warning: #f59e0b;
     --error: #ef4444;
+    --info: #3b82f6;
     --hover: rgba(59, 93, 171, 0.06);
     --today-highlight-bg: rgba(59, 93, 171, 0.06);
     --today-highlight-border: rgba(59, 93, 171, 0.25);
@@ -121,6 +123,7 @@
     --success: #68bce8;
     --warning: #f1b759;
     --error: #ef6b76;
+    --info: #9b8cff;
     --hover: rgba(94, 225, 173, 0.11);
     --today-highlight-bg: rgba(241, 183, 89, 0.08);
     --today-highlight-border: rgba(241, 183, 89, 0.34);
@@ -162,6 +165,7 @@
     --success: #16866f;
     --warning: #c88418;
     --error: #c83e53;
+    --info: #4b76c7;
     --hover: rgba(212, 79, 104, 0.065);
     --today-highlight-bg: rgba(20, 141, 141, 0.065);
     --today-highlight-border: rgba(20, 141, 141, 0.26);
@@ -206,6 +210,7 @@
     --success: #087e4f;
     --warning: #b86f10;
     --error: #c63f4f;
+    --info: #0874a6;
     --hover: rgba(8, 126, 79, 0.07);
     --today-highlight-bg: rgba(8, 120, 165, 0.07);
     --today-highlight-border: rgba(8, 120, 165, 0.28);

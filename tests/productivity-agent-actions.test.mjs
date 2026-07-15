@@ -52,6 +52,7 @@ test('agent actions submit a search, commit one agent, and render detail once', 
     },
     setAgentSearchTerm: value => calls.push(['setAgentSearchTerm', value]),
     renderAgentSearchResults: searchTerm => calls.push(['renderAgentSearchResults', searchTerm]),
+    closeAgentSearchResults: () => calls.push(['closeAgentSearchResults']),
     renderCurrentView: () => calls.push(['renderCurrentView'])
   });
 
@@ -66,6 +67,7 @@ test('agent actions submit a search, commit one agent, and render detail once', 
     ['setDetailSearchCommitted', true],
     ['setAgentSearchTerm', 'Ana Pop'],
     ['renderAgentSearchResults', 'Ana Pop'],
+    ['closeAgentSearchResults'],
     ['renderCurrentView']
   ]);
 });
@@ -105,7 +107,7 @@ test('agent actions reject unmatched searches without rendering the detail table
   ]);
 });
 
-test('agent actions use a chosen suggestion to fill the search without rendering detail', async () => {
+test('agent actions commit a chosen suggestion and load detail in one action', async () => {
   const { createProductivityAgentActions } = await loadAgentActionsModule();
   const calls = [];
 
@@ -113,9 +115,11 @@ test('agent actions use a chosen suggestion to fill the search without rendering
     getVisibleAgents: () => [
       ['ana pop', { fullName: 'Ana Pop' }]
     ],
+    setSelectedAgents: value => calls.push(['setSelectedAgents', [...value]]),
     setAgentSearchTerm: value => calls.push(['setAgentSearchTerm', value]),
     setDetailSearchCommitted: value => calls.push(['setDetailSearchCommitted', value]),
     renderAgentSearchResults: searchTerm => calls.push(['renderAgentSearchResults', searchTerm]),
+    closeAgentSearchResults: () => calls.push(['closeAgentSearchResults']),
     renderCurrentView: () => calls.push(['renderCurrentView'])
   });
 
@@ -123,9 +127,12 @@ test('agent actions use a chosen suggestion to fill the search without rendering
 
   assert.equal(chosen, true);
   assert.deepEqual(calls, [
+    ['setSelectedAgents', ['ana pop']],
+    ['setDetailSearchCommitted', true],
     ['setAgentSearchTerm', 'Ana Pop'],
-    ['setDetailSearchCommitted', false],
-    ['renderAgentSearchResults', 'Ana Pop']
+    ['renderAgentSearchResults', 'Ana Pop'],
+    ['closeAgentSearchResults'],
+    ['renderCurrentView']
   ]);
 });
 

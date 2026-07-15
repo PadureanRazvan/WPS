@@ -2,14 +2,14 @@
 import { db } from './firebase-config.js';
 import { collection, doc, setDoc, deleteDoc, getDocs, onSnapshot } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 import { getPlannerData } from './planner.js';
-import { getUsersData } from './users.js?v=2026.07.15.15';
-import { showTemporaryMessage } from './ui.js?v=2026.07.15.15';
-import { translations, getMonthKey } from './config.js';
+import { getUsersData } from './users.js?v=2026.07.15.17';
+import { showTemporaryMessage } from './ui.js?v=2026.07.15.17';
+import { translations, getMonthKey } from './config.js?v=2026.07.15.17';
 import { hasPerAgentProductivityEligibleDate, normalizeProductivityName } from './productivity-metrics.js';
 import { buildProductivityExportCsv, getProductivityDateStatus } from './productivity-upload-calendar.js';
 import { createProductivityDateCommands } from './productivity-date-commands.js';
-import { buildProductivityUploadCalendarView, buildProductivityUploadDateStatusView, buildProductivityUploadSuccessView } from './productivity-upload-calendar-view.js?v=2026.07.15.15';
-import { bindProductivityUploadCalendarActions } from './productivity-upload-calendar-actions.js?v=2026.07.15.15';
+import { buildProductivityUploadCalendarView, buildProductivityUploadDateStatusView, buildProductivityUploadSuccessView } from './productivity-upload-calendar-view.js?v=2026.07.15.17';
+import { bindProductivityUploadCalendarActions } from './productivity-upload-calendar-actions.js?v=2026.07.15.17';
 import { bindProductivityUploadArea } from './productivity-upload-area.js';
 import { processProductivityUploadFile } from './productivity-upload-flow.js';
 import { parseCallsCSV, parseTicketsXLSX } from './productivity-upload-parsing.js';
@@ -22,12 +22,13 @@ import {
     exportProductivityWorkbook
 } from './productivity-export-command.js';
 import { bindProductivityDateRangePicker } from './productivity-date-range-picker.js';
-import { bindProductivityControls } from './productivity-controls.js';
-import { bindProductivityAgentActions, createProductivityAgentActions } from './productivity-agent-actions.js';
+import { bindProductivityControls } from './productivity-controls.js?v=2026.07.15.17';
+import { bindProductivityAgentActions, createProductivityAgentActions } from './productivity-agent-actions.js?v=2026.07.15.17';
+import { bindProductivityAgentCombobox } from './productivity-agent-combobox.js?v=2026.07.15.17';
 import {
     buildProductivityAgentSelectionView,
     filterProductivityAgentSelection
-} from './productivity-agent-selection-view.js';
+} from './productivity-agent-selection-view.js?v=2026.07.15.17';
 import {
     calculateProductivityOverview,
     formatProductivityDateKey,
@@ -54,6 +55,7 @@ let detailSearchCommitted = false;
 let uploadCalendarMonth = new Date();
 let unsubscribeFromProductivity = null;
 let visibleAgentSearchResults = [];
+let agentCombobox = null;
 const productivityStore = createProductivityFirestoreStore({
     db,
     firestore: { collection, doc, setDoc, deleteDoc, getDocs, onSnapshot }
@@ -82,6 +84,7 @@ const agentActions = createProductivityAgentActions({
     getAgentSearchTerm: () => document.getElementById('prodAgentSearch')?.value || '',
     setAgentSearchTerm,
     renderAgentSearchResults,
+    closeAgentSearchResults: () => agentCombobox?.close(),
     renderCurrentView,
     showTemporaryMessage,
     getNoResultMessage: () => t('prod-no-results')
@@ -305,6 +308,8 @@ function getAgentSearchResults(searchTerm = '') {
 function renderAgentSearchResults(searchTerm = '') {
     const container = document.getElementById('agentChipsContainer');
     const countEl = document.getElementById('prodAgentCount');
+    const statusEl = document.getElementById('prodAgentPickerStatus');
+    const resultsMetaEl = document.getElementById('prodAgentResultsMeta');
     if (!container) return;
 
     const normalizedSearchTerm = String(searchTerm || '').trim();
@@ -329,6 +334,12 @@ function renderAgentSearchResults(searchTerm = '') {
         chooseAgentSuggestion: agentActions.chooseAgentSuggestion
     });
     if (countEl) countEl.textContent = view.countText;
+    if (statusEl) statusEl.textContent = view.statusText;
+    if (resultsMetaEl) {
+        resultsMetaEl.textContent = view.resultsMetaText;
+        resultsMetaEl.hidden = !view.resultsMetaText;
+    }
+    agentCombobox?.syncResults({ shouldOpen: view.shouldOpen });
 }
 
 // --- View Management ---
@@ -358,12 +369,14 @@ function setView(view) {
         detailBtn.style.color = view === 'detail' ? 'var(--accent-contrast)' : 'var(--text-secondary)';
         detailBtn.style.fontWeight = view === 'detail' ? '600' : '400';
     }
-    if (agentSection) agentSection.style.display = view === 'detail' ? 'block' : 'none';
+    if (agentSection) agentSection.hidden = view !== 'detail';
     if (teamFilter) teamFilter.style.display = view === 'detail' ? 'none' : '';
 
     if (view === 'detail') {
         detailSearchCommitted = false;
         renderAgentSearchResults(document.getElementById('prodAgentSearch')?.value || '');
+    } else {
+        agentCombobox?.close();
     }
     renderCurrentView();
 }
@@ -607,15 +620,26 @@ export async function initializeProductivity() {
         renderCurrentView
     });
 
+    agentCombobox?.cleanup();
+    agentCombobox = bindProductivityAgentCombobox({
+        input: document.getElementById('prodAgentSearch'),
+        submitButton: document.getElementById('prodAgentSearchBtn'),
+        popover: document.getElementById('prodAgentSuggestionsPopover'),
+        listbox: document.getElementById('agentChipsContainer'),
+        anchorElement: document.querySelector('.productivity-agent-combobox'),
+        getVisibleAgents: () => visibleAgentSearchResults,
+        renderSearchResults: renderAgentSearchResults,
+        chooseAgentSuggestion: agentActions.chooseAgentSuggestion,
+        submitAgentSearch: agentActions.submitAgentSearch,
+        markAgentSearchPending: () => {
+            detailSearchCommitted = false;
+        }
+    });
+
     bindProductivityControls({
         doc: document,
         getCurrentView: () => currentView,
         setView,
-        renderAgentSearchResults,
-        submitAgentSearch: agentActions.submitAgentSearch,
-        markAgentSearchPending: () => {
-            detailSearchCommitted = false;
-        },
         setCurrentTeamFilter: value => {
             currentTeamFilter = value;
         },
@@ -633,6 +657,8 @@ export async function initializeProductivity() {
 }
 
 export function cleanupProductivity() {
+    agentCombobox?.cleanup();
+    agentCombobox = null;
     if (unsubscribeFromProductivity) {
         unsubscribeFromProductivity();
         unsubscribeFromProductivity = null;
