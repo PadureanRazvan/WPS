@@ -16,8 +16,8 @@
 // =============================================================================
 
 export const SHERPA_VERSION = Object.freeze({
-    number: '2026.07.15.6',
-    codename: 'Safe Horizon',
+    number: '2026.07.15.7',
+    codename: 'Living Compass',
     released: '2026-07-15'
 });
 

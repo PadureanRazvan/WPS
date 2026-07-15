@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 
 const indexSource = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const componentsSource = await readFile(new URL('../css/components.css', import.meta.url), 'utf8');
+const baseSource = await readFile(new URL('../css/base.css', import.meta.url), 'utf8');
 const layoutSource = await readFile(new URL('../css/layout.css', import.meta.url), 'utf8');
 const responsiveSource = await readFile(new URL('../css/responsive.css', import.meta.url), 'utf8');
 const uiSource = await readFile(new URL('../js/ui.js', import.meta.url), 'utf8');
@@ -44,4 +45,21 @@ test('productivity view controls preserve theme contrast', () => {
   assert.match(indexSource, /class="segmented-control"[^>]*role="group"[^>]*aria-label="Productivity view"/);
   assert.match(productivitySource, /var\(--accent-contrast\)/);
   assert.doesNotMatch(productivitySource, /style\.color\s*=\s*view[^;]+\?\s*'#000'/);
+});
+
+test('active navigation rail progressively uses Anchor Positioning and View Transitions', () => {
+  assert.match(indexSource, /<span class="nav-active-rail" aria-hidden="true"><\/span>/);
+  assert.match(layoutSource, /\.nav-item\.active::before\s*\{/);
+  assert.match(layoutSource, /@supports \(top:\s*anchor\(top\)\) and \(height:\s*anchor-size\(height\)\)/);
+  assert.match(layoutSource, /anchor-name:\s*--sherpa-active-nav/);
+  assert.match(layoutSource, /position-anchor:\s*--sherpa-active-nav/);
+  assert.match(layoutSource, /view-transition-name:\s*sherpa-nav-rail/);
+  assert.match(baseSource, /::view-transition-group\(sherpa-nav-rail\)/);
+  assert.match(baseSource, /\.nav-active-rail\s*\{[^}]*view-transition-name:\s*none\s*!important/s);
+});
+
+test('collapsed navigation tooltips work for keyboard and modern anchor layouts', () => {
+  assert.match(layoutSource, /\.sidebar\.collapsed \.nav-item:focus-visible::after/);
+  assert.match(layoutSource, /@supports \(position-area:\s*right center\)/);
+  assert.match(layoutSource, /position-area:\s*right center/);
 });

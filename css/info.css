@@ -64,15 +64,11 @@
     position: absolute;
     inset: -12%;
     z-index: 0;
-    opacity: 0.95;
+    opacity: var(--liquid-opacity);
     pointer-events: none;
     transform: translate3d(var(--liquid-px, 0px), var(--liquid-py, 0px), 0);
     animation: liquid-hue 16s ease-in-out infinite alternate;
     will-change: transform, filter;
-}
-
-[data-theme="light"] .version-liquid {
-    opacity: 0.6;                       /* ink pools, not paint spills */
 }
 
 .version-goo {
@@ -98,12 +94,8 @@
     width: 40%;
     aspect-ratio: 1;
     border-radius: 50%;
-    mix-blend-mode: screen;
+    mix-blend-mode: var(--liquid-blend-mode);
     will-change: transform, border-radius;
-}
-
-[data-theme="light"] .version-blob {
-    mix-blend-mode: multiply;
 }
 
 .version-blob.b1 {
@@ -212,11 +204,7 @@
     transform-style: preserve-3d;
     transform: rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg));
     will-change: transform;
-    filter: drop-shadow(0 18px 50px rgba(0, 0, 0, 0.4));
-}
-
-[data-theme="light"] .version-hero {
-    filter: drop-shadow(0 14px 36px rgba(31, 41, 55, 0.22));
+    filter: var(--liquid-hero-shadow);
 }
 
 .version-wordmark {

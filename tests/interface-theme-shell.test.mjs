@@ -7,6 +7,8 @@ const baseSource = await readFile(new URL('../css/base.css', import.meta.url), '
 const componentsSource = await readFile(new URL('../css/components.css', import.meta.url), 'utf8');
 const layoutSource = await readFile(new URL('../css/layout.css', import.meta.url), 'utf8');
 const responsiveSource = await readFile(new URL('../css/responsive.css', import.meta.url), 'utf8');
+const chatSource = await readFile(new URL('../css/chat.css', import.meta.url), 'utf8');
+const infoSource = await readFile(new URL('../css/info.css', import.meta.url), 'utf8');
 const uiSource = await readFile(new URL('../js/ui.js', import.meta.url), 'utf8');
 const chartSource = await readFile(new URL('../js/charts.js', import.meta.url), 'utf8');
 
@@ -19,6 +21,9 @@ test('dashboard exposes system, FSP, and the complete accessible theme selector'
   assert.match(indexSource, /id="themeMenu"[^>]*popover="auto"/);
   assert.match(componentsSource, /\.theme-swatch--aurora/);
   assert.match(componentsSource, /\.theme-swatch--fsp/);
+  assert.match(indexSource, /class="sidebar-utilities"[^>]*aria-label="Interface preferences"/);
+  assert.match(indexSource, /<aside class="sidebar"[\s\S]*?id="themeToggle"[\s\S]*?<main class="main-content">/);
+  assert.doesNotMatch(indexSource, /<section id="dashboard"[\s\S]*?id="themeToggle"/);
 });
 
 test('all palettes define distinct interface tokens', () => {
@@ -28,6 +33,10 @@ test('all palettes define distinct interface tokens', () => {
   assert.match(baseSource, /\[data-theme="fsp"\]/);
   assert.match(baseSource, /--theme-secondary:/);
   assert.match(baseSource, /--surface-glass:/);
+  assert.match(baseSource, /accent-color:\s*var\(--accent\)/);
+  assert.match(baseSource, /caret-color:\s*var\(--accent\)/);
+  assert.doesNotMatch(componentsSource, /\[data-theme="light"\]\s+select option/);
+  assert.match(componentsSource, /select option\s*\{[^}]*background:\s*var\(--primary-light\)[^}]*color:\s*var\(--text-primary\)/s);
 });
 
 test('header menus use native popovers with anchored entry motion', () => {
@@ -36,6 +45,7 @@ test('header menus use native popovers with anchored entry motion', () => {
   assert.match(componentsSource, /@supports selector\(:popover-open\)/);
   assert.match(componentsSource, /position-anchor:\s*--sherpa-theme-toggle/);
   assert.match(componentsSource, /@starting-style/);
+  assert.match(componentsSource, /\.sidebar-utilities \.theme-menu\[popover\]\s*\{[^}]*bottom:\s*anchor\(bottom\)/s);
 });
 
 test('dashboard reflows by content width and mobile controls preserve usable targets', () => {
@@ -52,8 +62,34 @@ test('motion is progressively enhanced and has a reduced-motion path', () => {
   assert.match(baseSource, /view-transition-name: sherpa-section/);
 });
 
+test('glass surfaces honor the operating system reduced-transparency preference', () => {
+  assert.match(baseSource, /@media \(prefers-reduced-transparency:\s*reduce\)/);
+  assert.match(baseSource, /--surface-glass:\s*var\(--surface-elevated\)/);
+  assert.match(baseSource, /--header-surface:\s*var\(--primary-light\)/);
+  assert.match(baseSource, /\.theme-menu,[\s\S]*?backdrop-filter:\s*none\s*!important/);
+});
+
 test('charts read live theme tokens and replace old instances', () => {
   assert.match(chartSource, /getThemeChartColors/);
   assert.match(chartSource, /getPropertyValue/);
   assert.match(chartSource, /hoursChartInstance\?\.destroy\(\)/);
+});
+
+test('Chat uses semantic theme surfaces instead of Cloud-only overrides', () => {
+  assert.doesNotMatch(chatSource, /\[data-theme=/);
+  assert.match(chatSource, /background:\s*var\(--primary-light\)/);
+  assert.match(chatSource, /background:\s*var\(--surface-elevated\)/);
+  assert.match(chatSource, /color:\s*var\(--accent-contrast\)/);
+  assert.match(chatSource, /box-shadow:\s*var\(--overlay-shadow\)/);
+  assert.match(chatSource, /rgba\(var\(--theme-accent-rgb\),\s*0\.12\)/);
+});
+
+test('liquid Info scene is driven by per-palette scene tokens', () => {
+  assert.ok((baseSource.match(/--overlay-shadow:/g) || []).length >= 5);
+  assert.ok((baseSource.match(/--liquid-opacity:/g) || []).length >= 4);
+  assert.ok((baseSource.match(/--liquid-blend-mode:/g) || []).length >= 4);
+  assert.match(infoSource, /opacity:\s*var\(--liquid-opacity\)/);
+  assert.match(infoSource, /mix-blend-mode:\s*var\(--liquid-blend-mode\)/);
+  assert.match(infoSource, /filter:\s*var\(--liquid-hero-shadow\)/);
+  assert.doesNotMatch(infoSource, /\[data-theme=/);
 });

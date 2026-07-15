@@ -15,14 +15,14 @@
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
     
     <!-- CSS Files -->
-    <link rel="stylesheet" href="css/base.css?v=2026.07.15.6">
-    <link rel="stylesheet" href="css/layout.css?v=2026.07.15.6">
-    <link rel="stylesheet" href="css/components.css?v=2026.07.15.6">
+    <link rel="stylesheet" href="css/base.css?v=2026.07.15.7">
+    <link rel="stylesheet" href="css/layout.css?v=2026.07.15.7">
+    <link rel="stylesheet" href="css/components.css?v=2026.07.15.7">
     <link rel="stylesheet" href="css/planner.css">
-    <link rel="stylesheet" href="css/responsive.css?v=2026.07.15.6">
-    <link rel="stylesheet" href="css/chat.css?v=2026.07.15.6">
+    <link rel="stylesheet" href="css/responsive.css?v=2026.07.15.7">
+    <link rel="stylesheet" href="css/chat.css?v=2026.07.15.7">
     <link rel="stylesheet" href="css/schedule.css">
-    <link rel="stylesheet" href="css/info.css?v=2026.07.15.6">
+    <link rel="stylesheet" href="css/info.css?v=2026.07.15.7">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/litepicker/dist/css/litepicker.css"/>
     <style>
         /* FIX: Styles for the selection counter visibility */
@@ -134,7 +134,68 @@
                     </svg>
                     <span id="navInfoLabel">Info</span>
                 </button>
+                <span class="nav-active-rail" aria-hidden="true"></span>
             </nav>
+            <div class="sidebar-utilities" aria-label="Interface preferences">
+                <div class="header-controls">
+                    <div class="theme-selector">
+                        <button type="button" class="theme-toggle" id="themeToggle"
+                                aria-haspopup="true" aria-expanded="false" aria-controls="themeMenu"
+                                popovertarget="themeMenu"
+                                aria-label="Choose theme" title="Choose theme">
+                            <svg class="theme-icon" id="themeIcon" viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M12 17.5c-3.04 0-5.5-2.46-5.5-5.5S8.96 6.5 12 6.5s5.5 2.46 5.5 5.5-2.46 5.5-5.5 5.5zM12 9c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3zm0-7c-.55 0-1 .45-1 1v1c0 .55.45 1 1 1s1-.45 1-1V3c0-.55-.45-1-1-1zm0 16c-.55 0-1 .45-1 1v1c0 .55.45 1 1 1s1-.45 1-1v-1c0-.55-.45-1-1-1zM6 12c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1s.45 1 1 1h1c.55 0 1-.45 1-1zm14 0c0-.55-.45-1-1-1h-1c-.55 0-1 .45-1 1s.45 1 1 1h1c.55 0 1-.45 1-1zm-2.64-6.36c.39-.39.39-1.02 0-1.41l-.71-.71c-.39-.39-1.02-.39-1.41 0-.39.39-.39 1.02 0 1.41l.71.71c.39.39 1.02.39 1.41 0zM6.05 17.66c.39-.39.39-1.02 0-1.41l-.71-.71c-.39-.39-1.02-.39-1.41 0-.39.39-.39 1.02 0 1.41l.71.71c.39.39 1.02.39 1.41 0zm0-11.32c-.39-.39-1.02-.39-1.41 0l-.71.71c-.39.39-.39 1.02 0 1.41.39.39 1.02.39 1.41 0l.71-.71c.39-.39.39-1.02 0-1.41zm11.32 11.32c-.39-.39-1.02-.39-1.41 0l-.71.71c-.39.39-.39 1.02 0 1.41.39.39 1.02.39 1.41 0l.71-.71c.39-.39.39-1.02 0-1.41z"/>
+                            </svg>
+                        </button>
+                        <div class="theme-menu" id="themeMenu" role="menu" aria-label="Theme" popover="auto">
+                            <button type="button" class="theme-option" role="menuitemradio" aria-checked="false" data-theme-choice="system">
+                                <span class="theme-swatch theme-swatch--system" aria-hidden="true"></span><span>System</span>
+                            </button>
+                            <button type="button" class="theme-option" role="menuitemradio" aria-checked="false" data-theme-choice="dark">
+                                <span class="theme-swatch theme-swatch--dark" aria-hidden="true"></span><span>Midnight</span>
+                            </button>
+                            <button type="button" class="theme-option" role="menuitemradio" aria-checked="false" data-theme-choice="aurora">
+                                <span class="theme-swatch theme-swatch--aurora" aria-hidden="true"></span><span>Aurora</span>
+                            </button>
+                            <button type="button" class="theme-option" role="menuitemradio" aria-checked="false" data-theme-choice="light">
+                                <span class="theme-swatch theme-swatch--light" aria-hidden="true"></span><span>Cloud</span>
+                            </button>
+                            <button type="button" class="theme-option" role="menuitemradio" aria-checked="false" data-theme-choice="coral">
+                                <span class="theme-swatch theme-swatch--coral" aria-hidden="true"></span><span>Coral</span>
+                            </button>
+                            <button type="button" class="theme-option" role="menuitemradio" aria-checked="false" data-theme-choice="fsp">
+                                <span class="theme-swatch theme-swatch--fsp" aria-hidden="true"></span><span>FSP Global</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="language-selector">
+                        <button type="button" class="language-dropdown" id="languageToggle"
+                                aria-haspopup="menu" aria-expanded="false" aria-controls="languageMenu"
+                                popovertarget="languageMenu" aria-label="Language: Română" title="Language: Română">
+                            <span class="flag-icon" id="currentFlag">🇷🇴</span>
+                            <span class="language-text" id="currentLanguage">Română</span>
+                            <svg class="dropdown-arrow" viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M7 10l5 5 5-5z"/>
+                            </svg>
+                        </button>
+                        <div class="language-menu" id="languageMenu" role="menu" aria-label="Language" popover="auto">
+                            <button type="button" class="language-option active" role="menuitemradio" aria-checked="true" data-lang="ro">
+                                <span class="flag-icon">🇷🇴</span>
+                                <span class="language-option-text">Română</span>
+                            </button>
+                            <button type="button" class="language-option" role="menuitemradio" aria-checked="false" data-lang="en">
+                                <span class="flag-icon">🇺🇸</span>
+                                <span class="language-option-text">English</span>
+                            </button>
+                            <button type="button" class="language-option" role="menuitemradio" aria-checked="false" data-lang="it">
+                                <span class="flag-icon">🇮🇹</span>
+                                <span class="language-option-text">Italiano</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
             <div class="sidebar-user-info" id="sidebarUserInfo">
                 <img id="userAvatar" class="user-avatar" src="" alt="User">
                 <div class="user-details">
@@ -155,71 +216,6 @@
             <section id="dashboard" class="section active">
                 <header class="header">
                     <h2 class="header-title" id="dashboardTitle" data-translate="dashboard-title">Dashboard</h2>
-                    <div style="display: flex; align-items: center; gap: 1rem;">
-                        <!-- Theme and Language Controls -->
-                        <div class="header-controls">
-                            <!-- Theme Selector -->
-                            <div class="theme-selector">
-                                <button type="button" class="theme-toggle" id="themeToggle"
-                                        aria-haspopup="true" aria-expanded="false" aria-controls="themeMenu"
-                                        popovertarget="themeMenu"
-                                        aria-label="Choose theme" title="Choose theme">
-                                <svg class="theme-icon" id="themeIcon" viewBox="0 0 24 24" aria-hidden="true">
-                                    <path d="M12 17.5c-3.04 0-5.5-2.46-5.5-5.5S8.96 6.5 12 6.5s5.5 2.46 5.5 5.5-2.46 5.5-5.5 5.5zM12 9c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3zm0-7c-.55 0-1 .45-1 1v1c0 .55.45 1 1 1s1-.45 1-1V3c0-.55-.45-1-1-1zm0 16c-.55 0-1 .45-1 1v1c0 .55.45 1 1 1s1-.45 1-1v-1c0-.55-.45-1-1-1zM6 12c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1s.45 1 1 1h1c.55 0 1-.45 1-1zm14 0c0-.55-.45-1-1-1h-1c-.55 0-1 .45-1 1s.45 1 1 1h1c.55 0 1-.45 1-1zm-2.64-6.36c.39-.39.39-1.02 0-1.41l-.71-.71c-.39-.39-1.02-.39-1.41 0-.39.39-.39 1.02 0 1.41l.71.71c.39.39 1.02.39 1.41 0zM6.05 17.66c.39-.39.39-1.02 0-1.41l-.71-.71c-.39-.39-1.02-.39-1.41 0-.39.39-.39 1.02 0 1.41l.71.71c.39.39 1.02.39 1.41 0zm0-11.32c-.39-.39-1.02-.39-1.41 0l-.71.71c-.39.39-.39 1.02 0 1.41.39.39 1.02.39 1.41 0l.71-.71c.39-.39.39-1.02 0-1.41zm11.32 11.32c-.39-.39-1.02-.39-1.41 0l-.71.71c-.39.39-.39 1.02 0 1.41.39.39 1.02.39 1.41 0l.71-.71c.39-.39.39-1.02 0-1.41z"/>
-                                </svg>
-                                </button>
-                                <div class="theme-menu" id="themeMenu" role="menu" aria-label="Theme" popover="auto">
-                                    <button type="button" class="theme-option" role="menuitemradio" aria-checked="false" data-theme-choice="system">
-                                        <span class="theme-swatch theme-swatch--system" aria-hidden="true"></span><span>System</span>
-                                    </button>
-                                    <button type="button" class="theme-option" role="menuitemradio" aria-checked="false" data-theme-choice="dark">
-                                        <span class="theme-swatch theme-swatch--dark" aria-hidden="true"></span><span>Midnight</span>
-                                    </button>
-                                    <button type="button" class="theme-option" role="menuitemradio" aria-checked="false" data-theme-choice="aurora">
-                                        <span class="theme-swatch theme-swatch--aurora" aria-hidden="true"></span><span>Aurora</span>
-                                    </button>
-                                    <button type="button" class="theme-option" role="menuitemradio" aria-checked="false" data-theme-choice="light">
-                                        <span class="theme-swatch theme-swatch--light" aria-hidden="true"></span><span>Cloud</span>
-                                    </button>
-                                    <button type="button" class="theme-option" role="menuitemradio" aria-checked="false" data-theme-choice="coral">
-                                        <span class="theme-swatch theme-swatch--coral" aria-hidden="true"></span><span>Coral</span>
-                                    </button>
-                                    <button type="button" class="theme-option" role="menuitemradio" aria-checked="false" data-theme-choice="fsp">
-                                        <span class="theme-swatch theme-swatch--fsp" aria-hidden="true"></span><span>FSP Global</span>
-                                    </button>
-                                </div>
-                            </div>
-
-                            <!-- Language Selector -->
-                            <div class="language-selector">
-                                <button type="button" class="language-dropdown" id="languageToggle"
-                                        aria-haspopup="menu" aria-expanded="false" aria-controls="languageMenu"
-                                        popovertarget="languageMenu" aria-label="Language: Română" title="Language: Română">
-                                    <span class="flag-icon" id="currentFlag">🇷🇴</span>
-                                    <span class="language-text" id="currentLanguage">Română</span>
-                                    <svg class="dropdown-arrow" viewBox="0 0 24 24" aria-hidden="true">
-                                        <path d="M7 10l5 5 5-5z"/>
-                                    </svg>
-                                </button>
-                                <div class="language-menu" id="languageMenu" role="menu" aria-label="Language" popover="auto">
-                                    <button type="button" class="language-option active" role="menuitemradio" aria-checked="true" data-lang="ro">
-                                        <span class="flag-icon">🇷🇴</span>
-                                        <span class="language-option-text">Română</span>
-                                    </button>
-                                    <button type="button" class="language-option" role="menuitemradio" aria-checked="false" data-lang="en">
-                                        <span class="flag-icon">🇺🇸</span>
-                                        <span class="language-option-text">English</span>
-                                    </button>
-                                    <button type="button" class="language-option" role="menuitemradio" aria-checked="false" data-lang="it">
-                                        <span class="flag-icon">🇮🇹</span>
-                                        <span class="language-option-text">Italiano</span>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Header Actions removed -->
-                    </div>
                 </header>
                 <div class="content">
                     <!-- Stats Cards -->
@@ -825,14 +821,14 @@
     <!-- JavaScript Files -->
     <script src="https://cdn.jsdelivr.net/npm/litepicker/dist/litepicker.js"></script>
     <script src="js/config.js" type="module"></script>
-    <script src="js/ui.js?v=2026.07.15.6" type="module"></script>
-    <script src="js/charts.js?v=2026.07.15.6" type="module"></script>
+    <script src="js/ui.js?v=2026.07.15.7" type="module"></script>
+    <script src="js/charts.js?v=2026.07.15.7" type="module"></script>
     <script src="js/planner.js" type="module"></script>
     <script src="js/dashboard.js" type="module"></script>
     <script src="js/users.js" type="module"></script>
     <script src="js/productivity.js" type="module"></script>
-    <script src="js/logo-animation.js?v=2026.07.15.6" type="module"></script>
-    <script src="js/main.js?v=2026.07.15.6" type="module"></script>
+    <script src="js/logo-animation.js?v=2026.07.15.7" type="module"></script>
+    <script src="js/main.js?v=2026.07.15.7" type="module"></script>
 
     <!-- Deactivate User Modal -->
     <div id="deactivateModal" class="edit-modal">

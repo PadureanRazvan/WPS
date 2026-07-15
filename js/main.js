@@ -8,9 +8,9 @@ import { initializeSchedule, cleanupSchedule } from './schedule.js';
 import { initializeReports, cleanupReports } from './reports.js';
 import { initializeInfoVersion } from './info-version.js';
 import { initializeInfoInteractive } from './info-interactive.js';
-import { initializeCharts, initializeProductivityChart } from './charts.js?v=2026.07.15.6';
+import { initializeCharts, initializeProductivityChart } from './charts.js?v=2026.07.15.7';
 import { updateAverageProductivityCard } from './dashboard.js';
-import { setTheme, updateLanguageUI, showSection, openEditModal, selectEditType, saveModalChanges, closeEditModal, toggleSidebar } from './ui.js?v=2026.07.15.6';
+import { setTheme, updateLanguageUI, showSection, openEditModal, selectEditType, saveModalChanges, closeEditModal, toggleSidebar } from './ui.js?v=2026.07.15.7';
 import { bindPlannerControlInteractions } from './planner-interaction-wiring.js';
 import {
     bindAppLifecycleEvents,
@@ -18,10 +18,10 @@ import {
     bindAppShellInteractions,
     showAuthenticatedShell,
     showLoginScreen
-} from './app-shell-wiring.js?v=2026.07.15.6';
-import { initLogoAnimation } from './logo-animation.js?v=2026.07.15.6';
+} from './app-shell-wiring.js?v=2026.07.15.7';
+import { initLogoAnimation } from './logo-animation.js?v=2026.07.15.7';
 import { initializeChat, cleanupChat } from './chat.js';
-import { loginWithGoogle, logout, onAuthChange } from './auth.js?v=2026.07.15.6';
+import { loginWithGoogle, logout, onAuthChange } from './auth.js?v=2026.07.15.7';
 import { initializeLogs, setLogUser, logActivity } from './logs.js';
 import { applyDailyGreeting } from './daily-greeting.js';
 

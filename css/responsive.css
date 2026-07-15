@@ -104,6 +104,27 @@
         display: none;
     }
 
+    .sidebar-utilities {
+        padding: 8px 4px;
+    }
+
+    .sidebar-utilities .header-controls {
+        width: auto;
+        flex-direction: column;
+    }
+
+    .sidebar-utilities .language-dropdown {
+        width: 44px;
+        min-width: 44px;
+        padding: 0;
+        justify-content: center;
+    }
+
+    .sidebar-utilities .language-text,
+    .sidebar-utilities .dropdown-arrow {
+        display: none;
+    }
+
     .content {
         padding: 1.5rem;
     }

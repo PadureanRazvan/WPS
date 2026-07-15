@@ -163,6 +163,48 @@
 }
 
 /* ===== SIDEBAR USER INFO ===== */
+.sidebar-utilities {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 12px;
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+}
+
+.sidebar-utilities .header-controls {
+    width: 100%;
+    gap: 8px;
+    margin: 0;
+}
+
+.sidebar-utilities .language-dropdown {
+    min-width: 0;
+    flex: 1;
+    padding: 0.5rem 0.65rem;
+}
+
+.sidebar.collapsed .sidebar-utilities {
+    padding: 8px;
+}
+
+.sidebar.collapsed .sidebar-utilities .header-controls {
+    width: auto;
+    flex-direction: column;
+}
+
+.sidebar.collapsed .sidebar-utilities .language-dropdown {
+    width: 44px;
+    min-width: 44px;
+    padding: 0;
+    justify-content: center;
+}
+
+.sidebar.collapsed .sidebar-utilities .language-text,
+.sidebar.collapsed .sidebar-utilities .dropdown-arrow {
+    display: none;
+}
+
 .sidebar-user-info {
     display: flex;
     align-items: center;
@@ -723,11 +765,6 @@ input, select, textarea {
 }
 
 select option {
-    background: var(--primary-dark);
-    color: #ffffff;
-}
-
-[data-theme="light"] select option {
     background: var(--primary-light);
     color: var(--text-primary);
 }
@@ -2235,6 +2272,14 @@ input:focus, select:focus, textarea:focus {
     }
 }
 
+.sidebar-utilities .theme-menu,
+.sidebar-utilities .language-menu {
+    top: auto;
+    right: auto;
+    bottom: 0;
+    left: calc(100% + 8px);
+}
+
 .language-selector {
     position: relative;
 }
@@ -2409,6 +2454,21 @@ input:focus, select:focus, textarea:focus {
         top: calc(anchor(bottom) + 8px);
         right: anchor(right);
     }
+
+
+    .sidebar-utilities .theme-menu[popover] {
+        top: auto;
+        bottom: anchor(bottom);
+        right: auto;
+        left: calc(anchor(right) + 8px);
+    }
+
+    .sidebar-utilities .language-menu[popover] {
+        top: auto;
+        bottom: anchor(bottom);
+        right: auto;
+        left: calc(anchor(right) + 8px);
+    }
 }
 
 @media (max-width: 560px) {
@@ -2487,11 +2547,6 @@ input:focus, select:focus, textarea:focus {
 }
 
 #usersTable .inline-select option {
-    background: var(--primary-dark);
-    color: #ffffff;
-}
-
-[data-theme="light"] select option {
     background: var(--primary-light);
     color: var(--text-primary);
 }
