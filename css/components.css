@@ -957,9 +957,25 @@ input:focus, select:focus, textarea:focus {
     min-height: 40px;
 }
 
+.upload-calendar-layout {
+    container: upload-layout / inline-size;
+    display: flex;
+    align-items: flex-start;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.upload-calendar-intro {
+    flex: 0 0 260px;
+    min-width: 220px;
+}
+
 .upload-calendar-panel {
-    flex: 1;
-    min-width: 320px;
+    container: upload-calendar / inline-size;
+    flex: 1 1 420px;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
     border: 1px solid var(--border);
     border-radius: 8px;
     background: rgba(10, 10, 10, 0.22);
@@ -974,17 +990,23 @@ input:focus, select:focus, textarea:focus {
     margin-bottom: 0.9rem;
 }
 
+.upload-calendar-toolbar > div {
+    min-width: 0;
+}
+
 .upload-calendar-title {
     color: var(--text-secondary);
     font-size: 0.75rem;
     font-weight: 700;
     text-transform: uppercase;
+    overflow-wrap: anywhere;
 }
 
 .upload-calendar-month {
     color: var(--text-primary);
     font-size: 1.05rem;
     font-weight: 700;
+    overflow-wrap: anywhere;
 }
 
 .upload-calendar-nav {
@@ -995,6 +1017,8 @@ input:focus, select:focus, textarea:focus {
     background: var(--primary-dark);
     color: var(--text-secondary);
     cursor: pointer;
+    display: grid;
+    place-items: center;
 }
 
 .upload-calendar-nav:hover {
@@ -1013,7 +1037,7 @@ input:focus, select:focus, textarea:focus {
     margin-bottom: 0.35rem;
 }
 
-.upload-calendar-weekdays span {
+.upload-calendar-weekday {
     color: var(--text-secondary);
     font-size: 0.72rem;
     font-weight: 700;
@@ -1136,6 +1160,129 @@ input:focus, select:focus, textarea:focus {
 .upload-calendar-actions .btn {
     padding: 0.55rem 0.75rem;
     font-size: 0.78rem;
+}
+
+@container upload-layout (max-width: 560px) {
+    .upload-calendar-intro,
+    .upload-calendar-panel {
+        flex-basis: 100%;
+        min-width: 0;
+    }
+}
+
+@container upload-layout (max-width: 360px) {
+    .upload-calendar-panel {
+        padding: 0.75rem;
+    }
+}
+
+@container upload-calendar (max-width: 420px) {
+    .upload-calendar-toolbar {
+        grid-template-columns: 40px minmax(0, 1fr) 40px;
+        gap: 0.5rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .upload-calendar-title {
+        font-size: 0.68rem;
+    }
+
+    .upload-calendar-month {
+        font-size: 0.95rem;
+    }
+
+    .upload-calendar-nav {
+        width: 40px;
+        height: 40px;
+    }
+
+    .upload-calendar-weekdays,
+    .upload-calendar-grid {
+        gap: 0.2rem;
+    }
+
+    .upload-calendar-weekday {
+        font-size: 0.62rem;
+    }
+
+    .upload-calendar-day {
+        min-height: 56px;
+        align-items: center;
+        padding: 0.28rem 0.12rem;
+    }
+
+    .upload-calendar-day-number {
+        font-size: 0.8rem;
+    }
+
+    .upload-calendar-markers {
+        width: 100%;
+        min-height: 16px;
+        align-items: center;
+        justify-content: center;
+        flex-wrap: nowrap;
+        gap: 0.12rem;
+    }
+
+    .upload-calendar-marker {
+        width: 16px;
+        height: 16px;
+        flex: 0 0 16px;
+        display: grid;
+        place-items: center;
+        padding: 0;
+        font-size: 0;
+        line-height: 1;
+    }
+
+    .upload-calendar-marker.marker-xlsx::before,
+    .upload-calendar-marker.marker-csv::before {
+        font-size: 0.56rem;
+        line-height: 1;
+    }
+
+    .upload-calendar-marker.marker-xlsx::before {
+        content: "X";
+    }
+
+    .upload-calendar-marker.marker-csv::before {
+        content: "C";
+    }
+
+    .upload-calendar-detail {
+        flex-direction: column;
+        gap: 0.75rem;
+        margin-top: 0.75rem;
+        padding-top: 0.75rem;
+    }
+
+    .upload-calendar-actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        width: 100%;
+        margin-top: 0;
+    }
+
+    .upload-calendar-actions .btn {
+        width: 100%;
+        min-width: 0;
+        min-height: 40px;
+        padding: 0.5rem 0.35rem;
+        font-size: 0.72rem;
+        white-space: normal;
+    }
+}
+
+@container upload-calendar (max-width: 320px) {
+    .upload-calendar-weekdays,
+    .upload-calendar-grid {
+        gap: 0.15rem;
+    }
+
+    .upload-calendar-day {
+        min-height: 52px;
+        border-radius: 5px;
+    }
 }
 
 @keyframes spin {

@@ -16,8 +16,8 @@
 // =============================================================================
 
 export const SHERPA_VERSION = Object.freeze({
-    number: '2026.07.15.11',
-    codename: 'Pocket Roster',
+    number: '2026.07.15.13',
+    codename: 'Calendar Flow',
     released: '2026-07-15'
 });
 

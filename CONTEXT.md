@@ -58,7 +58,7 @@
 
 **Productivity View** — the rules for turning calculated Productivity rows into overview and per-agent detail HTML, including summary cards, team tooltips, productivity colors, and repeated-date display.
 
-**Productivity Upload Calendar View** — the rules for turning per-date Productivity Data into upload-calendar HTML, upload status messages, locale labels, file markers, and enabled or disabled upload-calendar actions.
+**Productivity Upload Calendar View** — the rules for turning per-date Productivity Data into accessible, container-responsive upload-calendar HTML, locale-aware weekday and date labels, compact file markers, upload status messages, and enabled or disabled upload-calendar actions.
 
 **Productivity Upload Calendar Actions** — the rules for binding upload-calendar date selection, month navigation, file upload triggers, export, and delete actions to the current Productivity upload date.
 

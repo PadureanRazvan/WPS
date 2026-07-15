@@ -16,7 +16,8 @@ const UPLOAD_LABELS = {
         selected: 'Data selectata',
         previous: 'Luna anterioara',
         next: 'Luna urmatoare',
-        weekdays: ['lun.', 'mar.', 'mie.', 'joi', 'vin.', 'sam.', 'dum.']
+        weekdays: ['lun.', 'mar.', 'mie.', 'joi', 'vin.', 'sam.', 'dum.'],
+        weekdayNames: ['luni', 'marți', 'miercuri', 'joi', 'vineri', 'sâmbătă', 'duminică']
     },
     en: {
         title: 'Upload calendar',
@@ -32,7 +33,8 @@ const UPLOAD_LABELS = {
         selected: 'Selected date',
         previous: 'Previous month',
         next: 'Next month',
-        weekdays: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+        weekdays: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+        weekdayNames: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
     },
     it: {
         title: 'Calendario caricamenti',
@@ -48,7 +50,8 @@ const UPLOAD_LABELS = {
         selected: 'Data selezionata',
         previous: 'Mese precedente',
         next: 'Mese successivo',
-        weekdays: ['lun', 'mar', 'mer', 'gio', 'ven', 'sab', 'dom']
+        weekdays: ['lun', 'mar', 'mer', 'gio', 'ven', 'sab', 'dom'],
+        weekdayNames: ['lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato', 'domenica']
     }
 };
 
@@ -96,8 +99,8 @@ function getStatusLabel(status, lang) {
 
 function getStatusMarkers(status) {
     return `
-        ${status.hasTickets ? '<span class="upload-calendar-marker marker-xlsx">XLSX</span>' : ''}
-        ${status.hasCalls ? '<span class="upload-calendar-marker marker-csv">CSV</span>' : ''}
+        ${status.hasTickets ? '<span class="upload-calendar-marker marker-xlsx" aria-hidden="true">XLSX</span>' : ''}
+        ${status.hasCalls ? '<span class="upload-calendar-marker marker-csv" aria-hidden="true">CSV</span>' : ''}
     `;
 }
 
@@ -173,8 +176,13 @@ export function buildProductivityUploadCalendarView({
     const locale = getProductivityUploadCalendarLocale(lang);
     const monthLabel = monthDate.toLocaleDateString(locale, { month: 'long', year: 'numeric' });
     const weekdays = getProductivityUploadText('weekdays', lang);
+    const weekdayNames = getProductivityUploadText('weekdayNames', lang);
     const calendarDays = getProductivityUploadCalendarDays(monthDate);
     const dayKeys = calendarDays.map(date => formatProductivityDateKey(date));
+    const monthKey = `${monthDate.getFullYear()}-${String(monthDate.getMonth() + 1).padStart(2, '0')}`;
+    const focusDateKey = dayKeys.includes(uploadDate)
+        ? uploadDate
+        : dayKeys.find(dateKey => dateKey.startsWith(`${monthKey}-`)) || dayKeys[0];
 
     const dayButtons = calendarDays.map((date, index) => {
         const dateKey = dayKeys[index];
@@ -191,9 +199,10 @@ export function buildProductivityUploadCalendarView({
             status.hasCalls ? 'has-calls' : '',
             status.isComplete ? 'complete' : ''
         ].filter(Boolean).join(' ');
+        const accessibleLabel = `${formatDateDisplay(dateKey)}: ${getStatusLabel(status, lang)}`;
 
         return `
-            <button type="button" class="${classes}" data-date="${dateKey}" title="${escapeProductivityUploadHtml(formatDateDisplay(dateKey))}: ${escapeProductivityUploadHtml(getStatusLabel(status, lang))}">
+            <button type="button" class="${classes}" data-date="${dateKey}" tabindex="${dateKey === focusDateKey ? '0' : '-1'}" aria-label="${escapeProductivityUploadHtml(accessibleLabel)}" aria-pressed="${isSelected}" ${isToday ? 'aria-current="date"' : ''} title="${escapeProductivityUploadHtml(accessibleLabel)}">
                 <span class="upload-calendar-day-number">${date.getDate()}</span>
                 <span class="upload-calendar-markers">${getStatusMarkers(status)}</span>
             </button>
@@ -202,17 +211,17 @@ export function buildProductivityUploadCalendarView({
 
     const html = `
         <div class="upload-calendar-toolbar">
-            <button type="button" class="upload-calendar-nav" id="uploadCalendarPrev" title="${escapeProductivityUploadHtml(getProductivityUploadText('previous', lang))}">&#9664;</button>
+            <button type="button" class="upload-calendar-nav" id="uploadCalendarPrev" aria-label="${escapeProductivityUploadHtml(getProductivityUploadText('previous', lang))}" title="${escapeProductivityUploadHtml(getProductivityUploadText('previous', lang))}">&#9664;</button>
             <div>
                 <div class="upload-calendar-title">${escapeProductivityUploadHtml(getProductivityUploadText('title', lang))}</div>
-                <div class="upload-calendar-month">${escapeProductivityUploadHtml(monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1))}</div>
+                <div class="upload-calendar-month" aria-live="polite" aria-atomic="true">${escapeProductivityUploadHtml(monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1))}</div>
             </div>
-            <button type="button" class="upload-calendar-nav" id="uploadCalendarNext" title="${escapeProductivityUploadHtml(getProductivityUploadText('next', lang))}">&#9654;</button>
+            <button type="button" class="upload-calendar-nav" id="uploadCalendarNext" aria-label="${escapeProductivityUploadHtml(getProductivityUploadText('next', lang))}" title="${escapeProductivityUploadHtml(getProductivityUploadText('next', lang))}">&#9654;</button>
         </div>
         <div class="upload-calendar-weekdays">
-            ${weekdays.map(day => `<span>${escapeProductivityUploadHtml(day)}</span>`).join('')}
+            ${weekdays.map((day, index) => `<span class="upload-calendar-weekday"><span aria-hidden="true">${escapeProductivityUploadHtml(day)}</span><span class="visually-hidden">${escapeProductivityUploadHtml(weekdayNames[index])}</span></span>`).join('')}
         </div>
-        <div class="upload-calendar-grid">
+        <div class="upload-calendar-grid" role="group" aria-label="${escapeProductivityUploadHtml(monthLabel)}">
             ${dayButtons}
         </div>
         <div class="upload-calendar-detail">

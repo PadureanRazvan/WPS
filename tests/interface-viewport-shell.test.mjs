@@ -56,10 +56,10 @@ test('fixed interaction surfaces respect safe areas and dynamic viewport height'
 });
 
 test('safe viewport release assets share one cache identity', () => {
-  assert.match(versionSource, /number:\s*'2026\.07\.15\.11'/);
-  assert.match(versionSource, /codename:\s*'Pocket Roster'/);
+  assert.match(versionSource, /number:\s*'2026\.07\.15\.13'/);
+  assert.match(versionSource, /codename:\s*'Calendar Flow'/);
 
   for (const asset of ['css/chat.css', 'css/info.css', 'js/main.js']) {
-    assert.match(indexSource, new RegExp(`${asset.replace('.', '\\.')}\\?v=2026\\.07\\.15\\.11`));
+    assert.match(indexSource, new RegExp(`${asset.replace('.', '\\.')}\\?v=2026\\.07\\.15\\.13`));
   }
 });

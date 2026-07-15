@@ -14,6 +14,8 @@ function fakeElement(overrides = {}) {
   return {
     dataset: {},
     clickCount: 0,
+    focusCount: 0,
+    tabIndex: -1,
     addEventListener(type, handler) {
       listeners.set(type, handler);
     },
@@ -25,9 +27,24 @@ function fakeElement(overrides = {}) {
     click() {
       this.clickCount += 1;
     },
+    focus() {
+      this.focusCount += 1;
+    },
     ...overrides
   };
 }
+
+test('calendar focus index follows rows and week boundaries', async () => {
+  const { getProductivityUploadCalendarFocusIndex } = await loadCalendarActionsModule();
+
+  assert.equal(getProductivityUploadCalendarFocusIndex('ArrowRight', 8, 42), 9);
+  assert.equal(getProductivityUploadCalendarFocusIndex('ArrowLeft', 0, 42), 0);
+  assert.equal(getProductivityUploadCalendarFocusIndex('ArrowDown', 8, 42), 15);
+  assert.equal(getProductivityUploadCalendarFocusIndex('ArrowUp', 5, 42), 5);
+  assert.equal(getProductivityUploadCalendarFocusIndex('Home', 10, 42), 7);
+  assert.equal(getProductivityUploadCalendarFocusIndex('End', 10, 42), 13);
+  assert.equal(getProductivityUploadCalendarFocusIndex('Tab', 10, 42), 10);
+});
 
 function fakePanel({ dateButtons = [], bySelector = {} } = {}) {
   return {
@@ -92,6 +109,36 @@ test('upload calendar actions bind date selection and month navigation', async (
     ['setUploadCalendarMonth', '2026-05-01'],
     ['renderUploadCalendar']
   ]);
+});
+
+test('upload calendar actions move one roving tab stop with arrow keys', async () => {
+  const { bindProductivityUploadCalendarActions } = await loadCalendarActionsModule();
+  const dates = Array.from({ length: 21 }, (_, index) => fakeElement({
+    dataset: { date: `2026-05-${String(index + 1).padStart(2, '0')}` },
+    tabIndex: index === 8 ? 0 : -1
+  }));
+  let prevented = 0;
+
+  bindProductivityUploadCalendarActions({ panel: fakePanel({ dateButtons: dates }) });
+  dates[8].dispatch('keydown', {
+    key: 'ArrowDown',
+    preventDefault: () => { prevented += 1; }
+  });
+
+  assert.equal(prevented, 1);
+  assert.equal(dates[8].tabIndex, -1);
+  assert.equal(dates[8].focusCount, 0);
+  assert.equal(dates[15].tabIndex, 0);
+  assert.equal(dates[15].focusCount, 1);
+
+  dates[0].dispatch('keydown', {
+    key: 'ArrowLeft',
+    preventDefault: () => { prevented += 1; }
+  });
+
+  assert.equal(prevented, 2);
+  assert.equal(dates[0].tabIndex, -1);
+  assert.equal(dates[0].focusCount, 0);
 });
 
 test('upload calendar actions bind upload file triggers', async () => {

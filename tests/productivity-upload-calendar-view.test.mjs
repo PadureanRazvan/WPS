@@ -138,7 +138,14 @@ test('upload calendar view builds escaped month grid and selected action state',
   assert.match(view.html, /Upload calendar/);
   assert.match(view.html, /data-date="2026-05-05"/);
   assert.match(view.html, /class="upload-calendar-day selected today has-tickets has-calls complete"/);
+  assert.match(view.html, /data-date="2026-05-05" tabindex="0" aria-label="Display &lt;2026-05-05&gt;: XLSX and CSV uploaded"/);
+  assert.match(view.html, /aria-pressed="true" aria-current="date"/);
   assert.match(view.html, /title="Display &lt;2026-05-05&gt;: XLSX and CSV uploaded"/);
+  assert.match(view.html, /class="upload-calendar-marker marker-xlsx" aria-hidden="true">XLSX/);
+  assert.match(view.html, /id="uploadCalendarPrev" aria-label="Previous month"/);
+  assert.match(view.html, /class="upload-calendar-month" aria-live="polite" aria-atomic="true">May 2026/);
+  assert.match(view.html, /class="visually-hidden">Monday/);
+  assert.match(view.html, /class="upload-calendar-grid" role="group" aria-label="May 2026"/);
   assert.match(view.html, /XLSX · 1/);
   assert.match(view.html, /CSV · 1/);
   assert.doesNotMatch(view.html, /id="uploadCalendarExport" disabled/);
