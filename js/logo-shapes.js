@@ -4,10 +4,10 @@ export const LOGO_PARTICLE_COUNT = 520;
 export const LOGO_SHAPE_NAMES = Object.freeze(['globe', 'heart', 'summit', 'infinity']);
 
 const SHAPE_META = Object.freeze({
-    globe: { glow: [0.13, 0.78, 0.48], orbitOpacity: 0.16 },
-    heart: { glow: [1.0, 0.23, 0.39], orbitOpacity: 0.02 },
-    summit: { glow: [0.96, 0.64, 0.2], orbitOpacity: 0.12 },
-    infinity: { glow: [0.14, 0.72, 0.94], orbitOpacity: 0.06 }
+    globe: { glow: [0.08, 0.72, 0.46], orbitOpacity: 0.1, lineOpacity: 0.055 },
+    heart: { glow: [1.0, 0.16, 0.34], orbitOpacity: 0, lineOpacity: 0.07 },
+    summit: { glow: [0.18, 0.72, 0.75], orbitOpacity: 0.03, lineOpacity: 0.085 },
+    infinity: { glow: [0.08, 0.63, 0.94], orbitOpacity: 0, lineOpacity: 0.04 }
 });
 
 function clamp01(value) {
@@ -54,35 +54,40 @@ function createShapeBuffer(name, count) {
         colors: new Float32Array(count * 3),
         sizes: new Float32Array(count),
         glow: [...meta.glow],
-        orbitOpacity: meta.orbitOpacity
+        orbitOpacity: meta.orbitOpacity,
+        lineOpacity: meta.lineOpacity
     };
 }
 
 function generateGlobe(count, random) {
     const shape = createShapeBuffer('globe', count);
     const goldenAngle = Math.PI * (3 - Math.sqrt(5));
-    const ocean = [0.08, 0.48, 0.92];
-    const deepOcean = [0.05, 0.25, 0.58];
-    const land = [0.15, 0.82, 0.45];
-    const sunlitLand = [0.52, 0.96, 0.52];
+    const ocean = [0.03, 0.5, 0.88];
+    const deepOcean = [0.015, 0.16, 0.42];
+    const land = [0.02, 0.64, 0.31];
+    const sunlitLand = [0.48, 0.95, 0.42];
+    const coast = [0.24, 0.9, 0.68];
 
     for (let index = 0; index < count; index++) {
         const yUnit = 1 - 2 * (index + 0.5) / count;
         const ringRadius = Math.sqrt(Math.max(0, 1 - yUnit * yUnit));
         const theta = goldenAngle * index;
-        const radius = 1.12 + (random() - 0.5) * 0.025;
+        const radius = 1.1 + (random() - 0.5) * 0.012;
         const x = Math.cos(theta) * ringRadius * radius;
         const y = yUnit * radius;
         const z = Math.sin(theta) * ringRadius * radius;
-        const landSignal = Math.sin(x * 4.1 + z * 1.7)
-            + Math.cos(y * 6.4 - z * 2.6)
-            + Math.sin((x - y) * 5.2);
-        const isLand = landSignal > 0.76 && Math.abs(yUnit) < 0.9;
+        const landSignal = Math.sin(x * 3.8 + z * 1.55)
+            + Math.cos(y * 5.8 - z * 2.25)
+            + Math.sin((x - y) * 4.65);
+        const isLand = landSignal > 0.58 && Math.abs(yUnit) < 0.92;
+        const isCoast = !isLand && landSignal > 0.42 && Math.abs(yUnit) < 0.92;
         const latitudeLight = 0.22 + 0.58 * (1 - Math.abs(yUnit));
-        const color = isLand
+        const color = isCoast
+            ? mixColor(ocean, coast, 0.48 + latitudeLight * 0.32)
+            : isLand
             ? mixColor(land, sunlitLand, latitudeLight * 0.55 + random() * 0.12)
             : mixColor(deepOcean, ocean, latitudeLight + random() * 0.14);
-        const size = (isLand ? 1.95 : 1.55) + random() * 0.65;
+        const size = (isLand ? 1.72 : isCoast ? 1.56 : 1.3) + random() * 0.42;
         setPoint(shape, index, x, y, z, color, size);
     }
 
@@ -123,7 +128,7 @@ function distanceToBoundary(x, y, boundary) {
 function generateHeart(count, random) {
     const shape = createShapeBuffer('heart', count);
     const boundary = Array.from({ length: 160 }, (_, index) => heartBoundaryPoint(index / 160 * TAU));
-    const rimCount = Math.floor(count * 0.3);
+    const rimCount = Math.floor(count * 0.4);
     const crimson = [0.88, 0.025, 0.16];
     const coral = [1.0, 0.23, 0.39];
     const highlight = [1.0, 0.76, 0.79];
@@ -131,8 +136,8 @@ function generateHeart(count, random) {
     for (let index = 0; index < rimCount; index++) {
         const t = index / rimCount * TAU + (random() - 0.5) * 0.018;
         const point = heartBoundaryPoint(t);
-        const z = Math.sin(t * 3.0) * 0.055 + (random() - 0.5) * 0.025;
-        const color = mixColor(coral, highlight, 0.42 + random() * 0.32);
+        const z = 0.13 + Math.sin(t * 3.0) * 0.035 + (random() - 0.5) * 0.018;
+        const color = mixColor(coral, highlight, 0.5 + random() * 0.3);
         setPoint(
             shape,
             index,
@@ -140,7 +145,7 @@ function generateHeart(count, random) {
             point.y * 1.12 - 0.035,
             z,
             color,
-            2.05 + random() * 0.72
+            1.82 + random() * 0.48
         );
     }
 
@@ -169,7 +174,7 @@ function generateHeart(count, random) {
             y * 1.12 - 0.035,
             z,
             mixColor(color, highlight, Math.max(0, depthLight - 0.72) * 0.55),
-            1.72 + random() * 0.68
+            1.34 + random() * 0.48
         );
     }
 
@@ -178,34 +183,58 @@ function generateHeart(count, random) {
 
 function generateSummit(count, random) {
     const shape = createShapeBuffer('summit', count);
-    const ring = [
-        [1.05, 0, 0],
-        [0, 0, 1.05],
-        [-1.05, 0, 0],
-        [0, 0, -1.05]
+    const apex = [0, 1.18, 0];
+    const baseCorners = [
+        [-1.08, -0.72, 0.68],
+        [1.08, -0.72, 0.68],
+        [0.88, -0.72, -0.72],
+        [-0.88, -0.72, -0.72]
     ];
-    const base = [0.08, 0.48, 0.72];
-    const ridge = [0.22, 0.84, 0.7];
-    const peak = [1.0, 0.67, 0.2];
+    const base = [0.035, 0.24, 0.5];
+    const ridge = [0.08, 0.72, 0.62];
+    const peak = [1.0, 0.76, 0.3];
+    const snow = [0.94, 1.0, 0.96];
+    const ridgeCount = Math.floor(count * 0.22);
 
     for (let index = 0; index < count; index++) {
-        const upper = index % 4 !== 0;
-        const face = Math.floor(random() * 4);
-        const apex = upper ? [0, 1.28, 0] : [0, -0.76, 0];
-        const edgeA = ring[face];
-        const edgeB = ring[(face + 1) % ring.length];
-        const root = Math.sqrt(random());
-        const a = 1 - root;
-        const b = root * (1 - random());
-        const c = 1 - a - b;
-        const x = apex[0] * a + edgeA[0] * b + edgeB[0] * c;
-        const y = apex[1] * a + edgeA[1] * b + edgeB[1] * c;
-        const z = apex[2] * a + edgeA[2] * b + edgeB[2] * c;
-        const elevation = clamp01((y + 0.76) / 2.04);
-        const color = elevation > 0.5
-            ? mixColor(ridge, peak, (elevation - 0.5) * 2)
-            : mixColor(base, ridge, elevation * 2);
-        setPoint(shape, index, x, y - 0.11, z, color, 1.65 + elevation * 0.65 + random() * 0.42);
+        let x;
+        let y;
+        let z;
+        let isRidge = false;
+
+        if (index < ridgeCount) {
+            const cornerIndex = index % baseCorners.length;
+            const corner = baseCorners[cornerIndex];
+            const progress = (Math.floor(index / baseCorners.length) + random() * 0.18)
+                / Math.max(1, Math.ceil(ridgeCount / baseCorners.length) - 1);
+            x = apex[0] + (corner[0] - apex[0]) * progress;
+            y = apex[1] + (corner[1] - apex[1]) * progress;
+            z = apex[2] + (corner[2] - apex[2]) * progress;
+            const jitter = (1 - progress) * 0.012 + 0.004;
+            x += (random() - 0.5) * jitter;
+            z += (random() - 0.5) * jitter;
+            isRidge = true;
+        } else {
+            const face = (index - ridgeCount) % baseCorners.length;
+            const edgeA = baseCorners[face];
+            const edgeB = baseCorners[(face + 1) % baseCorners.length];
+            const root = Math.sqrt(random());
+            const a = 1 - root;
+            const b = root * (1 - random());
+            const c = 1 - a - b;
+            x = apex[0] * a + edgeA[0] * b + edgeB[0] * c;
+            y = apex[1] * a + edgeA[1] * b + edgeB[1] * c;
+            z = apex[2] * a + edgeA[2] * b + edgeB[2] * c;
+        }
+
+        const elevation = clamp01((y + 0.72) / 1.9);
+        let color = elevation > 0.74
+            ? mixColor(peak, snow, (elevation - 0.74) / 0.26)
+            : elevation > 0.34
+                ? mixColor(ridge, peak, (elevation - 0.34) / 0.4)
+                : mixColor(base, ridge, elevation / 0.34);
+        if (isRidge) color = mixColor(color, snow, 0.22 + elevation * 0.34);
+        setPoint(shape, index, x, y - 0.05, z, color, (isRidge ? 1.8 : 1.38) + elevation * 0.42 + random() * 0.24);
     }
 
     return shape;
@@ -222,15 +251,17 @@ function generateInfinity(count, random) {
     const cyan = [0.12, 0.58, 1.0];
     const gold = [1.0, 0.67, 0.22];
 
+    const goldenAngle = Math.PI * (3 - Math.sqrt(5));
+
     for (let index = 0; index < count; index++) {
-        const t = index / count * TAU + (random() - 0.5) * 0.025;
-        const centerX = 1.25 * Math.sin(t);
-        const centerY = 0.64 * Math.sin(2 * t);
-        const centerZ = 0.2 * Math.cos(2 * t);
+        const t = (index + 0.5) / count * TAU;
+        const centerX = 1.23 * Math.sin(t);
+        const centerY = 0.56 * Math.sin(2 * t);
+        const centerZ = 0.13 * Math.cos(2 * t);
         const tangent = normalizeVector(
-            1.25 * Math.cos(t),
-            1.28 * Math.cos(2 * t),
-            -0.4 * Math.sin(2 * t)
+            1.23 * Math.cos(t),
+            1.12 * Math.cos(2 * t),
+            -0.26 * Math.sin(2 * t)
         );
         const normal = normalizeVector(tangent[1], -tangent[0], 0);
         const binormal = normalizeVector(
@@ -238,18 +269,19 @@ function generateInfinity(count, random) {
             tangent[2] * normal[0] - tangent[0] * normal[2],
             tangent[0] * normal[1] - tangent[1] * normal[0]
         );
-        const angle = (index % 17) / 17 * TAU + random() * 0.3;
-        const tubeRadius = 0.12 + random() * 0.075;
+        const angle = index * goldenAngle + Math.sin(t * 3) * 0.1;
+        const tubeRadius = 0.1 + Math.sin(t * 3 + index * 0.17) * 0.009 + (random() - 0.5) * 0.004;
         const cos = Math.cos(angle) * tubeRadius;
         const sin = Math.sin(angle) * tubeRadius;
         const x = centerX + normal[0] * cos + binormal[0] * sin;
         const y = centerY + normal[1] * cos + binormal[1] * sin;
         const z = centerZ + normal[2] * cos + binormal[2] * sin;
-        const colorPhase = (Math.sin(t) + 1) * 0.5;
+        const colorPhase = (centerX / 1.23 + 1) * 0.5;
         const color = colorPhase < 0.5
             ? mixColor(teal, cyan, colorPhase * 2)
             : mixColor(cyan, gold, (colorPhase - 0.5) * 2);
-        setPoint(shape, index, x, y, z, color, 1.72 + random() * 0.62);
+        const frontLight = clamp01((z + 0.24) / 0.48);
+        setPoint(shape, index, x, y, z, mixColor(color, [0.82, 0.98, 1.0], frontLight * 0.16), 1.42 + frontLight * 0.28 + random() * 0.12);
     }
 
     return shape;

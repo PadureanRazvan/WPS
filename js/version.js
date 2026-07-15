@@ -16,7 +16,7 @@
 // =============================================================================
 
 export const SHERPA_VERSION = Object.freeze({
-    number: '2026.07.14.2',
+    number: '2026.07.14.3',
     codename: 'Living Geometry',
     released: '2026-07-14'
 });

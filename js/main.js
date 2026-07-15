@@ -19,7 +19,7 @@ import {
     showAuthenticatedShell,
     showLoginScreen
 } from './app-shell-wiring.js';
-import { initLogoAnimation } from './logo-animation.js?v=2026.07.14.2';
+import { initLogoAnimation } from './logo-animation.js?v=2026.07.14.3';
 import { initializeChat, cleanupChat } from './chat.js';
 import { loginWithGoogle, logout, onAuthChange } from './auth.js';
 import { initializeLogs, setLogUser, logActivity } from './logs.js';

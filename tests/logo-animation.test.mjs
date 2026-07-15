@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-import { getHeartBeatScale, getLogoMotion } from '../js/logo-animation.js';
+import { getHeartBeatScale, getLogoMotion, getLogoShapePresence } from '../js/logo-animation.js';
 import { SHERPA_VERSION } from '../js/version.js';
 
 const TWO_PI = Math.PI * 2;
@@ -100,9 +100,45 @@ test('infinity ribbon settles front-biased while retaining a gentle 3D sway', ()
   assert.ok(Math.abs(settled.rotZ) < 0.1);
 });
 
+test('summit settles into a readable three-quarter pose', () => {
+  const revealAngle = 0.36;
+  let rotY = Math.PI * 1.35;
+
+  for (let frame = 0; frame < 150; frame++) {
+    rotY = getLogoMotion({
+      rotY,
+      dt: 1 / 60,
+      now: 0,
+      shapeName: 'summit'
+    }).rotY;
+  }
+
+  const target = Math.round((rotY - revealAngle) / TWO_PI) * TWO_PI + revealAngle;
+  const settled = getLogoMotion({ rotY, dt: 1 / 60, now: 1800, shapeName: 'summit' });
+  assert.ok(Math.abs(rotY - target) < 0.02);
+  assert.notEqual(settled.displayRotY, settled.rotY);
+  assert.ok(Math.abs(settled.rotZ) < 0.023);
+});
+
+test('solid figure cores crossfade without stacking at full strength', () => {
+  const heart = getLogoShapePresence('heart', 'heart', 'summit', 0.5);
+  const summit = getLogoShapePresence('summit', 'heart', 'summit', 0.5);
+
+  assert.ok(heart > 0 && heart < 1);
+  assert.ok(summit > 0 && summit < 1);
+  assert.ok(Math.abs(heart + summit - 1) < 1e-9);
+  assert.equal(getLogoShapePresence('globe', 'heart', 'summit', 0.5), 0);
+});
+
 test('point shader uses the color attribute injected by Three.js', () => {
   assert.match(animationSource, /vertexColors:\s*true/);
   assert.doesNotMatch(animationSource, /attribute\s+vec3\s+color\s*;/);
+});
+
+test('all four figures have a dedicated depth core', () => {
+  for (const name of ['Globe', 'Heart', 'Summit', 'Infinity']) {
+    assert.match(animationSource, new RegExp(`function create${name}Core\\(THREE\\)`));
+  }
 });
 
 test('logo module graph uses the current release number as its browser cache key', () => {

@@ -4,10 +4,11 @@ import {
     buildLogoConnections,
     createLogoShape,
     matchLogoShape
-} from './logo-shapes.js?v=2026.07.14.2';
+} from './logo-shapes.js?v=2026.07.14.3';
 
 const TAU = Math.PI * 2;
 const HEART_REVEAL_ANGLE = 0.48;
+const SUMMIT_REVEAL_ANGLE = 0.36;
 const MORPH_DURATION = 1900;
 const HOLD_DURATIONS = Object.freeze({
     globe: 4300,
@@ -67,9 +68,22 @@ export function getLogoMotion({
         const nextRotY = rotY + (target - rotY) * (1 - Math.exp(-dt * 3.4));
         return {
             rotY: nextRotY,
-            displayRotY: nextRotY + Math.sin(now * 0.00062) * 0.2,
-            rotX: 0.09 + Math.sin(now * 0.00044) * 0.05,
-            rotZ: Math.sin(now * 0.00038) * 0.09,
+            displayRotY: nextRotY + Math.sin(now * 0.00062) * 0.14,
+            rotX: 0.08 + Math.sin(now * 0.00044) * 0.04,
+            rotZ: Math.sin(now * 0.00038) * 0.055,
+            heartPresence: 0
+        };
+    }
+
+    if (resolvedShape === 'summit') {
+        const reveal = SUMMIT_REVEAL_ANGLE + Math.sin(now * 0.00034) * 0.055;
+        const target = nearestEquivalentAngle(rotY, reveal);
+        const nextRotY = rotY + (target - rotY) * (1 - Math.exp(-dt * 3.1));
+        return {
+            rotY: nextRotY,
+            displayRotY: nextRotY + Math.sin(now * 0.00051) * 0.025,
+            rotX: 0.17 + Math.sin(now * 0.00038) * 0.035,
+            rotZ: Math.sin(now * 0.00029) * 0.022,
             heartPresence: 0
         };
     }
@@ -96,6 +110,14 @@ export function getHeartBeatScale(now = 0) {
     return 1 + firstBeat + secondBeat;
 }
 
+export function getLogoShapePresence(shapeName, currentName, targetName = null, progress = 0) {
+    if (!targetName || currentName === targetName) return shapeName === currentName ? 1 : 0;
+    const amount = smootherstep(progress);
+    if (shapeName === currentName) return 1 - amount;
+    if (shapeName === targetName) return amount;
+    return 0;
+}
+
 function loadThree() {
     if (!threeModulePromise) threeModulePromise = import(THREE_MODULE_URL);
     return threeModulePromise;
@@ -117,7 +139,7 @@ function createGlowTexture(THREE) {
     return texture;
 }
 
-function createOrbit(THREE, radius = 1.38) {
+function createOrbit(THREE, radius = 1.31) {
     const vertices = [];
     for (let index = 0; index < 96; index++) {
         const angle = index / 96 * TAU;
@@ -135,6 +157,53 @@ function createOrbit(THREE, radius = 1.38) {
     orbit.rotation.x = Math.PI * 0.52;
     orbit.rotation.z = Math.PI * 0.08;
     return orbit;
+}
+
+function rememberCoreOpacity(material, opacity) {
+    material.userData.logoOpacity = opacity;
+    material.userData.logoEmissiveIntensity = material.emissiveIntensity ?? 0;
+    material.opacity = 0;
+    return material;
+}
+
+function createCircleLine(THREE, radius, material) {
+    const vertices = [];
+    for (let index = 0; index < 72; index++) {
+        const angle = index / 72 * TAU;
+        vertices.push(new THREE.Vector3(Math.cos(angle) * radius, Math.sin(angle) * radius, 0));
+    }
+    return new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(vertices), material);
+}
+
+function createGlobeCore(THREE) {
+    const group = new THREE.Group();
+    const sphereMaterial = rememberCoreOpacity(new THREE.MeshStandardMaterial({
+        color: 0x087ccc,
+        emissive: 0x032d4f,
+        emissiveIntensity: 0.45,
+        metalness: 0.08,
+        roughness: 0.48,
+        transparent: true,
+        depthWrite: false
+    }), 0.075);
+    const sphere = new THREE.Mesh(new THREE.SphereGeometry(1.015, 24, 16), sphereMaterial);
+    sphere.renderOrder = 1;
+    group.add(sphere);
+
+    const ringMaterial = rememberCoreOpacity(new THREE.LineBasicMaterial({
+        color: 0x6ff7bd,
+        transparent: true,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+    }), 0.13);
+    const equator = createCircleLine(THREE, 1.035, ringMaterial);
+    equator.rotation.x = Math.PI / 2;
+    const meridian = createCircleLine(THREE, 1.035, ringMaterial);
+    const crossMeridian = createCircleLine(THREE, 1.035, ringMaterial);
+    crossMeridian.rotation.y = Math.PI / 2;
+    group.add(equator, meridian, crossMeridian);
+    group.visible = false;
+    return group;
 }
 
 function createHeartCore(THREE) {
@@ -155,23 +224,142 @@ function createHeartCore(THREE) {
         bevelSegments: 4
     });
     geometry.center();
-    const material = new THREE.MeshStandardMaterial({
+    const material = rememberCoreOpacity(new THREE.MeshStandardMaterial({
         color: 0xd8143a,
         emissive: 0x5a0017,
-        emissiveIntensity: 0.72,
+        emissiveIntensity: 0.78,
         metalness: 0.16,
         roughness: 0.28,
         transparent: true,
-        opacity: 0,
         depthWrite: false,
         side: THREE.DoubleSide
-    });
+    }), 0.28);
     const mesh = new THREE.Mesh(geometry, material);
-    mesh.scale.setScalar(0.94);
-    mesh.position.y = -0.02;
-    mesh.visible = false;
     mesh.renderOrder = 1;
-    return mesh;
+
+    const edgeMaterial = rememberCoreOpacity(new THREE.LineBasicMaterial({
+        color: 0xff778f,
+        transparent: true,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+    }), 0.36);
+    const edge = new THREE.LineSegments(new THREE.EdgesGeometry(geometry, 22), edgeMaterial);
+    edge.renderOrder = 2;
+
+    const group = new THREE.Group();
+    group.add(mesh, edge);
+    group.scale.setScalar(0.92);
+    group.position.y = -0.02;
+    group.visible = false;
+    return group;
+}
+
+function createSummitCore(THREE) {
+    const group = new THREE.Group();
+    const mountainGeometry = new THREE.ConeGeometry(1.08, 1.9, 4, 1, false);
+    const mountainMaterial = rememberCoreOpacity(new THREE.MeshStandardMaterial({
+        color: 0x0a6c85,
+        emissive: 0x053847,
+        emissiveIntensity: 0.5,
+        metalness: 0.2,
+        roughness: 0.38,
+        transparent: true,
+        depthWrite: false,
+        flatShading: true
+    }), 0.17);
+    const mountain = new THREE.Mesh(mountainGeometry, mountainMaterial);
+    mountain.position.y = 0.18;
+    mountain.rotation.y = Math.PI / 4;
+    mountain.renderOrder = 1;
+
+    const ridgeMaterial = rememberCoreOpacity(new THREE.LineBasicMaterial({
+        color: 0x6af5d3,
+        transparent: true,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+    }), 0.3);
+    const ridges = new THREE.LineSegments(new THREE.EdgesGeometry(mountainGeometry, 10), ridgeMaterial);
+    ridges.position.copy(mountain.position);
+    ridges.rotation.copy(mountain.rotation);
+    ridges.renderOrder = 2;
+
+    const snowGeometry = new THREE.ConeGeometry(0.33, 0.47, 4, 1, false);
+    const snowMaterial = rememberCoreOpacity(new THREE.MeshStandardMaterial({
+        color: 0xf2fff7,
+        emissive: 0x5fd7ad,
+        emissiveIntensity: 0.7,
+        roughness: 0.3,
+        transparent: true,
+        depthWrite: false,
+        flatShading: true
+    }), 0.36);
+    const snow = new THREE.Mesh(snowGeometry, snowMaterial);
+    snow.position.y = 0.895;
+    snow.rotation.y = Math.PI / 4;
+    snow.renderOrder = 2;
+
+    group.add(mountain, ridges, snow);
+    group.visible = false;
+    return group;
+}
+
+function createInfinityCore(THREE) {
+    class InfinityCurve extends THREE.Curve {
+        getPoint(t, target = new THREE.Vector3()) {
+            const angle = t * TAU;
+            return target.set(
+                1.23 * Math.sin(angle),
+                0.56 * Math.sin(angle * 2),
+                0.13 * Math.cos(angle * 2)
+            );
+        }
+    }
+
+    const geometry = new THREE.TubeGeometry(new InfinityCurve(), 112, 0.065, 8, true);
+    const material = rememberCoreOpacity(new THREE.MeshStandardMaterial({
+        color: 0x159fe7,
+        emissive: 0x075c9a,
+        emissiveIntensity: 0.9,
+        metalness: 0.22,
+        roughness: 0.24,
+        transparent: true,
+        depthWrite: false
+    }), 0.24);
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.renderOrder = 1;
+    const group = new THREE.Group();
+    group.add(mesh);
+    group.visible = false;
+    return group;
+}
+
+function setCorePresence(core, presence, energy = 0) {
+    const amount = smootherstep(presence);
+    core.visible = amount > 0.004;
+    if (!core.visible) return;
+    core.traverse(object => {
+        if (!object.material) return;
+        const materials = Array.isArray(object.material) ? object.material : [object.material];
+        for (const material of materials) {
+            material.opacity = (material.userData.logoOpacity ?? 0) * amount;
+            if ('emissiveIntensity' in material) {
+                material.emissiveIntensity = (material.userData.logoEmissiveIntensity ?? 0) + energy;
+            }
+        }
+    });
+}
+
+function disposeCore(core) {
+    const geometries = new Set();
+    const materials = new Set();
+    core.traverse(object => {
+        if (object.geometry) geometries.add(object.geometry);
+        if (!object.material) return;
+        const objectMaterials = Array.isArray(object.material) ? object.material : [object.material];
+        objectMaterials.forEach(material => materials.add(material));
+    });
+    geometries.forEach(geometry => geometry.dispose());
+    materials.forEach(material => material.dispose());
 }
 
 function createPointMaterial(THREE, pixelRatio) {
@@ -201,10 +389,10 @@ function createPointMaterial(THREE, pixelRatio) {
                 vec3 animatedPosition = position * (1.0 + shimmer * 0.012 * uBreath);
                 vec4 viewPosition = modelViewMatrix * vec4(animatedPosition, 1.0);
                 gl_Position = projectionMatrix * viewPosition;
-                gl_PointSize = clamp(aSize * uPixelRatio * (8.1 / max(1.0, -viewPosition.z)), 1.2, 9.5);
+                gl_PointSize = clamp(aSize * uPixelRatio * (7.15 / max(1.0, -viewPosition.z)), 1.1, 8.5);
                 float depthLight = clamp((viewPosition.z + 5.9) / 1.7, 0.0, 1.0);
                 vColor = color * (0.82 + depthLight * 0.46);
-                vAlpha = 0.78 + shimmer * 0.18;
+                vAlpha = 0.76 + shimmer * 0.14;
             }
         `,
         fragmentShader: `
@@ -216,7 +404,7 @@ function createPointMaterial(THREE, pixelRatio) {
                 if (distanceToCenter > 0.5) discard;
                 float edge = 1.0 - smoothstep(0.18, 0.5, distanceToCenter);
                 float core = 1.0 - smoothstep(0.0, 0.17, distanceToCenter);
-                vec3 luminousColor = vColor + core * vec3(0.32);
+                vec3 luminousColor = vColor + core * vec3(0.24);
                 gl_FragColor = vec4(luminousColor, edge * vAlpha);
             }
         `
@@ -224,7 +412,7 @@ function createPointMaterial(THREE, pixelRatio) {
 }
 
 function setCanvasAccessibility(canvas, shapeName) {
-    const readableShape = shapeName === 'summit' ? 'summit crystal' : shapeName === 'infinity' ? 'infinity ribbon' : shapeName;
+    const readableShape = shapeName === 'summit' ? 'mountain summit' : shapeName === 'infinity' ? 'infinity ribbon' : shapeName;
     canvas.setAttribute('role', 'button');
     canvas.setAttribute('tabindex', '0');
     canvas.setAttribute('aria-label', `Sherpa animated ${readableShape}. Activate to show the next shape.`);
@@ -234,8 +422,6 @@ function drawFallbackLogo(canvas, size) {
     const ratio = Math.min(window.devicePixelRatio || 1, 2);
     canvas.width = Math.round(size * ratio);
     canvas.height = Math.round(size * ratio);
-    canvas.style.width = `${size}px`;
-    canvas.style.height = `${size}px`;
     const context = canvas.getContext('2d');
     if (!context) return;
     context.scale(ratio, ratio);
@@ -314,7 +500,7 @@ function createLogoScene(THREE, canvas, size) {
     const lineMaterial = new THREE.LineBasicMaterial({
         vertexColors: true,
         transparent: true,
-        opacity: 0.13,
+        opacity: currentShape.lineOpacity,
         blending: THREE.AdditiveBlending,
         depthWrite: false
     });
@@ -336,17 +522,24 @@ function createLogoScene(THREE, canvas, size) {
     glow.renderOrder = 0;
 
     const orbit = createOrbit(THREE);
-    const heartCore = createHeartCore(THREE);
+    const cores = {
+        globe: createGlobeCore(THREE),
+        heart: createHeartCore(THREE),
+        summit: createSummitCore(THREE),
+        infinity: createInfinityCore(THREE)
+    };
+    const coreRoot = new THREE.Group();
+    coreRoot.add(...Object.values(cores));
     const root = new THREE.Group();
-    root.add(glow, orbit, heartCore, lines, points);
+    root.add(glow, orbit, coreRoot, lines, points);
     scene.add(root);
-    scene.add(new THREE.AmbientLight(0xffd7df, 1.55));
-    const heartKeyLight = new THREE.DirectionalLight(0xffedf1, 4.2);
-    heartKeyLight.position.set(2.5, 3.2, 4.5);
-    scene.add(heartKeyLight);
-    const heartRimLight = new THREE.DirectionalLight(0x4ea8ff, 2.0);
-    heartRimLight.position.set(-3, -1.5, -2);
-    scene.add(heartRimLight);
+    scene.add(new THREE.AmbientLight(0xe4f8ff, 1.35));
+    const keyLight = new THREE.DirectionalLight(0xfff4ed, 3.6);
+    keyLight.position.set(2.5, 3.2, 4.5);
+    scene.add(keyLight);
+    const rimLight = new THREE.DirectionalLight(0x49aaff, 1.8);
+    rimLight.position.set(-3, -1.5, -2);
+    scene.add(rimLight);
 
     const colorScratch = new THREE.Color();
     const pointerTarget = { x: 0, y: 0 };
@@ -397,7 +590,8 @@ function createLogoScene(THREE, canvas, size) {
             fromColors: colors.slice(),
             fromSizes: sizes.slice(),
             fromGlow: [...currentShape.glow],
-            fromOrbitOpacity: currentShape.orbitOpacity
+            fromOrbitOpacity: currentShape.orbitOpacity,
+            fromLineOpacity: currentShape.lineOpacity
         };
         lineGeometry.setIndex(new THREE.BufferAttribute(buildLogoConnections(target), 1));
         canvas.dataset.logoShape = `${currentShape.name}-to-${nextName}`;
@@ -438,7 +632,9 @@ function createLogoScene(THREE, canvas, size) {
         positionAttribute.needsUpdate = true;
         colorAttribute.needsUpdate = true;
         sizeAttribute.needsUpdate = true;
-        lineMaterial.opacity = 0.04 + Math.abs(progress - 0.5) * 0.18;
+        const lineOpacity = transition.fromLineOpacity
+            + (transition.target.lineOpacity - transition.fromLineOpacity) * smoothstep(progress);
+        lineMaterial.opacity = lineOpacity * (1 - wave * 0.62);
 
         const glowColor = transition.fromGlow.map((value, index) => (
             value + (transition.target.glow[index] - value) * smoothstep(progress)
@@ -461,15 +657,21 @@ function createLogoScene(THREE, canvas, size) {
         const progress = updateMorph(now);
         if (!transition) {
             applyGlow(currentShape.glow, currentShape.orbitOpacity);
-            lineMaterial.opacity = 0.13;
+            lineMaterial.opacity = currentShape.lineOpacity;
             if (!reducedMotion && now - holdStartedAt >= HOLD_DURATIONS[currentShape.name]) beginMorph(now);
         }
 
         const targetName = transition ? transition.target.name : currentShape.name;
-        const heartPresence = currentShape.name === 'heart'
-            ? (transition ? 1 - progress : 1)
-            : transition?.target.name === 'heart' ? progress : 0;
-        const motion = getLogoMotion({ rotY, dt, now, shapeName: heartPresence > 0.06 ? 'heart' : targetName, heartFactor: heartPresence });
+        const transitionTarget = transition?.target.name ?? null;
+        const shapePresences = Object.fromEntries(LOGO_SHAPE_NAMES.map(name => [
+            name,
+            getLogoShapePresence(name, currentShape.name, transitionTarget, progress)
+        ]));
+        const heartPresence = shapePresences.heart;
+        const motionShape = heartPresence > 0.06
+            ? 'heart'
+            : transition && progress < 0.52 ? currentShape.name : targetName;
+        const motion = getLogoMotion({ rotY, dt, now, shapeName: motionShape, heartFactor: heartPresence });
         rotY = motion.rotY;
         pointerCurrent.x += (pointerTarget.x - pointerCurrent.x) * Math.min(1, dt * 5.5);
         pointerCurrent.y += (pointerTarget.y - pointerCurrent.y) * Math.min(1, dt * 5.5);
@@ -482,12 +684,16 @@ function createLogoScene(THREE, canvas, size) {
         const settle = transition ? 1 + Math.sin(progress * Math.PI) * 0.025 : 1;
         root.scale.setScalar(beat * settle);
         root.position.y = Math.sin(now * 0.00105) * (heartPresence > 0.1 ? 0.045 : 0.022);
-        heartCore.visible = heartPresence > 0.015;
-        heartCore.material.opacity = 0.19 * smootherstep(heartPresence);
-        heartCore.material.emissiveIntensity = 0.66 + (beat - 1) * 4.5;
+        for (const name of LOGO_SHAPE_NAMES) {
+            setCorePresence(cores[name], shapePresences[name], name === 'heart' ? (beat - 1) * 4.2 : 0);
+        }
         glow.scale.setScalar((3.18 + Math.sin(now * 0.0014) * 0.08) * beat);
         pointMaterial.uniforms.uTime.value = now / 1000;
-        pointMaterial.uniforms.uBreath.value = targetName === 'infinity' ? 1 : heartPresence > 0.1 ? 0.35 : 0.62;
+        pointMaterial.uniforms.uBreath.value = targetName === 'infinity'
+            ? 0.32
+            : targetName === 'summit'
+                ? 0.24
+                : heartPresence > 0.1 ? 0.22 : 0.55;
 
         renderer.render(scene, camera);
     }
@@ -526,8 +732,6 @@ function createLogoScene(THREE, canvas, size) {
         canvas.dataset.logoRenderer = 'context-lost';
     });
 
-    canvas.style.width = `${size}px`;
-    canvas.style.height = `${size}px`;
     canvas.dataset.logoRenderer = 'three';
     canvas.dataset.logoShape = currentShape.name;
     setCanvasAccessibility(canvas, currentShape.name);
@@ -550,8 +754,7 @@ function createLogoScene(THREE, canvas, size) {
             lineMaterial.dispose();
             orbit.geometry.dispose();
             orbit.material.dispose();
-            heartCore.geometry.dispose();
-            heartCore.material.dispose();
+            Object.values(cores).forEach(disposeCore);
             glowMaterial.map.dispose();
             glowMaterial.dispose();
             renderer.dispose();
