@@ -1,24 +1,24 @@
 // js/ui.js
 
 // === THEME AND LANGUAGE FUNCTIONALITY ===
-import { languageConfig, translations, PLANNER_TEAMS, TEAM_DISPLAY_NAMES, extractHoursFromDay, formatPlannerHoursValue, getMonthKey, getAgentNotesForMonth, isValidPlannerHoursValue } from './config.js';
+import { languageConfig, translations, PLANNER_TEAMS, TEAM_DISPLAY_NAMES, extractHoursFromDay, formatPlannerHoursValue, getMonthKey, getAgentNotesForMonth, isValidPlannerHoursValue } from './config.js?v=2026.07.15.11';
 function getLang() { return localStorage.getItem('language') || 'ro'; }
 export function t(key) { const l = getLang(); return (translations[l] && translations[l][key]) || key; }
 // Import the new Firestore functions from planner.js
 import { addAgent, applyChangesToSelectedCells, renderPlannerTable, clearSelection } from './planner.js';
-import { updateDashboard, updateAverageProductivityCard } from './dashboard.js';
-import { initializeCharts } from './charts.js?v=2026.07.15.7';
+import { updateDashboard, updateAverageProductivityCard } from './dashboard.js?v=2026.07.15.11';
+import { initializeCharts } from './charts.js?v=2026.07.15.11';
 import { getPlannerData } from './planner.js';
 import { renderLogsSection } from './logs.js';
-import { renderCurrentView as rerenderProductivity } from './productivity.js';
-import { renderUsersTable } from './users.js';
+import { renderCurrentView as rerenderProductivity } from './productivity.js?v=2026.07.15.11';
+import { renderUsersTable } from './users.js?v=2026.07.15.11';
 import {
     getNextTheme,
     getThemeMeta,
     getThemeRevealRadius,
     normalizeThemePreference,
     resolveThemePreference
-} from './theme-system.js?v=2026.07.15.7';
+} from './theme-system.js?v=2026.07.15.11';
 
 // Theme and language state
 let currentThemePreference = normalizeThemePreference(localStorage.getItem('theme'));

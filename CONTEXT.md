@@ -16,6 +16,8 @@
 
 **Users Command** — the rules for turning Users form input, inline Agent edits, contract changes, primary team changes, deactivation, and reactivation into validated Agent update payloads, activity metadata, and user-facing diagnostics while keeping the Users shell responsible for DOM modals and Firestore writes.
 
+**Users Directory View** — the searchable and filterable roster projection of Agents, including query normalization, team/status filters, translated result states, and container-driven table-to-list reflow while preserving inline Users commands.
+
 **Planner Cell** — one agent/day value in the Planner. A cell can be empty, a leave code such as `Co` or `DZ`, or one or more schedule entries such as `8RO` or `4RO+42L`.
 
 **Schedule Entry** — the smallest working-time expression inside a Planner Cell. It combines hours with an optional team code. `82L` means 8 hours for `2L`, not 82 hours.

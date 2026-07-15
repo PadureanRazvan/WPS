@@ -2,7 +2,7 @@
 import { db } from './firebase-config.js';
 import { collection, onSnapshot, Timestamp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 import { addAgent, updateAgent, deleteAgent } from './planner.js';
-import { showTemporaryMessage, t } from './ui.js';
+import { showTemporaryMessage, t } from './ui.js?v=2026.07.15.11';
 import { logActivity } from './logs.js';
 import {
     buildContractChangeCommand,
@@ -14,8 +14,11 @@ import {
     getComparableUserInlineFieldState,
     getUserCommandDateKey
 } from './users-command.js';
+import { filterUsersDirectory, getUsersDirectoryTeams } from './users-directory.js?v=2026.07.15.11';
 
 let usersData = [];
+const usersDirectoryState = { query: '', team: 'all', status: 'all' };
+let usersDirectoryControlsBound = false;
 
 const PRIMARY_TEAM_OPTIONS = [
     'RO zooplus',
@@ -61,12 +64,77 @@ function syncPrimaryTeamSelectOptions(selectElement, selectedValue = '') {
 export function getUsersData() { return usersData; }
 let unsubscribeFromUsers;
 
+function syncUsersDirectoryControls() {
+    const searchInput = document.getElementById('usersSearchInput');
+    const teamFilter = document.getElementById('usersTeamFilter');
+    const statusFilter = document.getElementById('usersStatusFilter');
+
+    if (searchInput) {
+        searchInput.value = usersDirectoryState.query;
+        searchInput.placeholder = t('users-search-placeholder');
+    }
+
+    if (teamFilter) {
+        const teams = getUsersDirectoryTeams(usersData);
+        if (usersDirectoryState.team !== 'all' && !teams.includes(usersDirectoryState.team)) {
+            usersDirectoryState.team = 'all';
+        }
+
+        teamFilter.replaceChildren();
+        const allTeamsOption = document.createElement('option');
+        allTeamsOption.value = 'all';
+        allTeamsOption.textContent = t('users-team-all');
+        teamFilter.appendChild(allTeamsOption);
+        teams.forEach(team => {
+            const option = document.createElement('option');
+            option.value = team;
+            option.textContent = team;
+            teamFilter.appendChild(option);
+        });
+        teamFilter.value = usersDirectoryState.team;
+    }
+
+    statusFilter?.querySelectorAll('[data-users-status]').forEach(button => {
+        const isActive = button.dataset.usersStatus === usersDirectoryState.status;
+        button.classList.toggle('active', isActive);
+        button.setAttribute('aria-pressed', String(isActive));
+    });
+}
+
+function setupUsersDirectoryControls() {
+    if (usersDirectoryControlsBound) return;
+
+    const searchInput = document.getElementById('usersSearchInput');
+    const teamFilter = document.getElementById('usersTeamFilter');
+    const statusFilter = document.getElementById('usersStatusFilter');
+    if (!searchInput || !teamFilter || !statusFilter) return;
+
+    searchInput.addEventListener('input', () => {
+        usersDirectoryState.query = searchInput.value;
+        renderUsersTable();
+    });
+    teamFilter.addEventListener('change', () => {
+        usersDirectoryState.team = teamFilter.value;
+        renderUsersTable();
+    });
+    statusFilter.addEventListener('click', event => {
+        const button = event.target.closest('[data-users-status]');
+        if (!button || !statusFilter.contains(button)) return;
+        usersDirectoryState.status = button.dataset.usersStatus;
+        renderUsersTable();
+    });
+
+    usersDirectoryControlsBound = true;
+    syncUsersDirectoryControls();
+}
+
 export function initializeUsers() {
     console.log("Setting up real-time listener for users...");
     const usersCollection = collection(db, 'agents');
 
     // Set up event delegation ONCE on tbody
     setupTableEventDelegation();
+    setupUsersDirectoryControls();
 
     unsubscribeFromUsers = onSnapshot(usersCollection, (querySnapshot) => {
         console.log(`%c[Firestore] Received users update. Found ${querySnapshot.size} users.`, 'color: #4caf50; font-weight: bold;');
@@ -197,35 +265,56 @@ export function renderUsersTable() {
     const tbody = document.getElementById('usersTableBody');
     if (!tbody) return;
 
+    syncUsersDirectoryControls();
+    const visibleUsers = filterUsersDirectory(usersData, usersDirectoryState);
+    const resultCount = document.getElementById('usersResultCount');
+    if (resultCount) {
+        resultCount.textContent = t('users-results')
+            .replace('{count}', visibleUsers.length)
+            .replace('{total}', usersData.length);
+    }
+
     tbody.innerHTML = '';
-    usersData.forEach((user) => {
+    if (visibleUsers.length === 0) {
+        const emptyRow = document.createElement('tr');
+        emptyRow.className = 'users-empty-row';
+        const emptyCell = document.createElement('td');
+        emptyCell.colSpan = 8;
+        emptyCell.textContent = t('users-empty');
+        emptyRow.appendChild(emptyCell);
+        tbody.appendChild(emptyRow);
+        return;
+    }
+
+    visibleUsers.forEach((user, index) => {
         const tr = document.createElement('tr');
         tr.dataset.id = user.id;
+        tr.style.setProperty('--users-row-order', Math.min(index, 10));
         const hireDateStr = user.hireDate ? user.hireDate.toISOString().split('T')[0] : '';
         const contractLabel = user.contractType || 'Full-time';
         const hoursLabel = user.contractHours || 8;
         tr.innerHTML = `
-            <td contenteditable="true" data-field="fullName">${user.fullName || ''}</td>
-            <td class="hide-mobile" contenteditable="true" data-field="username">${user.username || ''}</td>
-            <td class="hide-mobile-sm"><input type="number" class="inline-input" min="4" max="8" value="${hoursLabel}" data-field="contractHours"></td>
-            <td>
+            <td contenteditable="true" data-field="fullName" data-mobile-label="${t('full-name')}">${user.fullName || ''}</td>
+            <td class="hide-mobile" contenteditable="true" data-field="username" data-mobile-label="${t('username')}">${user.username || ''}</td>
+            <td class="hide-mobile-sm" data-mobile-label="${t('contract-hours')}"><input type="number" class="inline-input" min="4" max="8" value="${hoursLabel}" data-field="contractHours"></td>
+            <td data-mobile-label="${t('contract-type')}">
                 <select class="inline-select" data-field="contractType">
                     <option value="Full-time" ${contractLabel === 'Full-time' ? 'selected' : ''}>${t('form-full-time')}</option>
                     <option value="Part-time" ${contractLabel === 'Part-time' ? 'selected' : ''}>${t('form-part-time')}</option>
                 </select>
             </td>
-            <td>
+            <td data-mobile-label="${t('primary-team')}">
                 <select class="inline-select" data-field="primaryTeam">
                     ${buildPrimaryTeamOptionsMarkup(user.primaryTeam || '')}
                 </select>
             </td>
-            <td class="hide-mobile"><input type="date" class="inline-input" value="${hireDateStr}" data-field="hireDate"></td>
-            <td style="text-align: center;">
+            <td class="hide-mobile" data-mobile-label="${t('hire-date')}"><input type="date" class="inline-input" value="${hireDateStr}" data-field="hireDate"></td>
+            <td data-mobile-label="${t('active')}" style="text-align: center;">
                 <button class="btn-status ${user.isActive ? 'active' : 'inactive'}" data-field="isActive" data-id="${user.id}">
                     ${user.isActive ? t('active') : t('inactive')}
                 </button>
             </td>
-            <td><button class="btn-ghost delete-btn" data-id="${user.id}">${t('delete')}</button></td>
+            <td data-mobile-label="${t('actions')}"><button class="btn-ghost delete-btn" data-id="${user.id}">${t('delete')}</button></td>
         `;
 
         tr.querySelectorAll('[data-field]').forEach((fieldElement) => {

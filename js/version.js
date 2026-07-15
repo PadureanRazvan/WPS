@@ -16,8 +16,8 @@
 // =============================================================================
 
 export const SHERPA_VERSION = Object.freeze({
-    number: '2026.07.15.7',
-    codename: 'Living Compass',
+    number: '2026.07.15.11',
+    codename: 'Pocket Roster',
     released: '2026-07-15'
 });
 

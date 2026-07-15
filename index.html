@@ -15,14 +15,14 @@
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
     
     <!-- CSS Files -->
-    <link rel="stylesheet" href="css/base.css?v=2026.07.15.7">
-    <link rel="stylesheet" href="css/layout.css?v=2026.07.15.7">
-    <link rel="stylesheet" href="css/components.css?v=2026.07.15.7">
+    <link rel="stylesheet" href="css/base.css?v=2026.07.15.11">
+    <link rel="stylesheet" href="css/layout.css?v=2026.07.15.11">
+    <link rel="stylesheet" href="css/components.css?v=2026.07.15.11">
     <link rel="stylesheet" href="css/planner.css">
-    <link rel="stylesheet" href="css/responsive.css?v=2026.07.15.7">
-    <link rel="stylesheet" href="css/chat.css?v=2026.07.15.7">
+    <link rel="stylesheet" href="css/responsive.css?v=2026.07.15.11">
+    <link rel="stylesheet" href="css/chat.css?v=2026.07.15.11">
     <link rel="stylesheet" href="css/schedule.css">
-    <link rel="stylesheet" href="css/info.css?v=2026.07.15.7">
+    <link rel="stylesheet" href="css/info.css?v=2026.07.15.11">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/litepicker/dist/css/litepicker.css"/>
     <style>
         /* FIX: Styles for the selection counter visibility */
@@ -284,7 +284,7 @@
                 <header class="header">
                     <h2 class="header-title" data-translate="users-title">Users Management</h2>
                 </header>
-                <div class="content">
+                <div class="content users-content">
                     <div class="users-controls">
                         <button id="addNewUserBtn" class="btn btn-primary" data-translate="add-new-user">
                             <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style="margin-right: 8px;">
@@ -292,6 +292,28 @@
                             </svg>
                             Add New User
                         </button>
+                        <div class="users-directory-tools" role="search">
+                            <label class="users-search-control" for="usersSearchInput">
+                                <svg viewBox="0 0 24 24" aria-hidden="true">
+                                    <path d="m20.7 19.3-4.2-4.2a7 7 0 1 0-1.4 1.4l4.2 4.2a1 1 0 0 0 1.4-1.4ZM5 11a6 6 0 1 1 12 0 6 6 0 0 1-12 0Z"/>
+                                </svg>
+                                <span class="visually-hidden" id="usersSearchLabel" data-translate="users-search-label">Search users</span>
+                                <input type="search" id="usersSearchInput" autocomplete="off" placeholder="Search by name, username or team..." data-translate="users-search-placeholder">
+                            </label>
+                            <label class="users-team-control" for="usersTeamFilter">
+                                <span class="visually-hidden" id="usersTeamFilterLabel" data-translate="users-team-filter-label">Filter by team</span>
+                                <select id="usersTeamFilter" aria-labelledby="usersTeamFilterLabel">
+                                    <option value="all" data-translate="users-team-all">All teams</option>
+                                </select>
+                            </label>
+                            <div class="users-status-filter" id="usersStatusFilter" role="group" aria-labelledby="usersStatusFilterLabel">
+                                <span class="visually-hidden" id="usersStatusFilterLabel" data-translate="users-status-filter-label">Filter by status</span>
+                                <button type="button" class="active" data-users-status="all" aria-pressed="true" data-translate="users-status-all">All</button>
+                                <button type="button" data-users-status="active" aria-pressed="false" data-translate="active">Active</button>
+                                <button type="button" data-users-status="inactive" aria-pressed="false" data-translate="inactive">Inactive</button>
+                            </div>
+                        </div>
+                        <output id="usersResultCount" class="users-result-count" aria-live="polite"></output>
                     </div>
                     <div id="newUserFormContainer" style="display: none; margin-top: 1.5rem; background: var(--primary-light); padding: 1.5rem; border-radius: 8px; border: 1px solid var(--border);">
                         <h3 style="margin-top: 0; margin-bottom: 1.5rem; color: var(--text-primary);" data-translate="create-user-title">Create a New User Profile</h3>
@@ -349,7 +371,7 @@
                             </div>
                         </form>
                     </div>
-                    <div class="table-container enhanced-table" style="margin-top: 2rem;">
+                    <div class="table-container enhanced-table users-table-shell">
                         <table id="usersTable">
                             <thead>
                                 <tr>
@@ -821,14 +843,14 @@
     <!-- JavaScript Files -->
     <script src="https://cdn.jsdelivr.net/npm/litepicker/dist/litepicker.js"></script>
     <script src="js/config.js" type="module"></script>
-    <script src="js/ui.js?v=2026.07.15.7" type="module"></script>
-    <script src="js/charts.js?v=2026.07.15.7" type="module"></script>
+    <script src="js/ui.js?v=2026.07.15.11" type="module"></script>
+    <script src="js/charts.js?v=2026.07.15.11" type="module"></script>
     <script src="js/planner.js" type="module"></script>
     <script src="js/dashboard.js" type="module"></script>
     <script src="js/users.js" type="module"></script>
     <script src="js/productivity.js" type="module"></script>
-    <script src="js/logo-animation.js?v=2026.07.15.7" type="module"></script>
-    <script src="js/main.js?v=2026.07.15.7" type="module"></script>
+    <script src="js/logo-animation.js?v=2026.07.15.11" type="module"></script>
+    <script src="js/main.js?v=2026.07.15.11" type="module"></script>
 
     <!-- Deactivate User Modal -->
     <div id="deactivateModal" class="edit-modal">

@@ -2509,8 +2509,139 @@ input:focus, select:focus, textarea:focus {
 
 
 /* --- Users Page Specific Styles --- */
+.users-content {
+    container: users-directory / inline-size;
+}
+
 .users-controls {
-    margin-bottom: 1.5rem;
+    display: grid;
+    grid-template-columns: auto minmax(420px, 1fr) auto;
+    align-items: center;
+    gap: 0.75rem 1rem;
+    margin-bottom: 1rem;
+}
+
+.users-controls > .btn {
+    min-height: 42px;
+    white-space: nowrap;
+}
+
+.users-directory-tools {
+    display: grid;
+    grid-template-columns: minmax(220px, 1fr) minmax(150px, 0.55fr) auto;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+}
+
+.users-search-control,
+.users-team-control {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    min-height: 42px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--primary-light);
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background-color var(--transition-fast);
+}
+
+.users-search-control:focus-within,
+.users-team-control:focus-within {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 18%, transparent);
+    background: var(--surface-elevated);
+}
+
+.users-search-control > svg {
+    width: 18px;
+    height: 18px;
+    flex: 0 0 auto;
+    margin-left: 0.75rem;
+    fill: var(--text-secondary);
+}
+
+.users-search-control > input,
+.users-team-control > select {
+    width: 100%;
+    min-width: 0;
+    min-height: 40px;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--text-primary);
+    font: inherit;
+    font-size: 0.82rem;
+}
+
+.users-search-control > input {
+    padding: 0 0.75rem;
+}
+
+.users-search-control > input::placeholder {
+    color: var(--text-secondary);
+}
+
+.users-team-control > select {
+    padding: 0 2rem 0 0.75rem;
+    cursor: pointer;
+}
+
+.users-status-filter {
+    display: inline-grid;
+    grid-template-columns: repeat(3, auto);
+    min-height: 42px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--primary-dark);
+}
+
+.users-status-filter button {
+    min-width: 54px;
+    min-height: 40px;
+    padding: 0 0.65rem;
+    border: 0;
+    border-left: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-secondary);
+    font: inherit;
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.users-status-filter button:first-of-type {
+    border-left: 0;
+}
+
+.users-status-filter button:hover {
+    color: var(--text-primary);
+    background: var(--hover);
+}
+
+.users-status-filter button.active {
+    background: var(--accent);
+    color: var(--accent-contrast);
+}
+
+.users-result-count {
+    justify-self: end;
+    color: var(--text-secondary);
+    font-size: 0.78rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.users-table-shell {
+    margin-top: 1rem;
+}
+
+.users-empty-row td {
+    padding: 2.5rem 1rem !important;
+    color: var(--text-secondary);
+    text-align: center !important;
 }
 
 #usersTable td[contenteditable="true"] {
@@ -2639,4 +2770,248 @@ input:focus, select:focus, textarea:focus {
 #usersTable td, #usersTable th {
     text-align: left;
     padding: 0.8rem 1rem;
+}
+
+#usersTable th {
+    overflow: visible;
+    white-space: normal;
+    line-height: 1.25;
+    text-wrap: balance;
+}
+
+#usersTable th:nth-child(1) { width: 15%; }
+#usersTable th:nth-child(2) { width: 14%; }
+#usersTable th:nth-child(3) { width: 9%; }
+#usersTable th:nth-child(4) { width: 12%; }
+#usersTable th:nth-child(5) { width: 15%; }
+#usersTable th:nth-child(6) { width: 13%; }
+#usersTable th:nth-child(7) { width: 11%; }
+#usersTable th:nth-child(8) { width: 11%; }
+
+@keyframes users-roster-enter {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@container users-directory (max-width: 980px) {
+    .users-controls {
+        grid-template-columns: auto minmax(0, 1fr) auto;
+    }
+
+    .users-directory-tools {
+        grid-column: 1 / -1;
+        grid-row: 2;
+    }
+
+    .users-result-count {
+        grid-column: 3;
+        grid-row: 1;
+    }
+}
+
+@container users-directory (max-width: 860px) {
+    .users-controls {
+        grid-template-columns: 1fr;
+        align-items: stretch;
+        gap: 0.65rem;
+    }
+
+    .users-controls > .btn,
+    .users-result-count {
+        width: 100%;
+    }
+
+    .users-directory-tools {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    }
+
+    .users-search-control {
+        grid-column: 1 / -1;
+    }
+
+    .users-status-filter {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .users-status-filter button {
+        min-width: 0;
+        padding-inline: 0.35rem;
+    }
+
+    .users-result-count {
+        grid-column: 1;
+        grid-row: auto;
+        justify-self: start;
+    }
+
+    #users .users-table-shell {
+        overflow: visible;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+    }
+
+    #usersTable,
+    #usersTable tbody {
+        display: block;
+        width: 100%;
+    }
+
+    #usersTable {
+        table-layout: auto;
+        font-size: 0.8rem;
+    }
+
+    #usersTable thead {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+    }
+
+    #usersTable tbody {
+        display: grid;
+        gap: 0.65rem;
+    }
+
+    #usersTable tbody tr:not(.users-empty-row) {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-areas:
+            "name status"
+            "team team"
+            "contract hours"
+            "actions actions";
+        gap: 0.55rem 0.75rem;
+        padding: 0.75rem;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--primary-light);
+        transition: border-color var(--transition-fast), background-color var(--transition-fast), transform var(--transition-fast);
+    }
+
+    #usersTable tbody tr:not(.users-empty-row):nth-child(-n+12) {
+        animation: users-roster-enter 280ms cubic-bezier(0.22, 1, 0.36, 1) both;
+        animation-delay: calc(var(--users-row-order, 0) * 18ms);
+    }
+
+    #usersTable tbody tr:not(.users-empty-row):hover,
+    #usersTable tbody tr:not(.users-empty-row):focus-within {
+        border-color: color-mix(in srgb, var(--accent) 58%, var(--border));
+        background: var(--surface-elevated);
+        transform: translateY(-1px);
+    }
+
+    #usersTable tbody tr:not(.users-empty-row) > td {
+        display: flex !important;
+        min-width: 0;
+        padding: 0;
+        border: 0;
+        white-space: normal;
+    }
+
+    #usersTable tbody tr:not(.users-empty-row) > td::before {
+        content: attr(data-mobile-label);
+        display: block;
+        margin-bottom: 0.2rem;
+        color: var(--text-secondary);
+        font-size: 0.62rem;
+        font-weight: 800;
+        line-height: 1.2;
+        text-transform: uppercase;
+    }
+
+    #usersTable tbody tr:not(.users-empty-row) > td:nth-child(1) {
+        grid-area: name;
+        align-self: center;
+        font-size: 0.95rem;
+        font-weight: 750;
+        line-height: 1.25;
+    }
+
+    #usersTable tbody tr:not(.users-empty-row) > td:nth-child(1)::before,
+    #usersTable tbody tr:not(.users-empty-row) > td:nth-child(7)::before,
+    #usersTable tbody tr:not(.users-empty-row) > td:nth-child(8)::before {
+        display: none;
+    }
+
+    #usersTable tbody tr:not(.users-empty-row) > td:nth-child(2),
+    #usersTable tbody tr:not(.users-empty-row) > td:nth-child(6) {
+        display: none !important;
+    }
+
+    #usersTable tbody tr:not(.users-empty-row) > td:nth-child(3) {
+        grid-area: hours;
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    #usersTable tbody tr:not(.users-empty-row) > td:nth-child(4) {
+        grid-area: contract;
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    #usersTable tbody tr:not(.users-empty-row) > td:nth-child(5) {
+        grid-area: team;
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    #usersTable tbody tr:not(.users-empty-row) > td:nth-child(7) {
+        grid-area: status;
+        align-self: start;
+        justify-self: end;
+    }
+
+    #usersTable tbody tr:not(.users-empty-row) > td:nth-child(8) {
+        grid-area: actions;
+        justify-content: flex-end;
+    }
+
+    #usersTable .inline-input,
+    #usersTable .inline-select {
+        min-width: 0;
+        min-height: 36px;
+        padding: 0.45rem 1.8rem 0.45rem 0.5rem;
+        border: 1px solid var(--border);
+        background-color: var(--primary-dark);
+        font-size: 0.75rem;
+    }
+
+    #usersTable .inline-input {
+        padding-right: 0.5rem;
+    }
+
+    #usersTable .btn-status,
+    #usersTable .delete-btn {
+        min-height: 36px;
+    }
+
+    #usersTable .delete-btn {
+        min-width: 88px;
+    }
+
+    #usersTable .users-empty-row {
+        display: block;
+        border: 1px dashed var(--border);
+        border-radius: 8px;
+        background: var(--primary-light);
+    }
+
+    #usersTable .users-empty-row td {
+        display: block;
+        width: 100%;
+    }
 }

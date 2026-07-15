@@ -2,15 +2,15 @@
 
 // --- Core Application Imports ---
 import { initializePlanner, cleanupPlanner, clearSelection, undoLastChange } from './planner.js';
-import { initializeUsers, cleanupUsers } from './users.js';
-import { initializeProductivity, cleanupProductivity } from './productivity.js';
-import { initializeSchedule, cleanupSchedule } from './schedule.js';
+import { initializeUsers, cleanupUsers } from './users.js?v=2026.07.15.11';
+import { initializeProductivity, cleanupProductivity } from './productivity.js?v=2026.07.15.11';
+import { initializeSchedule, cleanupSchedule } from './schedule.js?v=2026.07.15.11';
 import { initializeReports, cleanupReports } from './reports.js';
 import { initializeInfoVersion } from './info-version.js';
 import { initializeInfoInteractive } from './info-interactive.js';
-import { initializeCharts, initializeProductivityChart } from './charts.js?v=2026.07.15.7';
-import { updateAverageProductivityCard } from './dashboard.js';
-import { setTheme, updateLanguageUI, showSection, openEditModal, selectEditType, saveModalChanges, closeEditModal, toggleSidebar } from './ui.js?v=2026.07.15.7';
+import { initializeCharts, initializeProductivityChart } from './charts.js?v=2026.07.15.11';
+import { updateAverageProductivityCard } from './dashboard.js?v=2026.07.15.11';
+import { setTheme, updateLanguageUI, showSection, openEditModal, selectEditType, saveModalChanges, closeEditModal, toggleSidebar } from './ui.js?v=2026.07.15.11';
 import { bindPlannerControlInteractions } from './planner-interaction-wiring.js';
 import {
     bindAppLifecycleEvents,
@@ -18,10 +18,10 @@ import {
     bindAppShellInteractions,
     showAuthenticatedShell,
     showLoginScreen
-} from './app-shell-wiring.js?v=2026.07.15.7';
-import { initLogoAnimation } from './logo-animation.js?v=2026.07.15.7';
-import { initializeChat, cleanupChat } from './chat.js';
-import { loginWithGoogle, logout, onAuthChange } from './auth.js?v=2026.07.15.7';
+} from './app-shell-wiring.js?v=2026.07.15.11';
+import { initLogoAnimation } from './logo-animation.js?v=2026.07.15.11';
+import { initializeChat, cleanupChat } from './chat.js?v=2026.07.15.11';
+import { loginWithGoogle, logout, onAuthChange } from './auth.js?v=2026.07.15.11';
 import { initializeLogs, setLogUser, logActivity } from './logs.js';
 import { applyDailyGreeting } from './daily-greeting.js';
 

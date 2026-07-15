@@ -2,8 +2,8 @@
 import { db } from './firebase-config.js';
 import { collection, doc, setDoc, deleteDoc, getDocs, onSnapshot } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 import { getPlannerData } from './planner.js';
-import { getUsersData } from './users.js';
-import { showTemporaryMessage } from './ui.js';
+import { getUsersData } from './users.js?v=2026.07.15.11';
+import { showTemporaryMessage } from './ui.js?v=2026.07.15.11';
 import { translations, getMonthKey } from './config.js';
 import { hasPerAgentProductivityEligibleDate, normalizeProductivityName } from './productivity-metrics.js';
 import { buildProductivityExportCsv, getProductivityDateStatus } from './productivity-upload-calendar.js';
