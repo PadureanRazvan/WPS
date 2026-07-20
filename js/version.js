@@ -16,9 +16,9 @@
 // =============================================================================
 
 export const SHERPA_VERSION = Object.freeze({
-    number: '2026.07.16',
-    codename: 'Steady Passage',
-    released: '2026-07-16'
+    number: '2026.07.20.1',
+    codename: 'Human Touch',
+    released: '2026-07-20'
 });
 
 // FNV-1a (32-bit) over the identifying fields -> short, stable hex fingerprint.

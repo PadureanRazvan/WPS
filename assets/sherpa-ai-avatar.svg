@@ -1,0 +1,112 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="avatarTitle avatarDesc">
+  <title id="avatarTitle">Sherpa AI headset avatar</title>
+  <desc id="avatarDesc">A stylized vector portrait with dark hair, expressive eyes, pursed lips, and a call-center headset.</desc>
+  <defs>
+    <linearGradient id="skin" x1="34" y1="30" x2="91" y2="109" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#f2c2a8"/>
+      <stop offset="0.56" stop-color="#d99a7d"/>
+      <stop offset="1" stop-color="#b96f60"/>
+    </linearGradient>
+    <linearGradient id="hair" x1="37" y1="16" x2="91" y2="103" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#4a4545"/>
+      <stop offset="0.45" stop-color="#242628"/>
+      <stop offset="1" stop-color="#131719"/>
+    </linearGradient>
+    <linearGradient id="headset" x1="24" y1="25" x2="107" y2="92" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#344852"/>
+      <stop offset="0.55" stop-color="#17242b"/>
+      <stop offset="1" stop-color="#57727c"/>
+    </linearGradient>
+    <radialGradient id="iris" cx="40%" cy="34%" r="65%">
+      <stop stop-color="#91715d"/>
+      <stop offset="0.48" stop-color="#4b382f"/>
+      <stop offset="1" stop-color="#17191a"/>
+    </radialGradient>
+    <filter id="softShadow" x="-25%" y="-20%" width="150%" height="155%">
+      <feDropShadow dx="0" dy="5" stdDeviation="4" flood-color="#07100f" flood-opacity="0.38"/>
+    </filter>
+    <filter id="micGlow" x="-250%" y="-250%" width="600%" height="600%">
+      <feGaussianBlur stdDeviation="2" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <g id="talking" aria-hidden="true"/>
+
+  <g class="avatar-portrait" filter="url(#softShadow)">
+    <path d="M34 56C30 36 38 19 54 13c5-2 10-3 16-3 19 0 33 12 35 31 2 19-3 47-11 61-7 12-18 19-31 19-15 0-27-8-34-22-6-12-5-30 5-43Z" fill="url(#hair)"/>
+    <ellipse cx="76" cy="14" rx="18" ry="10" transform="rotate(12 76 14)" fill="#25282a"/>
+
+    <path d="M27 68C23 41 31 20 51 11c24-11 52 1 56 28 1 8 1 18-1 30" fill="none" stroke="url(#headset)" stroke-width="8" stroke-linecap="round"/>
+    <path d="M28 66c-6 1-9 7-8 16 1 8 5 13 11 12l6-2-4-27-5 1Z" fill="#263941" stroke="#6f8b94" stroke-width="2"/>
+    <path d="M103 64c6 0 9 6 8 15-1 8-5 13-11 13l-6-2 4-26 5 0Z" fill="#263941" stroke="#6f8b94" stroke-width="2"/>
+
+    <path d="M40 41c5-12 15-18 28-18 17 0 27 8 30 23 3 15-1 38-9 52-7 12-17 19-27 19-11-1-23-10-29-24-6-14-5-39 7-52Z" fill="url(#skin)"/>
+    <path d="M39 45c5-16 19-23 34-22 11 1 21 6 25 17-10-7-17-8-25-7-14 1-22 5-34 12Z" fill="#2f2d2e" opacity="0.92"/>
+    <path d="M43 39c7-11 18-15 31-14 7 0 13 2 19 6-12-12-35-13-50 0-4 4-6 9-7 15l7-7Z" fill="#575050" opacity="0.55"/>
+
+    <path d="M39 53c7-7 16-7 23-1" fill="none" stroke="#463738" stroke-width="4.5" stroke-linecap="round"/>
+    <path d="M70 52c8-7 18-6 24 1" fill="none" stroke="#463738" stroke-width="4.5" stroke-linecap="round"/>
+
+    <g class="avatar-eyes">
+      <path d="M40 63c4-7 15-8 21 0-6 8-17 8-21 0Z" fill="#fff8f2"/>
+      <ellipse cx="51" cy="63" rx="6.4" ry="7.2" fill="url(#iris)"/>
+      <ellipse cx="51" cy="63" rx="3.1" ry="4.3" fill="#111719"/>
+      <circle cx="49" cy="60.5" r="1.7" fill="#fff" opacity="0.85"/>
+      <path d="M70 63c5-8 16-8 22 0-6 8-17 8-22 0Z" fill="#fff8f2"/>
+      <ellipse cx="81" cy="63" rx="6.4" ry="7.2" fill="url(#iris)"/>
+      <ellipse cx="81" cy="63" rx="3.1" ry="4.3" fill="#111719"/>
+      <circle cx="79" cy="60.5" r="1.7" fill="#fff" opacity="0.85"/>
+    </g>
+
+    <path d="M66 65c-1 6-3 11-5 15-1 3 1 5 5 5 3 0 5-1 6-3" fill="none" stroke="#a9655d" stroke-width="2" stroke-linecap="round"/>
+    <g class="avatar-mouth">
+      <path d="M55 95c3-5 7-7 11-5 4-2 9 0 12 5-3 5-8 7-12 6-5 1-9-1-11-6Z" fill="#9d4f5b"/>
+      <path d="M56 95c4-1 7-1 10 0 4-1 7-1 11 0-4 2-7 3-11 2-4 1-7 0-10-2Z" fill="#efadad"/>
+    </g>
+    <path d="M48 105c11 6 25 6 35-1" fill="none" stroke="#b87768" stroke-width="1.4" stroke-linecap="round" opacity="0.45"/>
+
+    <path d="M27 85c-3 10 1 20 13 25" fill="none" stroke="#263941" stroke-width="4.5" stroke-linecap="round"/>
+    <path d="M39 110c5 2 10 1 13-1" fill="none" stroke="#263941" stroke-width="4" stroke-linecap="round"/>
+    <rect x="48" y="105" width="13" height="8" rx="4" transform="rotate(-8 48 105)" fill="#16262d" stroke="#69858d" stroke-width="1.5"/>
+    <circle class="avatar-mic-light" cx="57" cy="108" r="2.1" fill="#60e3b3" filter="url(#micGlow)"/>
+
+    <path d="M44 77c-3 1-5 4-5 8" fill="none" stroke="#f5d0ba" stroke-width="2" stroke-linecap="round" opacity="0.48"/>
+    <path d="M88 42c6 9 8 22 6 34" fill="none" stroke="#f8d7c6" stroke-width="2.4" stroke-linecap="round" opacity="0.48"/>
+  </g>
+
+  <style>
+    .avatar-eyes { transform-box: fill-box; transform-origin: center; animation: avatar-blink 5.6s ease-in-out infinite; }
+    .avatar-mic-light { animation: avatar-mic-pulse 2.2s ease-in-out infinite; }
+    .avatar-portrait, .avatar-mouth { transform-box: fill-box; transform-origin: center; }
+    #talking:target ~ .avatar-portrait { animation: avatar-talk-bob 0.72s ease-in-out infinite; }
+    #talking:target ~ .avatar-portrait .avatar-mouth { animation: avatar-talk-mouth 0.28s steps(2, end) infinite; }
+    #talking:target ~ .avatar-portrait .avatar-mic-light { animation: avatar-mic-speak 0.34s ease-in-out infinite; }
+    @keyframes avatar-blink {
+      0%, 44%, 48%, 100% { transform: scaleY(1); }
+      46% { transform: scaleY(0.08); }
+    }
+    @keyframes avatar-mic-pulse {
+      0%, 100% { opacity: 0.55; }
+      50% { opacity: 1; }
+    }
+    @keyframes avatar-talk-bob {
+      0%, 100% { transform: translateY(0) rotate(0deg); }
+      45% { transform: translateY(-1.25px) rotate(-0.45deg); }
+      72% { transform: translateY(0.4px) rotate(0.35deg); }
+    }
+    @keyframes avatar-talk-mouth {
+      0%, 100% { transform: scaleY(0.72) translateY(-0.4px); }
+      50% { transform: scaleY(1.28) translateY(0.75px); }
+    }
+    @keyframes avatar-mic-speak {
+      0%, 100% { opacity: 0.48; transform: scale(0.82); }
+      50% { opacity: 1; transform: scale(1.38); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .avatar-eyes, .avatar-mic-light,
+      #talking:target ~ .avatar-portrait,
+      #talking:target ~ .avatar-portrait .avatar-mouth { animation: none; }
+    }
+  </style>
+</svg>

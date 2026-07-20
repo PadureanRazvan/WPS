@@ -2,15 +2,15 @@
 
 // --- Core Application Imports ---
 import { initializePlanner, cleanupPlanner, clearSelection, undoLastChange } from './planner.js';
-import { initializeUsers, cleanupUsers } from './users.js?v=2026.07.16';
-import { initializeProductivity, cleanupProductivity } from './productivity.js?v=2026.07.16';
-import { initializeSchedule, cleanupSchedule } from './schedule.js?v=2026.07.16';
-import { initializeReports, cleanupReports } from './reports.js?v=2026.07.16';
-import { initializeInfoVersion } from './info-version.js?v=2026.07.16';
+import { initializeUsers, cleanupUsers } from './users.js?v=2026.07.20.1';
+import { initializeProductivity, cleanupProductivity } from './productivity.js?v=2026.07.20.1';
+import { initializeSchedule, cleanupSchedule } from './schedule.js?v=2026.07.20.1';
+import { initializeReports, cleanupReports } from './reports.js?v=2026.07.20.1';
+import { initializeInfoVersion } from './info-version.js?v=2026.07.20.1';
 import { initializeInfoInteractive } from './info-interactive.js';
-import { initializeCharts, initializeProductivityChart } from './charts.js?v=2026.07.16';
-import { updateAverageProductivityCard } from './dashboard.js?v=2026.07.16';
-import { setTheme, updateLanguageUI, showSection, openEditModal, selectEditType, saveModalChanges, closeEditModal, toggleSidebar } from './ui.js?v=2026.07.16';
+import { initializeCharts, initializeProductivityChart } from './charts.js?v=2026.07.20.1';
+import { updateAverageProductivityCard } from './dashboard.js?v=2026.07.20.1';
+import { setTheme, updateLanguageUI, showSection, openEditModal, selectEditType, saveModalChanges, closeEditModal, toggleSidebar } from './ui.js?v=2026.07.20.1';
 import { bindPlannerControlInteractions } from './planner-interaction-wiring.js';
 import {
     bindAppLifecycleEvents,
@@ -18,11 +18,11 @@ import {
     bindAppShellInteractions,
     showAuthenticatedShell,
     showLoginScreen
-} from './app-shell-wiring.js?v=2026.07.16';
-import { initLogoAnimation } from './logo-animation.js?v=2026.07.16';
-import { initializeChat, cleanupChat } from './chat.js?v=2026.07.16';
-import { loginWithGoogle, logout, onAuthChange } from './auth.js?v=2026.07.16';
-import { initializeLogs, setLogUser, logActivity } from './logs.js?v=2026.07.16';
+} from './app-shell-wiring.js?v=2026.07.20.1';
+import { initLogoAnimation } from './logo-animation.js?v=2026.07.20.1';
+import { initializeChat, cleanupChat } from './chat.js?v=2026.07.20.1';
+import { loginWithGoogle, logout, onAuthChange } from './auth.js?v=2026.07.20.1';
+import { initializeLogs, setLogUser, logActivity } from './logs.js?v=2026.07.20.1';
 import { applyDailyGreeting } from './daily-greeting.js';
 
 // --- Daily Greeting (local rotation, no async overwrite) ---

@@ -6,7 +6,7 @@ import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, Timestamp } 
 import { showTemporaryMessage } from './ui.js';
 import { updateDashboard } from './dashboard.js';
 import { translations, getMonthKey } from './config.js';
-import { logActivity } from './logs.js?v=2026.07.16';
+import { logActivity } from './logs.js?v=2026.07.20.1';
 import { buildPlannerEditCommand } from './planner-edit-command.js';
 import { buildPlannerMigrationCommands, buildPlannerUndoCommand, buildPlannerClearMonthCommand } from './planner-persistence-command.js';
 import { buildPlannerReadModel, filterPlannerAgents } from './planner-read-model.js';

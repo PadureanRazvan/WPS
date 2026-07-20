@@ -1,12 +1,12 @@
 // js/chat.js — Sherpa AI Chat Module
 import { getPlannerData, updateAgent, addAgent, deleteAgent } from './planner.js';
-import { getUsersData } from './users.js?v=2026.07.16';
-import { getAverageProductivity, getProductivityTrendData } from './productivity.js?v=2026.07.16';
-import { showSection } from './ui.js?v=2026.07.16';
-import { showTemporaryMessage } from './ui.js?v=2026.07.16';
+import { getUsersData } from './users.js?v=2026.07.20.1';
+import { getAverageProductivity, getProductivityTrendData } from './productivity.js?v=2026.07.20.1';
+import { showSection } from './ui.js?v=2026.07.20.1';
+import { showTemporaryMessage } from './ui.js?v=2026.07.20.1';
 import { translations, extractHoursFromDay, getMonthKey, getAgentDaysForMonth, getEffectiveAgentDayValue, isNonWorkingCode, normalizeTeamForDisplay, parseShiftEntry } from './config.js';
 import { functions } from './firebase-config.js';
-import { logActivity } from './logs.js?v=2026.07.16';
+import { logActivity } from './logs.js?v=2026.07.20.1';
 import { httpsCallable } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-functions.js";
 import { createSherpaChatService, getChatErrorTranslationKey } from './chat-service.js';
 
@@ -19,6 +19,7 @@ let isOpen = false;
 let isLoading = false;
 let lastSendTime = 0;
 let pendingDeleteAgent = null; // Holds agent awaiting delete confirmation
+let speechTimer = null;
 const chatService = createSherpaChatService(httpsCallable(functions, 'generateSherpaChat'));
 
 // --- Initialization ---
@@ -32,8 +33,7 @@ export async function initializeChat() {
 
     if (!bubble || !panel) return;
 
-    // Initialize particle animations and drag
-    initChatParticles();
+    // Initialize panel dragging.
     initDraggable();
 
     bubble.addEventListener('click', toggleChat);
@@ -55,6 +55,8 @@ export function cleanupChat() {
     isOpen = false;
     const panel = document.getElementById('chatPanel');
     if (panel) panel.classList.remove('open');
+    stopAvatarSpeech();
+    setAvatarThinking(false);
 }
 
 // --- Toggle Chat ---
@@ -76,6 +78,51 @@ function toggleChat() {
     if (isOpen) {
         setTimeout(() => document.getElementById('chatInput')?.focus(), 300);
     }
+}
+
+function getAvatarBaseSrc(image) {
+    const currentSrc = image.getAttribute('src') || '';
+    const baseSrc = image.dataset.restSrc || currentSrc.split('#')[0];
+    image.dataset.restSrc = baseSrc;
+    return baseSrc;
+}
+
+function setAvatarThinking(isThinking) {
+    document.querySelectorAll('.chat-avatar-frame').forEach(frame => {
+        frame.classList.toggle('is-thinking', isThinking);
+    });
+}
+
+function setAvatarSpeaking(isSpeaking) {
+    document.querySelectorAll('.chat-avatar-frame').forEach(frame => {
+        frame.classList.toggle('is-speaking', isSpeaking);
+    });
+
+    document.querySelectorAll('.chat-avatar').forEach(image => {
+        const baseSrc = getAvatarBaseSrc(image);
+        const nextSrc = isSpeaking ? baseSrc + '#talking' : baseSrc;
+        if (image.getAttribute('src') !== nextSrc) image.setAttribute('src', nextSrc);
+    });
+}
+
+function stopAvatarSpeech() {
+    if (speechTimer) {
+        window.clearTimeout(speechTimer);
+        speechTimer = null;
+    }
+    setAvatarSpeaking(false);
+}
+
+function playAvatarSpeech(text) {
+    stopAvatarSpeech();
+    if (!text) return;
+
+    setAvatarSpeaking(true);
+    const duration = Math.min(5600, Math.max(1400, text.length * 24));
+    speechTimer = window.setTimeout(() => {
+        setAvatarSpeaking(false);
+        speechTimer = null;
+    }, duration);
 }
 
 // --- Send Message ---
@@ -126,6 +173,8 @@ async function sendMessage() {
     isLoading = true;
     showTyping(true);
 
+    let spokenResponse = '';
+
     try {
         const responseText = await callGeminiAPI(chatHistory);
 
@@ -150,6 +199,7 @@ async function sendMessage() {
         }
 
         chatHistory.push({ role: 'model', text: displayText });
+        spokenResponse = displayText;
     } catch (err) {
         console.error('[Chat] Error:', err);
         chatHistory.push({ role: 'error', text: t(getChatErrorTranslationKey(err)) });
@@ -157,6 +207,7 @@ async function sendMessage() {
         isLoading = false;
         showTyping(false);
         renderMessages();
+        if (spokenResponse) playAvatarSpeech(spokenResponse);
     }
 }
 
@@ -518,6 +569,8 @@ function escapeHtml(text) {
 }
 
 function showTyping(show) {
+    if (show) stopAvatarSpeech();
+    setAvatarThinking(show);
     const container = document.getElementById('chatMessages');
     if (!container) return;
     const existing = container.querySelector('.chat-typing');
@@ -590,125 +643,4 @@ function initDraggable() {
             panel.classList.remove('dragging');
         }
     });
-}
-
-// --- Mini Particle Sphere Animation ---
-function initChatParticles() {
-    const bubbleCanvas = document.getElementById('chatBubbleCanvas');
-    const headerCanvas = document.getElementById('chatHeaderCanvas');
-    if (!bubbleCanvas && !headerCanvas) return;
-
-    function createMiniSphere(canvas, size) {
-        const ctx = canvas.getContext('2d');
-        const dpr = window.devicePixelRatio || 1;
-        canvas.width = size * dpr;
-        canvas.height = size * dpr;
-        canvas.style.width = size + 'px';
-        canvas.style.height = size + 'px';
-        ctx.scale(dpr, dpr);
-
-        const cx = size / 2;
-        const cy = size / 2;
-        const numParticles = 40;
-        const particles = [];
-        const radius = size * 0.32;
-
-        // Detect theme
-        function getAccentColor() {
-            const theme = document.documentElement.getAttribute('data-theme');
-            return theme === 'light'
-                ? { r: 59, g: 93, b: 171 }   // Blue for light
-                : { r: 232, g: 168, b: 73 };  // Amber for dark
-        }
-
-        for (let i = 0; i < numParticles; i++) {
-            const phi = Math.acos(1 - 2 * (i + 0.5) / numParticles);
-            const theta = Math.PI * (1 + Math.sqrt(5)) * i;
-            particles.push({
-                phi, theta, r: radius,
-                size: 0.6 + Math.random() * 0.8,
-                alpha: 0.4 + Math.random() * 0.6,
-                pulse: Math.random() * Math.PI * 2
-            });
-        }
-
-        let rotY = 0;
-        function animate(now) {
-            rotY += 0.008;
-            ctx.clearRect(0, 0, size, size);
-
-            const accent = getAccentColor();
-            const cosRY = Math.cos(rotY);
-            const sinRY = Math.sin(rotY);
-            const cosRX = Math.cos(0.4);
-            const sinRX = Math.sin(0.4);
-            const projected = [];
-
-            for (const p of particles) {
-                let x = p.r * Math.sin(p.phi) * Math.cos(p.theta);
-                let y = p.r * Math.cos(p.phi);
-                let z = p.r * Math.sin(p.phi) * Math.sin(p.theta);
-                const x2 = x * cosRY - z * sinRY;
-                const z2 = x * sinRY + z * cosRY;
-                const y2 = y * cosRX - z2 * sinRX;
-                const z3 = y * sinRX + z2 * cosRX;
-                const scale = 60 / (60 + z3);
-                const pulse = Math.sin(now * 0.003 + p.pulse) * 0.3 + 0.7;
-                projected.push({
-                    x: cx + x2 * scale, y: cy + y2 * scale, z: z3,
-                    size: p.size * scale * (0.7 + pulse * 0.3),
-                    alpha: p.alpha * scale * pulse
-                });
-            }
-
-            projected.sort((a, b) => a.z - b.z);
-
-            // Connections
-            ctx.lineWidth = 0.3;
-            for (let i = 0; i < projected.length; i++) {
-                for (let j = i + 1; j < projected.length; j++) {
-                    const a = projected[i], b = projected[j];
-                    const dx = a.x - b.x, dy = a.y - b.y;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-                    if (dist < size * 0.25) {
-                        const la = (1 - dist / (size * 0.25)) * 0.12;
-                        ctx.strokeStyle = `rgba(${accent.r}, ${accent.g}, ${accent.b}, ${la})`;
-                        ctx.beginPath();
-                        ctx.moveTo(a.x, a.y);
-                        ctx.lineTo(b.x, b.y);
-                        ctx.stroke();
-                    }
-                }
-            }
-
-            // Particles
-            for (const p of projected) {
-                const depth = (p.z + radius) / (radius * 2);
-                const r = Math.round(accent.r - depth * 20);
-                const g = Math.round(accent.g - depth * 30);
-                const b = Math.round(accent.b + depth * 20);
-
-                // Glow
-                const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 3);
-                grad.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${p.alpha * 0.5})`);
-                grad.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
-                ctx.fillStyle = grad;
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, p.size * 3, 0, Math.PI * 2);
-                ctx.fill();
-
-                // Core
-                ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${p.alpha})`;
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-                ctx.fill();
-            }
-
-            requestAnimationFrame(animate);
-        }
-        requestAnimationFrame(animate);
-    }
-
-    if (bubbleCanvas) createMiniSphere(bubbleCanvas, 60);
-    if (headerCanvas) createMiniSphere(headerCanvas, 28);
 }

@@ -54,9 +54,9 @@ test('legacy temporary messages delegate to the shared translated notification s
   }
 });
 
-test('Steady Passage cache-busts the notification module and browser shell', () => {
-  assert.match(versionSource, /number:\s*'2026\.07\.16'/);
-  assert.match(versionSource, /codename:\s*'Steady Passage'/);
-  assert.match(mainSource, /ui\.js\?v=2026\.07\.16/);
-  assert.match(uiSource, /toast-notifications\.js\?v=2026\.07\.16/);
+test('Human Touch cache-busts the notification module and browser shell', () => {
+  assert.match(versionSource, /number:\s*'2026\.07\.20\.1'/);
+  assert.match(versionSource, /codename:\s*'Human Touch'/);
+  assert.match(mainSource, /ui\.js\?v=2026\.07\.20\.1/);
+  assert.match(uiSource, /toast-notifications\.js\?v=2026\.07\.20\.1/);
 });

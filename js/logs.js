@@ -2,7 +2,7 @@
 import { db } from './firebase-config.js';
 import { collection, addDoc, query, orderBy, limit, getDocs, Timestamp, where } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 import { translations } from './config.js';
-import { renderActivityLogStatus, renderActivityLogView } from './logs-view.js?v=2026.07.16';
+import { renderActivityLogStatus, renderActivityLogView } from './logs-view.js?v=2026.07.20.1';
 
 function getLang() { return localStorage.getItem('language') || 'ro'; }
 function t(key) { const l = getLang(); return (translations[l] && translations[l][key]) || key; }
