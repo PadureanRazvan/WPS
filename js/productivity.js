@@ -2,14 +2,14 @@
 import { db } from './firebase-config.js';
 import { collection, doc, setDoc, deleteDoc, getDocs, onSnapshot } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 import { getPlannerData } from './planner.js';
-import { getUsersData } from './users.js?v=2026.09.06';
-import { showTemporaryMessage } from './ui.js?v=2026.09.06';
-import { translations, getMonthKey } from './config.js?v=2026.09.06';
+import { getUsersData } from './users.js?v=2026.09.06.2';
+import { showTemporaryMessage } from './ui.js?v=2026.09.06.2';
+import { translations, getMonthKey } from './config.js?v=2026.09.06.2';
 import { hasPerAgentProductivityEligibleDate, normalizeProductivityName } from './productivity-metrics.js';
 import { buildProductivityExportCsv, getProductivityDateStatus } from './productivity-upload-calendar.js';
 import { createProductivityDateCommands } from './productivity-date-commands.js';
-import { buildProductivityUploadCalendarView, buildProductivityUploadDateStatusView, buildProductivityUploadSuccessView } from './productivity-upload-calendar-view.js?v=2026.09.06';
-import { bindProductivityUploadCalendarActions } from './productivity-upload-calendar-actions.js?v=2026.09.06';
+import { buildProductivityUploadCalendarView, buildProductivityUploadDateStatusView, buildProductivityUploadSuccessView } from './productivity-upload-calendar-view.js?v=2026.09.06.2';
+import { bindProductivityUploadCalendarActions } from './productivity-upload-calendar-actions.js?v=2026.09.06.2';
 import { bindProductivityUploadArea } from './productivity-upload-area.js';
 import { processProductivityUploadFile } from './productivity-upload-flow.js';
 import { parseCallsCSV, parseTicketsXLSX } from './productivity-upload-parsing.js';
@@ -22,13 +22,13 @@ import {
     exportProductivityWorkbook
 } from './productivity-export-command.js';
 import { bindProductivityDateRangePicker } from './productivity-date-range-picker.js';
-import { bindProductivityControls } from './productivity-controls.js?v=2026.09.06';
-import { bindProductivityAgentActions, createProductivityAgentActions } from './productivity-agent-actions.js?v=2026.09.06';
-import { bindProductivityAgentCombobox } from './productivity-agent-combobox.js?v=2026.09.06';
+import { bindProductivityControls } from './productivity-controls.js?v=2026.09.06.2';
+import { bindProductivityAgentActions, createProductivityAgentActions } from './productivity-agent-actions.js?v=2026.09.06.2';
+import { bindProductivityAgentCombobox } from './productivity-agent-combobox.js?v=2026.09.06.2';
 import {
     buildProductivityAgentSelectionView,
     filterProductivityAgentSelection
-} from './productivity-agent-selection-view.js?v=2026.09.06';
+} from './productivity-agent-selection-view.js?v=2026.09.06.2';
 import {
     calculateProductivityOverview,
     formatProductivityDateKey,
