@@ -55,14 +55,44 @@ test('non-heart logo states keep rotating', () => {
 
 test('FSP makes a continuous full turn during its primary display interval', () => {
   let rotY = 0;
+  let frontFrames = 0;
+  let backFrames = 0;
   for (let frame = 0; frame < HOLD_DURATIONS.fsp / 1000 * 60; frame++) {
     const next = getLogoMotion({ rotY, dt: 1 / 60, now: frame * 1000 / 60, shapeName: 'fsp' });
     assert.ok(next.rotY > rotY && next.rotY - rotY < 0.02);
     assert.equal(next.displayRotY, next.rotY);
+    if (rotY < TWO_PI) {
+      if (Math.cos((rotY + next.rotY) / 2) >= 0) frontFrames++;
+      else backFrames++;
+    }
     rotY = next.rotY;
   }
   assert.ok(rotY > TWO_PI);
+  assert.ok(frontFrames > backFrames * 2.5, 'readable front should occupy most of each turn');
   assert.ok(Object.entries(HOLD_DURATIONS).every(([name, duration]) => name === 'fsp' || duration < HOLD_DURATIONS.fsp));
+});
+
+test('FSP accelerates through its reversed face and slows smoothly on return', () => {
+  const advanceAt = angle => getLogoMotion({ rotY: angle, dt: 0.001, shapeName: 'fsp' }).rotY - angle;
+  const front = advanceAt(0);
+  const side = advanceAt(Math.PI / 2);
+  const back = advanceAt(Math.PI);
+  assert.ok(front > 0 && side > front && back > side);
+  assert.ok(back > front * 4 && back < front * 6);
+  assert.ok(Math.abs(advanceAt(TWO_PI) - front) < 1e-10, 'successive turns should join smoothly');
+  assert.ok(Math.abs(advanceAt(-0.01) - advanceAt(0.01)) < 1e-8);
+  assert.equal(getLogoMotion({ rotY: Math.PI, dt: 0, shapeName: 'fsp' }).rotY, Math.PI);
+});
+
+test('FSP completes the same eased turn at different display refresh rates', () => {
+  const turnAfter = frameRate => {
+    let rotY = 0;
+    for (let frame = 0; frame < 14 * frameRate; frame++) {
+      rotY = getLogoMotion({ rotY, dt: 1 / frameRate, shapeName: 'fsp' }).rotY;
+    }
+    return rotY;
+  };
+  assert.ok(Math.abs(turnAfter(30) - turnAfter(144)) < 0.001);
 });
 
 test('heart motion includes a restrained depth sway', () => {

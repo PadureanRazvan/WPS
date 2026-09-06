@@ -54,9 +54,9 @@ test('legacy temporary messages delegate to the shared translated notification s
   }
 });
 
-test('Global Motion cache-busts the notification module and browser shell', () => {
-  assert.match(versionSource, /number:\s*'2026\.09\.06'/);
-  assert.match(versionSource, /codename:\s*'Global Motion'/);
-  assert.match(mainSource, /ui\.js\?v=2026\.09\.06/);
-  assert.match(uiSource, /toast-notifications\.js\?v=2026\.09\.06/);
+test('Readable Orbit cache-busts the notification module and browser shell', () => {
+  assert.match(versionSource, /number:\s*'2026\.09\.06\.2'/);
+  assert.match(versionSource, /codename:\s*'Readable Orbit'/);
+  assert.match(mainSource, /ui\.js\?v=2026\.09\.06\.2/);
+  assert.match(uiSource, /toast-notifications\.js\?v=2026\.09\.06\.2/);
 });

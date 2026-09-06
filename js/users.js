@@ -2,8 +2,8 @@
 import { db } from './firebase-config.js';
 import { collection, onSnapshot, Timestamp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 import { addAgent, updateAgent, deleteAgent } from './planner.js';
-import { showTemporaryMessage, t } from './ui.js?v=2026.09.06';
-import { logActivity } from './logs.js?v=2026.09.06';
+import { showTemporaryMessage, t } from './ui.js?v=2026.09.06.2';
+import { logActivity } from './logs.js?v=2026.09.06.2';
 import {
     buildContractChangeCommand,
     buildCreateAgentCommand,
@@ -14,7 +14,7 @@ import {
     getComparableUserInlineFieldState,
     getUserCommandDateKey
 } from './users-command.js';
-import { filterUsersDirectory, getUsersDirectoryTeams } from './users-directory.js?v=2026.09.06';
+import { filterUsersDirectory, getUsersDirectoryTeams } from './users-directory.js?v=2026.09.06.2';
 
 let usersData = [];
 const usersDirectoryState = { query: '', team: 'all', status: 'all' };

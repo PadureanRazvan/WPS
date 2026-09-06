@@ -16,8 +16,8 @@
 // =============================================================================
 
 export const SHERPA_VERSION = Object.freeze({
-    number: '2026.09.06',
-    codename: 'Global Motion',
+    number: '2026.09.06.2',
+    codename: 'Readable Orbit',
     released: '2026-09-06'
 });
 

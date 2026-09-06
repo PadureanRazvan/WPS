@@ -5,7 +5,7 @@ import {
     buildLogoConnections,
     createLogoShape,
     matchLogoShape
-} from './logo-shapes.js?v=2026.09.06&fsp=20260906.3';
+} from './logo-shapes.js?v=2026.09.06.2&fsp=20260906.3';
 
 const TAU = Math.PI * 2;
 const HEART_REVEAL_ANGLE = 0.48;
@@ -38,6 +38,11 @@ function smootherstep(value) {
 
 function nearestEquivalentAngle(current, baseAngle) {
     return Math.round((current - baseAngle) / TAU) * TAU + baseAngle;
+}
+
+function getFspSpinSpeed(angle) {
+    // Linger on the readable front, then smoothly accelerate past the back.
+    return 0.22 + 0.88 * (1 - Math.cos(angle)) / 2;
 }
 
 export function getLogoMotion({
@@ -90,7 +95,11 @@ export function getLogoMotion({
         };
     }
 
-    const speed = resolvedShape === 'fsp' ? 0.5 : resolvedShape === 'globe' ? 0.22 : 0.3;
+    // Sample halfway through the frame so the easing stays consistent across
+    // display refresh rates, including when a frame spans the front/back seam.
+    const speed = resolvedShape === 'fsp'
+        ? getFspSpinSpeed(rotY + dt * getFspSpinSpeed(rotY) / 2)
+        : resolvedShape === 'globe' ? 0.22 : 0.3;
     const nextRotY = rotY + dt * speed;
     return {
         rotY: nextRotY,
