@@ -15,14 +15,15 @@
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
     
     <!-- CSS Files -->
-    <link rel="stylesheet" href="css/base.css?v=2026.07.20.1">
-    <link rel="stylesheet" href="css/layout.css?v=2026.07.20.1">
-    <link rel="stylesheet" href="css/components.css?v=2026.07.20.1">
+    <link rel="stylesheet" href="css/base.css?v=2026.09.06">
+    <link rel="stylesheet" href="css/layout.css?v=2026.09.06">
+    <link rel="stylesheet" href="css/components.css?v=2026.09.06">
     <link rel="stylesheet" href="css/planner.css">
-    <link rel="stylesheet" href="css/responsive.css?v=2026.07.20.1">
-    <link rel="stylesheet" href="css/chat.css?v=2026.07.20.1">
+    <link rel="stylesheet" href="css/responsive.css?v=2026.09.06">
+    <link rel="stylesheet" href="css/chat.css?v=2026.09.06">
     <link rel="stylesheet" href="css/schedule.css">
-    <link rel="stylesheet" href="css/info.css?v=2026.07.20.1">
+    <link rel="stylesheet" href="css/info.css?v=2026.09.06">
+    <link rel="stylesheet" href="css/fsp-logo.css?v=20260906.3">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/litepicker/dist/css/litepicker.css"/>
     <style>
         /* FIX: Styles for the selection counter visibility */
@@ -51,7 +52,9 @@
     <div id="loginScreen" class="login-screen">
         <div class="login-container">
             <div class="login-logo">
-                <canvas id="loginLogo" width="100" height="100"></canvas>
+                <button id="loginLogo" class="fsp-brand-logo" type="button" data-fsp-logo aria-label="FSP Global — click pentru forma următoare">
+                    <img class="fsp-logo-full" src="assets/branding/fsp-global-still.webp?v=20260906.3" width="960" height="807" alt="FSP Global" draggable="false" fetchpriority="high">
+                </button>
                 <h1 class="login-title">Sherpa</h1>
                 <p class="login-subtitle" id="loginGreeting">Workforce Planning System</p>
             </div>
@@ -79,7 +82,10 @@
                 </span>
             </button>
             <div class="logo">
-                <canvas id="sherpaLogo" class="logo-canvas" width="120" height="120" aria-label="Sherpa animated mark. Activate to show the next shape." role="button" tabindex="0"></canvas>
+                <button id="sherpaLogo" class="fsp-brand-logo" type="button" data-fsp-logo aria-label="FSP Global — click pentru forma următoare">
+                    <img class="fsp-logo-full" src="assets/branding/fsp-global-still.webp?v=20260906.3" width="960" height="807" alt="FSP Global" draggable="false">
+                    <img class="fsp-logo-compact" src="assets/branding/fsp-global-compact-still.webp?v=20260906.3" width="512" height="410" alt="FSP Global" draggable="false">
+                </button>
                 <h1>Sherpa</h1>
                 <p id="sidebarGreeting">Workforce Planning System</p>
             </div>
@@ -829,14 +835,14 @@
     <!-- AI Chat -->
     <button type="button" id="chatBubble" class="chat-bubble" aria-label="Open Sherpa AI" title="Sherpa AI">
         <span class="chat-avatar-frame chat-avatar-frame--bubble" aria-hidden="true">
-            <img class="chat-avatar" src="assets/sherpa-ai-avatar.svg?v=2026.07.20.1" alt="">
+            <img class="chat-avatar" src="assets/sherpa-ai-avatar.svg?v=2026.09.06" alt="">
         </span>
     </button>
     <div id="chatPanel" class="chat-panel">
         <div class="chat-header" id="chatDragHandle">
             <span class="chat-header-title">
                 <span class="chat-avatar-frame chat-avatar-frame--header" aria-hidden="true">
-                    <img class="chat-avatar" src="assets/sherpa-ai-avatar.svg?v=2026.07.20.1" alt="">
+                    <img class="chat-avatar" src="assets/sherpa-ai-avatar.svg?v=2026.09.06" alt="">
                 </span>
                 Sherpa AI
             </span>
@@ -863,7 +869,7 @@
     <!-- JavaScript Files -->
     <script src="https://cdn.jsdelivr.net/npm/litepicker/dist/litepicker.js"></script>
     <!-- main.js owns the application module graph so each module has one identity. -->
-    <script src="js/main.js?v=2026.07.20.1" type="module"></script>
+    <script src="js/main.js?v=2026.09.06&amp;fsp=20260906.3" type="module"></script>
 
     <!-- Deactivate User Modal -->
     <div id="deactivateModal" class="edit-modal">

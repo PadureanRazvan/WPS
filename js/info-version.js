@@ -5,7 +5,7 @@
 // populates the dynamic fields once at init. DOM-only — no Firestore, no
 // listeners, nothing to clean up. Safe to call again (idempotent).
 
-import { SHERPA_VERSION, computeBuildFingerprint, formatVersionLabel } from './version.js?v=2026.07.20.1';
+import { SHERPA_VERSION, computeBuildFingerprint, formatVersionLabel } from './version.js?v=2026.09.06';
 
 function setText(root, id, value) {
     const el = root && root.getElementById ? root.getElementById(id) : null;
