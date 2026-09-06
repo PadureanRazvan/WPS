@@ -1,9 +1,12 @@
+import { FSP_SHAPE_DATA } from '../assets/branding/fsp-shape-data.js?v=20260906.3';
+
 const TAU = Math.PI * 2;
 
 export const LOGO_PARTICLE_COUNT = 520;
-export const LOGO_SHAPE_NAMES = Object.freeze(['globe', 'heart', 'summit', 'infinity']);
+export const LOGO_SHAPE_NAMES = Object.freeze(['fsp', 'globe', 'heart', 'summit', 'infinity']);
 
 const SHAPE_META = Object.freeze({
+    fsp: { glow: [0.02, 0.64, 0.31], orbitOpacity: 0, lineOpacity: 0.025 },
     globe: { glow: [0.08, 0.72, 0.46], orbitOpacity: 0.1, lineOpacity: 0.055 },
     heart: { glow: [1.0, 0.16, 0.34], orbitOpacity: 0, lineOpacity: 0.07 },
     summit: { glow: [0.18, 0.72, 0.75], orbitOpacity: 0.03, lineOpacity: 0.085 },
@@ -57,6 +60,19 @@ function createShapeBuffer(name, count) {
         orbitOpacity: meta.orbitOpacity,
         lineOpacity: meta.lineOpacity
     };
+}
+
+function generateFsp(count, random, variant) {
+    const data = FSP_SHAPE_DATA[variant] || FSP_SHAPE_DATA.full;
+    const shape = createShapeBuffer('fsp', count);
+    const sampleCount = data.samples.length / 5;
+    for (let index = 0; index < count; index++) {
+        const offset = Math.min(sampleCount - 1, Math.floor((index + random()) / count * sampleCount)) * 5;
+        setPoint(shape, index, data.samples[offset], data.samples[offset + 1],
+            (index % 3 ? 1 : -1) * data.depth / 2,
+            data.samples.slice(offset + 2, offset + 5), 1.38 + random() * 0.3);
+    }
+    return shape;
 }
 
 function generateGlobe(count, random) {
@@ -287,7 +303,7 @@ function generateInfinity(count, random) {
     return shape;
 }
 
-export function createLogoShape(name, count = LOGO_PARTICLE_COUNT, seed = 0x5EED1234) {
+export function createLogoShape(name, count = LOGO_PARTICLE_COUNT, seed = 0x5EED1234, variant = 'full') {
     if (!LOGO_SHAPE_NAMES.includes(name)) {
         throw new RangeError(`Unknown logo shape: ${name}`);
     }
@@ -295,8 +311,10 @@ export function createLogoShape(name, count = LOGO_PARTICLE_COUNT, seed = 0x5EED
         throw new RangeError('Logo particle count must be an integer of at least 32');
     }
 
-    const shapeSeed = seed ^ ((LOGO_SHAPE_NAMES.indexOf(name) + 1) * 0x9E3779B9);
+    // Keep the original four figures' seeds stable when adding the brand shape.
+    const shapeSeed = seed ^ ((name === 'fsp' ? 5 : LOGO_SHAPE_NAMES.indexOf(name)) * 0x9E3779B9);
     const random = createRandom(shapeSeed);
+    if (name === 'fsp') return generateFsp(count, random, variant);
     if (name === 'globe') return generateGlobe(count, random);
     if (name === 'heart') return generateHeart(count, random);
     if (name === 'summit') return generateSummit(count, random);

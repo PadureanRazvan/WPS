@@ -19,7 +19,7 @@ function axisExtent(positions, axis) {
 }
 
 test('modern logo shape set is deterministic and structurally complete', () => {
-  assert.deepEqual(LOGO_SHAPE_NAMES, ['globe', 'heart', 'summit', 'infinity']);
+  assert.deepEqual(LOGO_SHAPE_NAMES, ['fsp', 'globe', 'heart', 'summit', 'infinity']);
 
   for (const name of LOGO_SHAPE_NAMES) {
     const first = createLogoShape(name, 160, 12345);
@@ -115,4 +115,33 @@ test('nearest matching preserves every target particle and connection indices st
   const sourceSum = heart.positions.reduce((sum, value) => sum + value, 0);
   const matchedSum = matched.positions.reduce((sum, value) => sum + value, 0);
   assert.ok(Math.abs(sourceSum - matchedSum) < 1e-5);
+});
+
+test('FSP particles retain white oceans and green/blue artwork through a complete morph cycle', () => {
+  const fsp = createLogoShape('fsp', 520, 42);
+  const swatches = { green: 0, blue: 0, white: 0 };
+  for (let i = 0; i < fsp.colors.length; i += 3) {
+    const [r, g, b] = fsp.colors.slice(i, i + 3);
+    if (g > 0.35 && g > r * 1.6 && g > b * 1.3) swatches.green++;
+    if (b > 0.2 && b > r * 1.5 && b > g * 1.2) swatches.blue++;
+    if (Math.min(r, g, b) > 0.9) swatches.white++;
+  }
+  assert.ok(Object.values(swatches).every(count => count > 30), JSON.stringify(swatches));
+  let current = fsp;
+  for (const name of [...LOGO_SHAPE_NAMES.slice(1), 'fsp']) {
+    const target = createLogoShape(name, 520, 42);
+    current = matchLogoShape(current, target);
+    assert.ok(current.positions.every(Number.isFinite));
+    const points = shape => Array.from({ length: shape.count }, (_, i) => Array.from(shape.positions.slice(i * 3, i * 3 + 3)).join(',')).sort();
+    assert.deepEqual(points(current), points(target), `${name} lost or duplicated a target point`);
+  }
+});
+
+test('compact FSP stays a separate globe-and-star silhouette with matching particle count', () => {
+  const full = createLogoShape('fsp', 520, 42);
+  const compact = createLogoShape('fsp', 520, 42, 'compact');
+  assert.equal(compact.count, full.count);
+  assert.ok(axisExtent(compact.positions, 1).span < axisExtent(full.positions, 1).span);
+  assert.ok(axisExtent(compact.positions, 2).span > 0.1);
+  assert.notDeepEqual(compact.positions, full.positions);
 });

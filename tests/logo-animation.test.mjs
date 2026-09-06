@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-import { getHeartBeatScale, getInterfacePulseScale, getLogoMotion, getLogoShapePresence } from '../js/logo-animation.js';
+import { HOLD_DURATIONS, getHeartBeatScale, getInterfacePulseScale, getLogoMotion, getLogoShapePresence } from '../js/logo-animation.js';
 import { SHERPA_VERSION } from '../js/version.js';
 
 const TWO_PI = Math.PI * 2;
@@ -51,6 +51,18 @@ test('non-heart logo states keep rotating', () => {
 
   assert.ok(motion.rotY > 0.2);
   assert.equal(motion.displayRotY, motion.rotY);
+});
+
+test('FSP makes a continuous full turn during its primary display interval', () => {
+  let rotY = 0;
+  for (let frame = 0; frame < HOLD_DURATIONS.fsp / 1000 * 60; frame++) {
+    const next = getLogoMotion({ rotY, dt: 1 / 60, now: frame * 1000 / 60, shapeName: 'fsp' });
+    assert.ok(next.rotY > rotY && next.rotY - rotY < 0.02);
+    assert.equal(next.displayRotY, next.rotY);
+    rotY = next.rotY;
+  }
+  assert.ok(rotY > TWO_PI);
+  assert.ok(Object.entries(HOLD_DURATIONS).every(([name, duration]) => name === 'fsp' || duration < HOLD_DURATIONS.fsp));
 });
 
 test('heart motion includes a restrained depth sway', () => {

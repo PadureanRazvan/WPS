@@ -13,7 +13,7 @@ const [indexSource, chatSource, chatStyles, avatarSource] = await Promise.all([
 test('Sherpa AI uses the vector headset avatar in the bubble and chat header', () => {
   assert.match(indexSource, /id="chatBubble"[^>]*aria-label="Open Sherpa AI"/);
   assert.equal(
-    (indexSource.match(/assets\/sherpa-ai-avatar\.svg\?v=2026\.07\.20\.1/g) || []).length,
+    (indexSource.match(/assets\/sherpa-ai-avatar\.svg\?v=2026\.09\.06/g) || []).length,
     2
   );
   assert.doesNotMatch(indexSource, /chatBubbleCanvas|chatHeaderCanvas/);
