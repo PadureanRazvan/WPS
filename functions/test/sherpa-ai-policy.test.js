@@ -70,6 +70,21 @@ test('builds the system prompt on the Bucharest calendar date', () => {
   assert.equal(request.tools[0].functionDeclarations.length, 7);
 });
 
+test('AI action and schedule protocols use exact IDs and require application confirmation', () => {
+  const request = buildGeminiRequest({
+    language: 'en', contents: [{ role: 'user', parts: [{ text: 'Change a schedule' }] }]
+  });
+  const scheduleTool = request.tools[0].functionDeclarations.find(tool => tool.name === 'get_agent_schedule');
+  assert.deepEqual(scheduleTool.parameters.required, ['agent_id']);
+  assert.equal(scheduleTool.parameters.properties.agent_id.type, 'STRING');
+  assert.equal(scheduleTool.parameters.properties.agent_name, undefined);
+  const prompt = request.system_instruction.parts[0].text;
+  assert.match(prompt, /\[\[ACTION:SET_CELL\|agentId\|dayNumber\|value\]\]/);
+  assert.match(prompt, /\[\[ACTION:DELETE_AGENT\|agentId\]\]/);
+  assert.match(prompt, /requires an Apply changes button click before any write/);
+  assert.doesNotMatch(prompt, /executed automatically|agentFullName/);
+});
+
 test('distinguishes denied projects from invalid and rate-limited credentials', () => {
   assert.equal(
     mapGeminiError(403, { error: { message: 'Your project has been denied access. Please contact support.' } }).reason,

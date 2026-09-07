@@ -438,3 +438,15 @@
         cursor: default;
     }
 }
+.chat-action-confirmation {
+    padding: 1rem;
+    border: 1px solid var(--accent);
+    border-radius: 12px;
+    background: var(--bg-secondary);
+    overflow-wrap: anywhere;
+}
+.chat-action-confirmation p { margin: 0 0 .75rem; }
+.chat-action-confirmation ul { padding-left: 1.25rem; margin: 0 0 .75rem; }
+.chat-action-confirmation li + li { margin-top: .5rem; }
+.chat-confirmation-controls { display: flex; flex-wrap: wrap; gap: .5rem; }
+.chat-confirmation-controls button { min-height: 44px; }

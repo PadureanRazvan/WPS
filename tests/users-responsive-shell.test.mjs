@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { SHERPA_VERSION } from '../js/version.js';
 import { readFile } from 'node:fs/promises';
 
 const indexSource = await readFile(new URL('../index.html', import.meta.url), 'utf8');
@@ -18,10 +19,10 @@ test('users directory exposes searchable and filterable controls with a live res
   assert.match(usersSource, /usersDirectoryState\.query\s*=\s*searchInput\.value/);
   assert.match(usersSource, /usersDirectoryState\.team\s*=\s*teamFilter\.value/);
   assert.match(usersSource, /usersDirectoryState\.status\s*=\s*button\.dataset\.usersStatus/);
-  assert.match(mainSource, /from '\.\/users\.js\?v=2026\.09\.06\.2'/);
-  assert.match(uiSource, /from '\.\/users\.js\?v=2026\.09\.06\.2'/);
-  assert.match(usersSource, /from '\.\/ui\.js\?v=2026\.09\.06\.2'/);
-  assert.match(usersSource, /from '\.\/users-directory\.js\?v=2026\.09\.06\.2'/);
+  assert.ok(mainSource.includes(`from './users.js?v=${SHERPA_VERSION.number}'`));
+  assert.ok(uiSource.includes(`from './users.js?v=${SHERPA_VERSION.number}'`));
+  assert.ok(usersSource.includes(`from './ui.js?v=${SHERPA_VERSION.number}'`));
+  assert.ok(usersSource.includes(`from './users-directory.js?v=${SHERPA_VERSION.number}'`));
 });
 
 test('users directory translations cover controls, counts and empty states in every language', () => {

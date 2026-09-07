@@ -1,12 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { SHERPA_VERSION } from '../js/version.js';
 import { readFileSync } from 'node:fs';
 
 const mainSource = readFileSync(new URL('../js/main.js', import.meta.url), 'utf8');
 const indexSource = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 
 test('main shell delegates app visibility and DOM lifecycle wiring to App Shell Wiring', () => {
-  assert.match(mainSource, /from\s+'\.\/app-shell-wiring\.js\?v=2026\.09\.06\.2';/);
+  assert.ok(mainSource.includes(`from './app-shell-wiring.js?v=${SHERPA_VERSION.number}';`));
 
   [
     'bindAppLifecycleEvents',

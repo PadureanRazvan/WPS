@@ -1,5 +1,5 @@
 // js/dashboard.js
-import { getAverageProductivity } from './productivity.js?v=2026.09.06.2';
+import { getAverageProductivity } from './productivity.js?v=2026.09.07';
 import { translations, formatPlannerHoursValue, isNonWorkingCode, normalizeTeamForDisplay, parseShiftEntry, getEffectiveAgentDayValue } from './config.js';
 
 let cachedPlannerData = null;
@@ -195,7 +195,7 @@ function updateTeamHoursTable(dailyStats, dateLabel) {
         const teamData = dailyStats.teams[teamCode];
         const row = document.createElement('tr');
         row.innerHTML = `
-            <td>${teamCode} zooplus</td>
+            <td>${escapeHtml(teamCode)} zooplus</td>
             <td>${teamData.agentIds.size}</td>
             <td>${formatPlannerHoursValue(teamData.hours)}</td>
         `;
@@ -224,3 +224,4 @@ export function updateAverageProductivityCard() {
         }
     }
 }
+import { escapeHtml } from './html.js';

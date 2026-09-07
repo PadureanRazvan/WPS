@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { test } from 'node:test';
+import { SHERPA_VERSION } from '../js/version.js';
 
 const read = path => readFile(new URL(path, import.meta.url), 'utf8');
 
@@ -37,21 +38,16 @@ test('productivity agent picker has responsive fallback and progressive anchor p
   assert.match(comboboxSource, /Escape/);
 });
 
-test('Readable Orbit cache-busts the productivity picker and shared shell', async () => {
-  const [html, productivitySource, versionSource] = await Promise.all([
+test('the current release cache-busts the productivity picker and shared shell', async () => {
+  const [html, productivitySource] = await Promise.all([
     read('../index.html'),
-    read('../js/productivity.js'),
-    read('../js/version.js')
+    read('../js/productivity.js')
   ]);
 
-  assert.match(versionSource, /number:\s*'2026\.09\.06\.2'/);
-  assert.match(versionSource, /codename:\s*'Readable Orbit'/);
-  assert.match(productivitySource, /config\.js\?v=2026\.09\.06\.2/);
-  assert.match(productivitySource, /productivity-controls\.js\?v=2026\.09\.06\.2/);
-  assert.match(productivitySource, /productivity-agent-actions\.js\?v=2026\.09\.06\.2/);
-  assert.match(productivitySource, /productivity-agent-selection-view\.js\?v=2026\.09\.06\.2/);
-  assert.match(productivitySource, /productivity-agent-combobox\.js\?v=2026\.09\.06\.2/);
-  assert.match(html, /components\.css\?v=2026\.09\.06\.2/);
-  assert.match(html, /main\.js\?v=2026\.09\.06\.2/);
+  for (const module of ['config', 'productivity-controls', 'productivity-agent-actions', 'productivity-agent-selection-view', 'productivity-agent-combobox']) {
+    assert.ok(productivitySource.includes(`${module}.js?v=${SHERPA_VERSION.number}`), module);
+  }
+  assert.ok(html.includes(`components.css?v=${SHERPA_VERSION.number}`));
+  assert.ok(html.includes(`main.js?v=${SHERPA_VERSION.number}`));
   assert.doesNotMatch(html, /<script src="js\/(?:config|ui|charts|planner|dashboard|users|productivity|logo-animation)\.js/);
 });

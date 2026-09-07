@@ -42,8 +42,8 @@ export function createProductivityDateCommands({
             download(`productivity-${dateKey}.csv`, csv);
         },
         async removeDate(dateKey) {
-            deleteDateEntry(dateKey);
             await deletePersistedDate(dateKey);
+            deleteDateEntry(dateKey);
             refreshProductivityViews({ source: 'delete' });
             showTemporaryMessage(
                 t('prod-deleted').replace('{date}', formatDateDisplay(dateKey)),

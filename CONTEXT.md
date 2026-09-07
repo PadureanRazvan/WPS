@@ -16,6 +16,8 @@
 
 **Runtime Deploy Hardening** — the rules for proving a deployed Sherpa build is the intended version, reusing one external Chrome session for read-only production smoke checks, confirming GitHub Pages serves new Modules, and rolling back production without touching Firestore data.
 
+The release import map resolves local module imports to one versioned URL per module, including otherwise unversioned imports. `scripts/refresh-release-assets.mjs` refreshes module aliases and entry/CSS URLs from `SHERPA_VERSION`; its `--check` mode detects stale release assets.
+
 **Users Command** — the rules for turning Users form input, inline Agent edits, contract changes, primary team changes, deactivation, and reactivation into validated Agent update payloads, activity metadata, and user-facing diagnostics while keeping the Users shell responsible for DOM modals and Firestore writes.
 
 **Users Directory View** — the searchable and filterable roster projection of Agents, including query normalization, team/status filters, translated result states, and container-driven table-to-list reflow while preserving inline Users commands.
@@ -42,6 +44,10 @@
 
 **Planner Persistence Command** — the rules for turning legacy Planner data, undo snapshots, and clear-month actions into Firestore update payloads and activity metadata while keeping the browser shell responsible for actual writes.
 
+**Agent Persistence** — the transaction boundary for Agent updates, deletions, and confirmed AI proposals. It compares the prepared baseline with current Firestore data, merges only changed Planner Cells and notes, rejects conflicting edits, and commits each command atomically. Undo records both the previous and applied values so it cannot overwrite a later edit to the same cell.
+
+**AI Action Proposal** — a complete, validated set of proposed Agent changes using exact document IDs and the Bucharest calendar. The chat renders the affected Agents, dates, values, and deletion warnings for an explicit Apply changes button; text replies, Clear, and logout cannot approve a proposal. Success is shown only after Agent Persistence acknowledges the transaction.
+
 **Planner Selection State** — the rules for turning Planner Cell click, drag, stop, and clear actions into selected Planner Cell keys, selection counts, and selection drag state.
 
 **Planner View State** — the rules for turning Planner month, team, Agent, date-range, search, and view-option controls into the current Planner filter and render state.
@@ -57,6 +63,8 @@
 **Productivity Upload Parsing** — the rules for turning uploaded ticket XLSX and call CSV files into normalized Productivity Data, including language-to-team mapping, queue-to-team mapping, skipped zero-ticket rows, and answered-call filtering.
 
 **Productivity Persistence** — the rules for serializing Productivity Data to Firestore, hydrating date snapshots back into maps, and routing save/delete/load/subscribe operations through a Firestore adapter.
+
+Each Productivity upload replaces only its own ticket or call map, preserving the other file type. Parsed uploads stay separate from the subscribed data until persistence accepts the write, and rejected writes propagate to the calling UI.
 
 **Productivity Dashboard Metrics** — the rules for turning Productivity Data, Agents, Schedule Semantics, and date selections into dashboard summaries such as seven-day average productivity and monthly team trend series.
 

@@ -1,4 +1,5 @@
 import { formatPlannerHoursValue } from './config.js';
+import { escapeHtml } from './html.js';
 
 function productivityColor(hours, productivity) {
     if (hours === 0) return 'var(--text-secondary)';
@@ -28,9 +29,9 @@ function centeredMessageHtml(message, padding = '2rem') {
 function statCard(label, value, detail = '', valueStyle = '') {
     return `
             <div class="stat-card">
-                <div class="stat-label">${label}</div>
-                <div class="stat-value"${valueStyle ? ` style="${valueStyle}"` : ''}>${value}</div>
-                ${detail ? `<div class="stat-detail">${detail}</div>` : ''}
+                <div class="stat-label">${escapeHtml(label)}</div>
+                <div class="stat-value"${valueStyle ? ` style="${escapeHtml(valueStyle)}"` : ''}>${escapeHtml(value)}</div>
+                ${detail ? `<div class="stat-detail">${escapeHtml(detail)}</div>` : ''}
             </div>`;
 }
 
@@ -95,11 +96,11 @@ export function buildProductivityOverviewView({
 
         contentHtml += `<tr>
             <td style="color: var(--text-secondary);">${index + 1}</td>
-            <td style="font-weight: 500;">${row.name}</td>
-            <td title="${teamTooltip}"><span style="background: rgba(99,102,241,0.15); padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8rem; letter-spacing: 0.5px;">${row.teamsDisplay}</span></td>
-            <td>${row.tickets}</td>
-            <td>${row.calls}</td>
-            <td style="font-weight: bold;">${row.total}</td>
+            <td style="font-weight: 500;">${escapeHtml(row.name)}</td>
+            <td title="${escapeHtml(teamTooltip)}"><span style="background: rgba(99,102,241,0.15); padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8rem; letter-spacing: 0.5px;">${escapeHtml(row.teamsDisplay)}</span></td>
+            <td>${escapeHtml(row.tickets)}</td>
+            <td>${escapeHtml(row.calls)}</td>
+            <td style="font-weight: bold;">${escapeHtml(row.total)}</td>
             <td>${formatPlannerHoursValue(row.hours)}h</td>
             <td style="color: ${prodColor}; font-weight: bold;">${prodDisplay}</td>
         </tr>`;
@@ -171,13 +172,13 @@ export function buildProductivityDetailView({
         lastDate = row.dateKey;
 
         contentHtml += `<tr style="${rowBg}${noDataStyle}">
-            <td style="font-weight: ${showDate ? '500' : '300'}; color: ${row.isWeekend ? 'var(--warning)' : 'var(--text-primary)'};">${showDate ? row.dateLabel : ''}</td>
-            <td style="font-weight: 500;">${row.name}</td>
-            <td title="${teamTooltip}"><span style="background: rgba(99,102,241,0.15); padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8rem;">${row.teamsDisplay}</span></td>
-            <td>${row.tickets || '-'}</td>
-            <td>${row.calls || '-'}</td>
-            <td style="font-weight: bold;">${row.total || '-'}</td>
-            <td style="font-size: 0.85rem; color: var(--text-secondary);">${row.dayValue || '-'}</td>
+            <td style="font-weight: ${showDate ? '500' : '300'}; color: ${row.isWeekend ? 'var(--warning)' : 'var(--text-primary)'};">${showDate ? escapeHtml(row.dateLabel) : ''}</td>
+            <td style="font-weight: 500;">${escapeHtml(row.name)}</td>
+            <td title="${escapeHtml(teamTooltip)}"><span style="background: rgba(99,102,241,0.15); padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8rem;">${escapeHtml(row.teamsDisplay)}</span></td>
+            <td>${escapeHtml(row.tickets || '-')}</td>
+            <td>${escapeHtml(row.calls || '-')}</td>
+            <td style="font-weight: bold;">${escapeHtml(row.total || '-')}</td>
+            <td style="font-size: 0.85rem; color: var(--text-secondary);">${escapeHtml(row.dayValue || '-')}</td>
             <td>${formatPlannerHoursValue(row.hours)}h</td>
             <td style="color: ${prodColor}; font-weight: bold;">${prodDisplay}</td>
         </tr>`;

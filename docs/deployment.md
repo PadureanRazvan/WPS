@@ -7,6 +7,16 @@ This flow is for production changes to `https://padureanrazvan.github.io/WPS/`.
 1. Confirm the working tree only contains the intended slice.
 2. Confirm there is a recent Firestore backup before deploying production code. If the current backup is not acceptable for the risk level, create a fresh backup first.
 3. Run the focused tests for the slice.
+
+When cutting a release, update the three fields in `js/version.js`, then refresh and verify the complete browser cache identity:
+
+```powershell
+node scripts/refresh-release-assets.mjs
+node scripts/refresh-release-assets.mjs --check
+```
+
+The generated import map keeps versioned and unversioned imports on the same module instance. Commit `index.html` and refreshed imports with the release.
+
 4. Run the full suite:
 
 ```powershell
@@ -23,6 +33,8 @@ git diff --cached --check
 ```
 
 6. For AI or authorization changes, review `docs/ai-security.md`. Never place the Gemini key in Firestore, a local environment file, Git, or a browser prompt.
+
+7. For the September 2026 security and concurrency changes, follow [the coordinated frontend/function rollout and rollback notes](security-fixes.md). Run `node scripts/security-browser-smoke.mjs` locally before deployment; its fixtures never write production data.
 
 ## Firebase Backend
 

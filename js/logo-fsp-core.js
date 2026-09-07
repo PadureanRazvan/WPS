@@ -1,4 +1,4 @@
-import { FSP_SHAPE_DATA } from '../assets/branding/fsp-shape-data.js?v=20260906.3';
+import { FSP_SHAPE_DATA } from '../assets/branding/fsp-shape-data.js?v=2026.09.07';
 
 function createVariant(THREE, data, texture) {
     const shapes = data.contours.map(contour => {

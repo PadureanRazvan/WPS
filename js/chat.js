@@ -1,12 +1,11 @@
 // js/chat.js — Sherpa AI Chat Module
-import { getPlannerData, updateAgent, addAgent, deleteAgent } from './planner.js';
-import { getUsersData } from './users.js?v=2026.09.06.2';
-import { getAverageProductivity, getProductivityTrendData } from './productivity.js?v=2026.09.06.2';
-import { showSection } from './ui.js?v=2026.09.06.2';
-import { showTemporaryMessage } from './ui.js?v=2026.09.06.2';
-import { translations, extractHoursFromDay, getMonthKey, getAgentDaysForMonth, getEffectiveAgentDayValue, isNonWorkingCode, normalizeTeamForDisplay, parseShiftEntry } from './config.js';
+import { getPlannerData, commitAgentChanges } from './planner.js';
+import { buildChatActionPlan, findAgentById, getChatCalendarDate } from './chat-actions.js';
+import { getAverageProductivity, getProductivityTrendData } from './productivity.js?v=2026.09.07';
+import { showSection } from './ui.js?v=2026.09.07';
+import { translations, extractHoursFromDay, getMonthKey, getEffectiveAgentDayValue, isNonWorkingCode, normalizeTeamForDisplay, parseShiftEntry } from './config.js';
 import { functions } from './firebase-config.js';
-import { logActivity } from './logs.js?v=2026.09.06.2';
+import { logActivity } from './logs.js?v=2026.09.07';
 import { httpsCallable } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-functions.js";
 import { createSherpaChatService, getChatErrorTranslationKey } from './chat-service.js';
 
@@ -18,7 +17,9 @@ let chatHistory = [];
 let isOpen = false;
 let isLoading = false;
 let lastSendTime = 0;
-let pendingDeleteAgent = null; // Holds agent awaiting delete confirmation
+let pendingActionPlan = null;
+let chatSession = 0;
+let chatBound = false;
 let speechTimer = null;
 const chatService = createSherpaChatService(httpsCallable(functions, 'generateSherpaChat'));
 
@@ -34,29 +35,35 @@ export async function initializeChat() {
     if (!bubble || !panel) return;
 
     // Initialize panel dragging.
-    initDraggable();
-
-    bubble.addEventListener('click', toggleChat);
-    closeBtn?.addEventListener('click', toggleChat);
-    sendBtn?.addEventListener('click', () => sendMessage());
-    input?.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            sendMessage();
-        }
-    });
-    clearBtn?.addEventListener('click', clearChat);
-    chatHistory = [];
-    addSystemMessage(t('chat-welcome'));
+    if (!chatBound) {
+        initDraggable();
+        bubble.addEventListener('click', toggleChat);
+        closeBtn?.addEventListener('click', toggleChat);
+        sendBtn?.addEventListener('click', () => sendMessage());
+        input?.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+        clearBtn?.addEventListener('click', clearChat);
+        chatBound = true;
+    }
+    clearChat();
 }
 
 export function cleanupChat() {
+    chatSession++;
+    pendingActionPlan = null;
+    isLoading = false;
+    lastSendTime = 0;
     chatHistory = [];
     isOpen = false;
     const panel = document.getElementById('chatPanel');
     if (panel) panel.classList.remove('open');
     stopAvatarSpeech();
     setAvatarThinking(false);
+    renderMessages();
 }
 
 // --- Toggle Chat ---
@@ -129,85 +136,36 @@ function playAvatarSpeech(text) {
 async function sendMessage() {
     const input = document.getElementById('chatInput');
     if (!input || !input.value.trim() || isLoading) return;
-
-    // Rate limit (2s cooldown)
     if (Date.now() - lastSendTime < 2000) return;
     lastSendTime = Date.now();
-
     const userText = input.value.trim();
     input.value = '';
-
-    // Check for pending delete confirmation
-    if (pendingDeleteAgent) {
-        const confirm = userText.toLowerCase();
-        const yesWords = ['yes', 'da', 'sì', 'si', 'ok', 'confirm', 'sure', 'do it', 'delete', 'sterge', 'șterge'];
-        const noWords = ['no', 'nu', 'cancel', 'anulează', 'annulla', 'stop', 'nope'];
-        if (yesWords.some(w => confirm.includes(w))) {
-            chatHistory.push({ role: 'user', text: userText });
-            try {
-                await deleteAgent(pendingDeleteAgent.id);
-                logActivity('ai', 'delete_agent', { name: pendingDeleteAgent.fullName });
-                chatHistory.push({ role: 'model', text: `✓ ${pendingDeleteAgent.fullName} deleted` });
-            } catch (err) {
-                chatHistory.push({ role: 'error', text: `Error: ${err.message}` });
-            }
-            pendingDeleteAgent = null;
-            renderMessages();
-            return;
-        } else if (noWords.some(w => confirm.includes(w))) {
-            chatHistory.push({ role: 'user', text: userText });
-            chatHistory.push({ role: 'model', text: t('chat-delete-cancelled') || 'Delete cancelled.' });
-            pendingDeleteAgent = null;
-            renderMessages();
-            return;
-        }
-        // If neither yes nor no, clear pending and process as normal message
-        pendingDeleteAgent = null;
-    }
-
-    // Add user message
+    // Text never confirms a write. A new request cancels the previous proposal.
+    if (pendingActionPlan) cancelChatActions(pendingActionPlan);
+    const session = chatSession;
     chatHistory.push({ role: 'user', text: userText });
     renderMessages();
-
-    // Show typing
     isLoading = true;
     showTyping(true);
-
-    let spokenResponse = '';
-
     try {
         const responseText = await callGeminiAPI(chatHistory);
-
-        // Parse actions
+        if (session !== chatSession) return;
         const { cleanText, actions } = parseActions(responseText);
-
-        // Execute actions (with rate limit)
-        const actionResults = [];
-        const limitedActions = actions.slice(0, MAX_ACTIONS_PER_MESSAGE);
-        if (actions.length > MAX_ACTIONS_PER_MESSAGE) {
-            actionResults.push(`⚠ Limited to ${MAX_ACTIONS_PER_MESSAGE} actions (${actions.length} requested)`);
-        }
-        for (const action of limitedActions) {
-            const result = await executeAction(action.command, action.params);
-            if (result) actionResults.push(result);
-        }
-
-        // Build display text
-        let displayText = cleanText.trim();
-        if (actionResults.length > 0) {
-            displayText += '\n' + actionResults.map(r => `✓ ${r}`).join('\n');
-        }
-
-        chatHistory.push({ role: 'model', text: displayText });
-        spokenResponse = displayText;
-    } catch (err) {
-        console.error('[Chat] Error:', err);
-        chatHistory.push({ role: 'error', text: t(getChatErrorTranslationKey(err)) });
+        const plan = buildChatActionPlan(actions, getPlannerData() || []);
+        if (plan.requiresConfirmation) pendingActionPlan = plan;
+        else plan.navigations.forEach(section => showSection(section));
+        chatHistory.push({ role: 'model', text: cleanText || t(plan.requiresConfirmation ? 'chat-review-changes' : 'chat-done') });
+        playAvatarSpeech(cleanText);
+    } catch (error) {
+        if (session !== chatSession) return;
+        console.error('[Chat]', error);
+        chatHistory.push({ role: 'error', text: t(error.code === 'invalid-action' ? 'chat-invalid-actions' : getChatErrorTranslationKey(error)) });
     } finally {
-        isLoading = false;
-        showTyping(false);
-        renderMessages();
-        if (spokenResponse) playAvatarSpeech(spokenResponse);
+        if (session === chatSession) {
+            isLoading = false;
+            showTyping(false);
+            renderMessages();
+        }
     }
 }
 
@@ -228,18 +186,11 @@ function parseScheduleEntries(dayValue) {
         }));
 }
 
-function isValidScheduleValue(value) {
-    const trimmed = (value || '').trim();
-    if (!trimmed) return true;
-    if (isNonWorkingCode(trimmed)) return true;
-    return trimmed.split('+').every(part => parseShiftEntry(part));
-}
-
 function buildDayStatus(agents, dayNum) {
     const schedule = { working: [], holiday: [], sick: [], dayOff: [], unplanned: [] };
     let totalHours = 0;
     const teamHours = {};
-    const now = new Date();
+    const now = getChatCalendarDate();
     const targetYear = now.getFullYear();
     const targetMonth = now.getMonth();
     const daysInMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
@@ -279,6 +230,11 @@ function buildDayStatus(agents, dayNum) {
 
 function executeToolCall(name, args) {
     const agents = getPlannerData() || [];
+    const now = getChatCalendarDate();
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const validDay = day => Number.isInteger(day) && day >= 1 && day <= daysInMonth;
+    if (name === 'get_day_status' && !validDay(args.day_number)) return { error: 'Invalid day.' };
+    if (name === 'get_week_overview' && (!validDay(args.start_day) || !validDay(args.end_day) || args.start_day > args.end_day)) return { error: 'Invalid day range.' };
 
     switch (name) {
         case 'get_agent_list': {
@@ -286,6 +242,7 @@ function executeToolCall(name, args) {
             if (args.active_only !== false) filtered = filtered.filter(a => a.isActive !== false);
             if (args.team_filter) filtered = filtered.filter(a => (a.primaryTeam || '').startsWith(args.team_filter));
             return filtered.map(a => ({
+                id: a.id,
                 name: a.fullName,
                 team: a.primaryTeam || '?',
                 contract: `${a.contractType || 'Full-time'} ${a.contractHours || 8}h`,
@@ -293,9 +250,9 @@ function executeToolCall(name, args) {
             }));
         }
         case 'get_agent_schedule': {
-            const agent = findAgent(args.agent_name);
-            if (!agent) return { error: `Agent "${args.agent_name}" not found` };
-            const schedMonthKey = getMonthKey(new Date());
+            const agent = findAgentById(agents, args.agent_id);
+            if (!agent) return { error: `Agent "${args.agent_id}" not found` };
+            const schedMonthKey = getMonthKey(getChatCalendarDate());
             const [year, month] = schedMonthKey.split('-').map(Number);
             const daysInMonth = new Date(year, month, 0).getDate();
             const schedDaysArray = Array.from({ length: 31 }, (_, index) => {
@@ -314,7 +271,7 @@ function executeToolCall(name, args) {
             };
         }
         case 'get_today_status':
-            return buildDayStatus(agents, new Date().getDate());
+            return buildDayStatus(agents, getChatCalendarDate().getDate());
         case 'get_day_status':
             return buildDayStatus(agents, args.day_number);
         case 'get_team_summary': {
@@ -356,10 +313,12 @@ function executeToolCall(name, args) {
 
 // --- Secure callable AI transport with client-side function execution ---
 async function callGeminiAPI(messages) {
-    // Keep only last 20 messages to avoid exceeding token limits
+    const session = chatSession;
+    // Reserve room for all five tool rounds within the server's 25-message limit.
     const recentMessages = messages
         .filter(m => m.role === 'user' || m.role === 'model')
-        .slice(-20);
+        .slice(-16);
+    if (recentMessages[0]?.role === 'model') recentMessages.shift();
 
     const contents = recentMessages.map(m => ({
         role: m.role === 'user' ? 'user' : 'model',
@@ -368,7 +327,9 @@ async function callGeminiAPI(messages) {
 
     // Function calling loop (max 5 rounds to allow multiple queries)
     for (let round = 0; round < 5; round++) {
+        if (session !== chatSession) throw new Error('Chat cancelled.');
         const data = await chatService.generate({ language: getLang(), contents });
+        if (session !== chatSession) throw new Error('Chat cancelled.');
         const candidate = data?.candidates?.[0]?.content;
         if (!candidate || !candidate.parts) throw new Error('Empty response from Gemini');
 
@@ -393,7 +354,7 @@ async function callGeminiAPI(messages) {
         }
 
         // No function calls — extract final text response
-        const text = candidate.parts.find(p => p.text)?.text;
+        const text = candidate.parts.filter(part => typeof part.text === 'string').map(part => part.text).join('\n');
         if (!text) throw new Error('Empty text in response');
         return text;
     }
@@ -405,127 +366,101 @@ async function callGeminiAPI(messages) {
 function parseActions(responseText) {
     const actionRegex = /\[\[ACTION:(\w+)\|([^\]]*)\]\]/g;
     const actions = [];
-    let match;
-
-    while ((match = actionRegex.exec(responseText)) !== null) {
-        const command = match[1];
-        const params = match[2].split('|').map(p => p.trim());
-        actions.push({ command, params });
+    const cleanText = responseText.replace(actionRegex, (_tag, command, fields) => {
+        actions.push({ command, params: fields.split('|').map(value => value.trim()) });
+        return '';
+    }).trim();
+    // Never silently discard a malformed tag and offer only the other changes.
+    if (/\[\[ACTION\b/i.test(cleanText)) {
+        const error = new Error('Malformed proposed action.');
+        error.code = 'invalid-action';
+        throw error;
     }
-
-    const cleanText = responseText.replace(/\[\[ACTION:[^\]]*\]\]\n?/g, '').trim();
     return { cleanText, actions };
 }
 
-// --- Execute Actions ---
-function normalizeName(name) {
-    if (!name) return '';
-    return name.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-}
-
-function findAgent(nameQuery) {
-    const agents = getPlannerData() || [];
-    const query = normalizeName(nameQuery);
-    // Exact match first
-    let found = agents.find(a => normalizeName(a.fullName) === query);
-    if (found) return found;
-    // Partial match
-    found = agents.find(a => normalizeName(a.fullName).includes(query) || query.includes(normalizeName(a.fullName)));
-    return found || null;
-}
-
-// Action rate limiting: max actions per message
-const MAX_ACTIONS_PER_MESSAGE = 15;
-
-async function executeAction(command, params) {
+// --- Confirmed Actions ---
+async function approveChatActions(expectedPlan = pendingActionPlan) {
+    if (!expectedPlan || pendingActionPlan !== expectedPlan || isLoading) return;
+    const session = chatSession;
+    const plan = pendingActionPlan;
+    pendingActionPlan = null; // Consume before awaiting, so double clicks cannot repeat writes.
+    isLoading = true;
+    renderMessages();
+    showTyping(true);
     try {
-        switch (command) {
-            case 'SET_CELL': {
-                const [agentName, dayStr, value] = params;
-                const agent = findAgent(agentName);
-                if (!agent) return `Agent "${agentName}" not found`;
-                const dayIndex = parseInt(dayStr, 10) - 1;
-                const daysInMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
-                if (dayIndex < 0 || dayIndex >= daysInMonth) return `Invalid day: ${dayStr} (month has ${daysInMonth} days)`;
-
-                // Safety: validate value format
-                if (!isValidScheduleValue(value)) return `Invalid schedule value: "${value}"`;
-
-                // Safety: warn if hours exceed contract
-                if (value && agent.contractHours) {
-                    const totalHours = extractHoursFromDay(value);
-                    if (totalHours > agent.contractHours) {
-                        console.warn(`[Chat] Schedule ${value} (${totalHours}h) exceeds contract (${agent.contractHours}h) for ${agent.fullName}`);
-                    }
-                }
-
-                const setCellMonthKey = getMonthKey(new Date());
-                const setCellDays = getAgentDaysForMonth(agent, setCellMonthKey);
-                const newDays = [...setCellDays];
-                while (newDays.length < 31) newDays.push('');
-                newDays[dayIndex] = value || '';
-                await updateAgent(agent.id, { [`monthlyDays.${setCellMonthKey}`]: newDays });
-                logActivity('ai', 'set_cell', { agent: agent.fullName, day: dayStr, value: value || 'cleared' });
-                return `${agent.fullName}: day ${dayStr} → ${value || 'cleared'}`;
-            }
-
-            case 'ADD_AGENT': {
-                const [fullName, username, primaryTeam, contractType, contractHours] = params;
-                if (!fullName || fullName.trim().length < 3) return 'Agent name too short';
-
-                // Safety: check for duplicates
-                const existing = findAgent(fullName);
-                if (existing) return `Agent "${fullName}" already exists`;
-
-                const hours = parseInt(contractHours, 10) || 8;
-                if (hours < 1 || hours > 12) return `Invalid contract hours: ${contractHours}`;
-
-                const validTeams = ['RO zooplus', 'HU zooplus', 'IT zooplus', 'NL zooplus', 'CS zooplus', 'SK zooplus', 'SV-SE zooplus', '2L 2nd Level', 'QA Quality Assurance', 'TL Team Lead'];
-                const team = primaryTeam || 'RO zooplus';
-                if (!validTeams.includes(team)) return `Unknown team: "${team}". Valid: ${validTeams.join(', ')}`;
-
-                const addAgentMonthKey = getMonthKey(new Date());
-                await addAgent({
-                    fullName: fullName.trim(),
-                    username: (username || fullName.toLowerCase().replace(/\s+/g, '.')).trim(),
-                    primaryTeam: team,
-                    contractType: contractType === 'Part-time' ? 'Part-time' : 'Full-time',
-                    contractHours: hours,
-                    teams: [team.split(' ')[0]],
-                    hireDate: new Date(),
-                    isActive: true,
-                    monthlyDays: { [addAgentMonthKey]: Array(31).fill('') },
-                    monthlyNotes: {}
-                });
-                logActivity('ai', 'add_agent', { name: fullName.trim(), team, contract: `${contractType || 'Full-time'} ${hours}h` });
-                return `Agent "${fullName}" created (${team}, ${contractType || 'Full-time'}, ${hours}h)`;
-            }
-
-            case 'DELETE_AGENT': {
-                const [agentName] = params;
-                const agent = findAgent(agentName);
-                if (!agent) return `Agent "${agentName}" not found`;
-                // Safety: require explicit user confirmation — do NOT delete immediately
-                pendingDeleteAgent = agent;
-                return null; // The AI's response already asks for confirmation
-            }
-
-            case 'NAVIGATE': {
-                const [sectionId] = params;
-                const validSections = ['dashboard', 'users', 'planner', 'productivity', 'upload', 'reports', 'logs', 'info'];
-                if (!validSections.includes(sectionId)) return `Invalid section: ${sectionId}`;
-                showSection(sectionId);
-                logActivity('ai', 'navigate', { section: sectionId });
-                return `Navigated to ${sectionId}`;
-            }
-
-            default:
-                return null;
+        if (plan.monthKey !== getMonthKey(getChatCalendarDate())) throw new Error('Proposal expired.');
+        await commitAgentChanges(plan);
+        if (session !== chatSession) return;
+        plan.navigations.forEach(section => showSection(section));
+        logActivity('ai', 'apply_changes', { cells: plan.actions.filter(action => action.command === 'SET_CELL').length, created: plan.creates.length, deleted: plan.deletes.length });
+        chatHistory.push({ role: 'model', text: t('chat-changes-applied') });
+    } catch (error) {
+        if (session !== chatSession) return;
+        console.error('[Chat] Write failed:', error);
+        chatHistory.push({ role: 'error', text: t(error.code === 'data-conflict' ? 'write-conflict' : 'write-failed') });
+    } finally {
+        if (session === chatSession) {
+            isLoading = false;
+            showTyping(false);
+            renderMessages();
         }
-    } catch (err) {
-        console.error(`[Chat] Action error (${command}):`, err);
-        return `Error: ${err.message}`;
     }
+}
+
+function cancelChatActions(expectedPlan = pendingActionPlan) {
+    if (!expectedPlan || expectedPlan !== pendingActionPlan) return;
+    pendingActionPlan = null;
+    chatHistory.push({ role: 'model', text: t('chat-changes-cancelled') });
+    renderMessages();
+}
+
+function renderActionConfirmation(container) {
+    const plan = pendingActionPlan;
+    if (!plan) return;
+    const card = document.createElement('div');
+    card.className = 'chat-action-confirmation';
+    card.setAttribute('role', 'group');
+    card.setAttribute('aria-label', t('chat-review-changes'));
+    const title = document.createElement('p');
+    title.textContent = t('chat-review-changes');
+    card.appendChild(title);
+    const list = document.createElement('ul');
+    plan.actions.forEach(action => {
+        const item = document.createElement('li');
+        const identity = action.agentName + (action.username ? ' (' + action.username + ')' : '');
+        if (action.command === 'SET_CELL') {
+            item.textContent = action.dateKey + ' — ' + identity + ' → ' + (action.value || t('chat-cleared'))
+                + (action.exceedsContract ? ' — ' + t('chat-over-contract') : '');
+        } else if (action.command === 'DELETE_AGENT') {
+            item.textContent = t('chat-propose-delete') + ': ' + identity + ' — ' + action.primaryTeam;
+        } else {
+            item.textContent = t('chat-propose-add') + ': ' + identity + ' — ' + action.primaryTeam + ', ' + action.contractType + ', ' + action.hours + 'h, ' + action.dateKey;
+        }
+        list.appendChild(item);
+    });
+    card.appendChild(list);
+    if (plan.deletes.length) {
+        const warning = document.createElement('p');
+        warning.textContent = t('chat-delete-warning');
+        card.appendChild(warning);
+    }
+    const controls = document.createElement('div');
+    controls.className = 'chat-confirmation-controls';
+    const apply = document.createElement('button');
+    apply.type = 'button';
+    apply.className = 'btn btn-primary';
+    apply.textContent = t('chat-apply-changes');
+    apply.addEventListener('click', () => approveChatActions(plan));
+    const cancel = document.createElement('button');
+    cancel.type = 'button';
+    cancel.className = 'btn btn-secondary';
+    cancel.textContent = t('chat-cancel-changes');
+    cancel.addEventListener('click', () => cancelChatActions(plan));
+    controls.appendChild(apply);
+    controls.appendChild(cancel);
+    card.appendChild(controls);
+    container.appendChild(card);
 }
 
 // --- Rendering ---
@@ -559,6 +494,7 @@ function renderMessages() {
         container.appendChild(div);
     });
 
+    renderActionConfirmation(container);
     container.scrollTop = container.scrollHeight;
 }
 
@@ -590,6 +526,12 @@ function addSystemMessage(text) {
 }
 
 function clearChat() {
+    chatSession++;
+    pendingActionPlan = null;
+    isLoading = false;
+    lastSendTime = 0;
+    stopAvatarSpeech();
+    setAvatarThinking(false);
     chatHistory = [];
     addSystemMessage(t('chat-welcome'));
 }

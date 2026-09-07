@@ -1,25 +1,25 @@
 // js/ui.js
 
 // === THEME AND LANGUAGE FUNCTIONALITY ===
-import { languageConfig, translations, PLANNER_TEAMS, TEAM_DISPLAY_NAMES, extractHoursFromDay, formatPlannerHoursValue, getMonthKey, getAgentNotesForMonth, isValidPlannerHoursValue } from './config.js?v=2026.09.06.2';
+import { languageConfig, translations, PLANNER_TEAMS, TEAM_DISPLAY_NAMES, extractHoursFromDay, formatPlannerHoursValue, getMonthKey, getAgentNotesForMonth, isValidPlannerHoursValue } from './config.js?v=2026.09.07';
 function getLang() { return localStorage.getItem('language') || 'ro'; }
 export function t(key) { const l = getLang(); return (translations[l] && translations[l][key]) || key; }
 // Import the new Firestore functions from planner.js
 import { addAgent, applyChangesToSelectedCells, renderPlannerTable, clearSelection } from './planner.js';
-import { updateDashboard, updateAverageProductivityCard } from './dashboard.js?v=2026.09.06.2';
-import { initializeCharts } from './charts.js?v=2026.09.06.2';
+import { updateDashboard, updateAverageProductivityCard } from './dashboard.js?v=2026.09.07';
+import { initializeCharts } from './charts.js?v=2026.09.07';
 import { getPlannerData } from './planner.js';
-import { renderLogsSection } from './logs.js?v=2026.09.06.2';
-import { renderCurrentView as rerenderProductivity } from './productivity.js?v=2026.09.06.2';
-import { renderUsersTable } from './users.js?v=2026.09.06.2';
+import { renderLogsSection } from './logs.js?v=2026.09.07';
+import { renderCurrentView as rerenderProductivity } from './productivity.js?v=2026.09.07';
+import { renderUsersTable } from './users.js?v=2026.09.07';
 import {
     getNextTheme,
     getThemeMeta,
     getThemeRevealRadius,
     normalizeThemePreference,
     resolveThemePreference
-} from './theme-system.js?v=2026.09.06.2';
-import { showToastNotification } from './toast-notifications.js?v=2026.09.06.2';
+} from './theme-system.js?v=2026.09.07';
+import { showToastNotification } from './toast-notifications.js?v=2026.09.07';
 
 // Theme and language state
 let currentThemePreference = normalizeThemePreference(localStorage.getItem('theme'));
@@ -576,7 +576,15 @@ export function hideEditMessage() {
     }
 }
 
-export function saveModalChanges() {
+let plannerSavePending = false;
+
+export function showWriteError(error) {
+    console.error('[Persistence]', error);
+    showTemporaryMessage(t(error?.code === 'data-conflict' ? 'write-conflict' : 'write-failed'), 'error');
+}
+
+export async function saveModalChanges() {
+    if (plannerSavePending) return;
     const selectedOption = document.querySelector('.edit-option.selected');
     if (!selectedOption) {
         alert(t('edit-select-type'));
@@ -635,7 +643,18 @@ export function saveModalChanges() {
 
     // Call the refactored function in planner.js to handle the database update
     if (selectedCellKeys.size > 0) {
-        applyChangesToSelectedCells(selectedCellKeys, newValue, noteText);
+        const saveButton = document.getElementById('saveButton');
+        plannerSavePending = true;
+        if (saveButton) saveButton.disabled = true;
+        try {
+            await applyChangesToSelectedCells(selectedCellKeys, newValue, noteText);
+        } catch (error) {
+            showWriteError(error);
+            return;
+        } finally {
+            plannerSavePending = false;
+            if (saveButton) saveButton.disabled = false;
+        }
     }
 
     closeEditModal();
@@ -692,7 +711,8 @@ async function handleCreateAgent() {
     };
 
     // Call the Firestore function from planner.js
-    await addAgent(newAgent);
+    try { await addAgent(newAgent); }
+    catch (error) { showWriteError(error); return; }
 
     // Clear the form for the next entry
     document.getElementById('newUserForm').reset();

@@ -55,7 +55,9 @@ function buildAgentMonthUpdate(agent, agentId, monthKey, changes, noteText) {
             agentId,
             monthKey,
             previousDays: [...daysArray],
-            previousDayNotes: { ...notesObj }
+            previousDayNotes: { ...notesObj },
+            appliedDays: [...newDays],
+            appliedDayNotes: { ...newDayNotes }
         },
         updateData: {
             [`monthlyDays.${monthKey}`]: newDays,
@@ -73,6 +75,7 @@ export function buildPlannerEditCommand(agents, selectedCellKeys, newValue, note
     const changedAgentIds = [];
     const missingAgentIds = [];
     const activityAgentNames = [];
+    const baselines = [];
 
     for (const [agentId, monthsMap] of updatesByAgent.entries()) {
         const agent = agentById.get(agentId);
@@ -83,9 +86,12 @@ export function buildPlannerEditCommand(agents, selectedCellKeys, newValue, note
         }
 
         const updateData = {};
+        const baseline = { ...agent, monthlyDays: { ...agent.monthlyDays }, monthlyNotes: { ...agent.monthlyNotes } };
         for (const [monthKey, changes] of monthsMap.entries()) {
             const monthUpdate = buildAgentMonthUpdate(agent, agentId, monthKey, changes, noteText);
             snapshots.push(monthUpdate.snapshot);
+            baseline.monthlyDays[monthKey] = monthUpdate.snapshot.previousDays;
+            baseline.monthlyNotes[monthKey] = monthUpdate.snapshot.previousDayNotes;
             Object.assign(updateData, monthUpdate.updateData);
         }
 
@@ -96,10 +102,12 @@ export function buildPlannerEditCommand(agents, selectedCellKeys, newValue, note
             agentName: agent.fullName || agent.name || agentId,
             updateData
         });
+        baselines.push(baseline);
     }
 
     return {
         updates,
+        baselines,
         snapshots,
         changedAgentIds,
         cellCount: selectedKeys.size,

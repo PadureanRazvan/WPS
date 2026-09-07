@@ -1,12 +1,14 @@
 // js/planner.js
+import { escapeHtml } from './html.js';
 
 // --- Firestore & Application Imports ---
 import { db } from './firebase-config.js';
-import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, Timestamp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
-import { showTemporaryMessage } from './ui.js';
+import { collection, onSnapshot, addDoc, runTransaction, doc, Timestamp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
+import { showTemporaryMessage, showWriteError } from './ui.js';
+import { createAgentFirestoreStore } from './agent-persistence.js';
 import { updateDashboard } from './dashboard.js';
 import { translations, getMonthKey } from './config.js';
-import { logActivity } from './logs.js?v=2026.09.06.2';
+import { logActivity } from './logs.js?v=2026.09.07';
 import { buildPlannerEditCommand } from './planner-edit-command.js';
 import { buildPlannerMigrationCommands, buildPlannerUndoCommand, buildPlannerClearMonthCommand } from './planner-persistence-command.js';
 import { buildPlannerReadModel, filterPlannerAgents } from './planner-read-model.js';
@@ -50,6 +52,9 @@ function t(key) { const l = getLang(); return (translations[l] && translations[l
 // --- Local State Management ---
 // This will hold the live data from Firestore. It's our local, in-memory copy.
 let plannerData = [];
+const agentStore = createAgentFirestoreStore({ db, firestore: { collection, doc, runTransaction } });
+let plannerCommandPending = false;
+let plannerSession = 0;
 
 // --- Undo Stack ---
 const undoStack = [];
@@ -57,6 +62,9 @@ const MAX_UNDO = 3;
 let undoConfirmedThisSession = false; // After first confirmation, skip asking
 
 export function getPlannerData() { return plannerData; } 
+export async function commitAgentChanges(plan) {
+    await agentStore.updateMany(plan.updates, plan.baselines, { creates: plan.creates, deletes: plan.deletes });
+}
 // This holds the unsubscribe function for our real-time listener.
 let unsubscribeFromAgents; 
 
@@ -88,7 +96,7 @@ export function initializePlanner() {
                 agentData.hireDate = agentData.hireDate.toDate();
             }
             // Add the Firestore document ID to our local object. This is CRITICAL for updates/deletes.
-            plannerData.push({ id: doc.id, ...agentData });
+            plannerData.push({ ...agentData, id: doc.id });
         });
 
         // Sort agents by name for consistent display
@@ -142,10 +150,15 @@ async function migrateUnmigratedAgents() {
  * This is good practice to prevent memory leaks.
  */
 export function cleanupPlanner() {
+    plannerSession++;
     if (unsubscribeFromAgents) {
         console.log("Detaching Firestore listener.");
         unsubscribeFromAgents();
     }
+    plannerData = [];
+    undoStack.length = 0;
+    undoConfirmedThisSession = false;
+    migratedAgentIds.clear();
 }
 
 
@@ -161,7 +174,7 @@ export async function addAgent(agentObject) {
     try {
         // Convert JS Date back to Firestore Timestamp for consistency
         if(agentObject.hireDate) {
-            agentObject.hireDate = Timestamp.fromDate(agentObject.hireDate);
+            agentObject = { ...agentObject, hireDate: Timestamp.fromDate(agentObject.hireDate) };
         }
         const docRef = await addDoc(collection(db, "agents"), agentObject);
         console.log("✅ Agent added successfully with ID:", docRef.id);
@@ -169,7 +182,7 @@ export async function addAgent(agentObject) {
         showTemporaryMessage("Agent created successfully!", "success");
     } catch (error) {
         console.error("❌ Error adding agent: ", error);
-        showTemporaryMessage("Failed to create agent. Check console for details.", "error");
+        throw error;
     }
 }
 
@@ -179,15 +192,14 @@ export async function addAgent(agentObject) {
  * @param {object} updatedData - An object containing the fields to change.
  * @returns {Promise<void>}
  */
-export async function updateAgent(agentId, updatedData) {
+export async function updateAgent(agentId, updatedData, baseline = plannerData.find(agent => agent.id === agentId)) {
     if (!agentId) {
         console.error("❌ updateAgent failed: agentId is missing.");
-        return;
+        throw new Error('Agent ID is required.');
     }
     console.log(`[Firestore] Attempting to update agent ${agentId} with:`, updatedData);
-    const agentRef = doc(db, "agents", agentId);
     try {
-        await updateDoc(agentRef, updatedData);
+        await agentStore.updateMany([{ agentId, updateData: updatedData }], baseline ? [baseline] : []);
         console.log(`✅ Agent ${agentId} updated successfully.`);
         // Log the update (summarize what changed)
         const fields = Object.keys(updatedData).filter(k => k !== 'days').join(', ');
@@ -196,7 +208,7 @@ export async function updateAgent(agentId, updatedData) {
         // No success message here to avoid spamming on every cell change.
     } catch (error) {
         console.error(`❌ Error updating agent ${agentId}:`, error);
-        showTemporaryMessage(`Failed to update agent ${agentId}.`, "error");
+        throw error;
     }
 }
 
@@ -205,21 +217,21 @@ export async function updateAgent(agentId, updatedData) {
  * @param {string} agentId - The Firestore document ID of the agent to delete.
  * @returns {Promise<void>}
  */
-export async function deleteAgent(agentId) {
+export async function deleteAgent(agentId, baseline = plannerData.find(agent => agent.id === agentId)) {
      if (!agentId) {
         console.error("❌ deleteAgent failed: agentId is missing.");
-        return;
+        throw new Error('Agent ID is required.');
     }
     console.log(`[Firestore] Attempting to delete agent ${agentId}...`);
     try {
-        await deleteDoc(doc(db, "agents", agentId));
+        await agentStore.deleteAgent(agentId, baseline);
         const deletedAgent = plannerData.find(a => a.id === agentId);
         console.log(`✅ Agent ${agentId} deleted successfully.`);
         logActivity('portal', 'delete_agent', { name: deletedAgent?.fullName || agentId });
         showTemporaryMessage("Agent deleted.", "success");
     } catch (error) {
         console.error(`❌ Error deleting agent ${agentId}:`, error);
-        showTemporaryMessage("Failed to delete agent.", "error");
+        throw error;
     }
 }
 
@@ -232,34 +244,39 @@ export async function deleteAgent(agentId) {
  * @param {string} noteText - Optional note/reason for the change.
  */
 export async function applyChangesToSelectedCells(selectedCellKeys, newValue, noteText = '') {
+    if (plannerCommandPending) throw new Error('A planner save is already in progress.');
     const editCommand = buildPlannerEditCommand(plannerData, selectedCellKeys, newValue, noteText);
     console.log(`Applying value "${newValue}" to ${editCommand.cellCount} cells.`);
 
-    editCommand.missingAgentIds.forEach(agentId => {
-        console.error(`Could not find agent with ID ${agentId} in local data.`);
-    });
+    if (editCommand.missingAgentIds.length) throw new Error('An agent is missing. Refresh before saving.');
+    if (!editCommand.updates.length) return;
+    plannerCommandPending = true;
+    const session = plannerSession;
+    try {
+        await agentStore.updateMany(editCommand.updates, editCommand.baselines);
+        if (session !== plannerSession) return;
 
-    for (const update of editCommand.updates) {
-        await updateAgent(update.agentId, update.updateData);
+        if (editCommand.snapshots.length > 0) {
+            undoStack.push(editCommand.snapshots);
+            if (undoStack.length > MAX_UNDO) undoStack.shift();
+        }
+
+        logActivity('portal', 'edit_cells', {
+            agents: editCommand.activity.agentNames.join(', '),
+            cells: editCommand.activity.cells,
+            value: editCommand.activity.value
+        });
+        showTemporaryMessage("Changes saved to database!", "success");
+    } finally {
+        plannerCommandPending = false;
     }
-
-    if (editCommand.snapshots.length > 0) {
-        undoStack.push(editCommand.snapshots);
-        if (undoStack.length > MAX_UNDO) undoStack.shift();
-    }
-
-    logActivity('portal', 'edit_cells', {
-        agents: editCommand.activity.agentNames.join(', '),
-        cells: editCommand.activity.cells,
-        value: editCommand.activity.value
-    });
-    showTemporaryMessage("Changes saved to database!", "success");
 }
 
 /**
  * Undo the last planner edit by restoring the previous state from the undo stack.
  */
 export async function undoLastChange() {
+    if (plannerCommandPending) return;
     if (undoStack.length === 0) {
         showTemporaryMessage(t('undo-nothing'), "info");
         return;
@@ -271,13 +288,21 @@ export async function undoLastChange() {
         undoConfirmedThisSession = true;
     }
 
-    const snapshot = undoStack.pop();
+    const snapshot = undoStack.at(-1);
     const undoCommand = buildPlannerUndoCommand(snapshot);
-    for (const update of undoCommand.updates) {
-        await updateAgent(update.agentId, update.updateData);
+    plannerCommandPending = true;
+    const session = plannerSession;
+    try {
+        await agentStore.updateMany(undoCommand.updates, undoCommand.baselines);
+        if (session !== plannerSession) return;
+        undoStack.pop();
+        logActivity('portal', 'undo', undoCommand.activity);
+        showTemporaryMessage(t('undo-success'), "success");
+    } catch (error) {
+        showWriteError(error);
+    } finally {
+        plannerCommandPending = false;
     }
-    logActivity('portal', 'undo', undoCommand.activity);
-    showTemporaryMessage(t('undo-success'), "success");
 }
 
 
@@ -424,8 +449,8 @@ function populateAgentFilter() {
                 const item = document.createElement('div');
                 item.className = 'agent-list-item';
                 item.innerHTML = `
-                    <input type="checkbox" id="team-${team}" value="${team}" ${plannerState.selectedTeams.includes(team) ? 'checked' : ''}>
-                    <label for="team-${team}">${team}</label>
+                    <input type="checkbox" id="team-${escapeHtml(team)}" value="${escapeHtml(team)}" ${plannerState.selectedTeams.includes(team) ? 'checked' : ''}>
+                    <label for="team-${escapeHtml(team)}">${escapeHtml(team)}</label>
                 `;
                 agentList.appendChild(item);
             });
@@ -440,8 +465,8 @@ function populateAgentFilter() {
                 const item = document.createElement('div');
                 item.className = 'agent-list-item';
                 item.innerHTML = `
-                    <input type="checkbox" id="agent-${agent.id}" value="${agent.id}" ${plannerState.selectedAgents.includes(agent.id) ? 'checked' : ''}>
-                    <label for="agent-${agent.id}">${agent.fullName}</label>
+                    <input type="checkbox" id="agent-${escapeHtml(agent.id)}" value="${escapeHtml(agent.id)}" ${plannerState.selectedAgents.includes(agent.id) ? 'checked' : ''}>
+                    <label for="agent-${escapeHtml(agent.id)}">${escapeHtml(agent.fullName)}</label>
                 `;
                 agentList.appendChild(item);
             });
@@ -613,7 +638,7 @@ function initializeTeamChips() {
     const allTeams = getAllTeams();
     const teamsHtml = [
         '<div class="team-chip active" data-team="all">Toate Echipele</div>',
-        ...allTeams.map(team => `<div class="team-chip" data-team="${team}">${team} zooplus</div>`)
+        ...allTeams.map(team => `<div class="team-chip" data-team="${escapeHtml(team)}">${escapeHtml(team)} zooplus</div>`)
     ].join('');
     
     teamChips.innerHTML = teamsHtml;
@@ -729,7 +754,7 @@ async function clearAgentPlannerMonth(agentId, monthKey) {
     const clearCommand = buildPlannerClearMonthCommand(agentId, monthKey, plannerData);
     if (!clearCommand) return;
 
-    await updateAgent(clearCommand.update.agentId, clearCommand.update.updateData);
+    await agentStore.updateMany([clearCommand.update], plannerData, { strict: true });
 
     logActivity('portal', 'clear_agent_month', clearCommand.activity);
     showTemporaryMessage(`Planner data cleared for ${formatMonthLabel(monthKey)}.`, "success");
@@ -873,7 +898,7 @@ function handleDeleteButtonClick(e) {
         const confirmMessage = `Remove ${agentName} from ${monthLabel} only?\n\nThis clears planner data for that month and keeps previous months unchanged.`;
 
         if (confirm(confirmMessage)) {
-            clearAgentPlannerMonth(agentId, monthKey);
+            clearAgentPlannerMonth(agentId, monthKey).catch(showWriteError);
         }
     }
 }
