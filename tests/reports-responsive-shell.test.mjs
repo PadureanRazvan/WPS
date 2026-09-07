@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { SHERPA_VERSION } from '../js/version.js';
 import { readFile } from 'node:fs/promises';
 
 const indexSource = await readFile(new URL('../index.html', import.meta.url), 'utf8');
@@ -29,7 +30,7 @@ test('reports distribution avoids nested scrolling and stale viewport-only card 
 });
 
 test('report atlas cache-busts the complete Reports renderer chain', () => {
-  assert.match(mainSource, /from '\.\/reports\.js\?v=2026\.09\.06\.2'/);
-  assert.match(reportsSource, /from '\.\/report-read-model\.js\?v=2026\.09\.06\.2'/);
-  assert.match(reportsSource, /from '\.\/reports-view\.js\?v=2026\.09\.06\.2'/);
+  assert.ok(mainSource.includes(`from './reports.js?v=${SHERPA_VERSION.number}'`));
+  assert.ok(reportsSource.includes(`from './report-read-model.js?v=${SHERPA_VERSION.number}'`));
+  assert.ok(reportsSource.includes(`from './reports-view.js?v=${SHERPA_VERSION.number}'`));
 });

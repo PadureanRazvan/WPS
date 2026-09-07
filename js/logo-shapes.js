@@ -1,4 +1,4 @@
-import { FSP_SHAPE_DATA } from '../assets/branding/fsp-shape-data.js?v=20260906.3';
+import { FSP_SHAPE_DATA } from '../assets/branding/fsp-shape-data.js?v=2026.09.07';
 
 const TAU = Math.PI * 2;
 

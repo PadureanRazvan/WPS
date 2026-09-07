@@ -8,6 +8,7 @@
 //                 for a second/third release on the same day).
 //   2. codename — a fresh, memorable two-word name, unique to this release.
 //   3. released — the ISO date this build shipped.
+//   4. Run node scripts/refresh-release-assets.mjs, then its --check mode.
 //
 // The build fingerprint is DERIVED automatically from those three fields, so any
 // change produces a new id you can eyeball. Open Info in the app and match the
@@ -16,9 +17,9 @@
 // =============================================================================
 
 export const SHERPA_VERSION = Object.freeze({
-    number: '2026.09.06.2',
-    codename: 'Readable Orbit',
-    released: '2026-09-06'
+    number: '2026.09.07',
+    codename: 'Guarded Summit',
+    released: '2026-09-07'
 });
 
 // FNV-1a (32-bit) over the identifying fields -> short, stable hex fingerprint.

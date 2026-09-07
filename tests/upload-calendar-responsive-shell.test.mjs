@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { SHERPA_VERSION } from '../js/version.js';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 
@@ -30,6 +31,6 @@ test('compact calendar navigation and actions retain stable touch targets', () =
 });
 
 test('current release cache-busts the upload calendar modules', () => {
-  assert.match(productivitySource, /from '\.\/productivity-upload-calendar-view\.js\?v=2026\.09\.06\.2'/);
-  assert.match(productivitySource, /from '\.\/productivity-upload-calendar-actions\.js\?v=2026\.09\.06\.2'/);
+  assert.ok(productivitySource.includes(`from './productivity-upload-calendar-view.js?v=${SHERPA_VERSION.number}'`));
+  assert.ok(productivitySource.includes(`from './productivity-upload-calendar-actions.js?v=${SHERPA_VERSION.number}'`));
 });

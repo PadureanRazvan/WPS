@@ -17,7 +17,8 @@ const server = createServer(async (request, response) => {
         const path = resolve(root, '.' + decodeURIComponent(pathname === '/' ? '/index.html' : pathname));
         if (!path.startsWith(root.endsWith(sep) ? root : root + sep)) throw new Error('Invalid path');
         let content = await readFile(path);
-        if (extname(path) === '.html') content = content.toString().replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '');
+        if (extname(path) === '.html') content = content.toString().replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,
+            script => script.includes('type="importmap"') ? script : '');
         response.setHeader('Content-Type', ({ '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png' })[extname(path)] || 'application/octet-stream');
         response.end(content);
     } catch { response.writeHead(404); response.end(); }
@@ -30,7 +31,20 @@ try {
     const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
-    await page.route('**/*', route => route.request().url().startsWith(origin + '/') ? route.continue() : route.abort());
+    await page.route('**/*', route => {
+        const url = new URL(route.request().url());
+        const fulfillModule = body => route.fulfill({ contentType: 'text/javascript', body });
+        if (url.origin === origin && url.pathname === '/js/firebase-config.js') {
+            return fulfillModule('export const db = {}, functions = {};');
+        }
+        if (url.origin === 'https://www.gstatic.com' && url.pathname.endsWith('/firebase-firestore.js')) {
+            return fulfillModule('export const collection = () => ({}), doc = () => ({}), onSnapshot = () => () => {}, getDocs = async () => ({ forEach() {} }), query = () => ({}), orderBy = () => ({}), limit = () => ({}), where = () => ({}), serverTimestamp = () => ({}); export const addDoc = async () => { throw Error("Unexpected write"); }, setDoc = addDoc, updateDoc = addDoc, deleteDoc = addDoc, runTransaction = addDoc; export class Timestamp { static fromDate(date) { return date; } }');
+        }
+        if (url.origin === 'https://www.gstatic.com' && url.pathname.endsWith('/firebase-functions.js')) {
+            return fulfillModule('export const httpsCallable = () => async () => { throw Error("Unexpected AI request"); };');
+        }
+        return url.origin === origin ? route.continue() : route.abort();
+    });
     await page.goto(origin, { waitUntil: 'networkidle' });
     await page.evaluate(async () => {
         const config = await import('/js/config.js');
@@ -102,8 +116,20 @@ try {
     await page.getByText('Changes saved.', { exact: true }).waitFor();
     assert.equal(await page.evaluate(() => window.auditCommits.length), 1);
     assert.equal(await page.evaluate(() => window.auditCommits[0].actions.length), 11);
+    const moduleState = await page.evaluate(async () => {
+        const { SHERPA_VERSION } = await import('/js/version.js');
+        const planner = await import('/js/planner.js');
+        const ui = await import('/js/ui.js');
+        const chat = await import('/js/chat.js');
+        return {
+            plannerShared: planner === await import('/js/planner.js?v=' + SHERPA_VERSION.number),
+            uiShared: ui === await import('/js/ui.js?v=' + SHERPA_VERSION.number),
+            exportsReady: typeof planner.commitAgentChanges === 'function' && typeof ui.showWriteError === 'function' && typeof chat.initializeChat === 'function'
+        };
+    });
+    assert.deepEqual(moduleState, { plannerShared: true, uiShared: true, exportsReady: true });
     assert.deepEqual(errors, []);
-    console.log('PASS: stored XSS, refusal, bulk confirmation, mobile controls; zero production requests.');
+    console.log('PASS: stored XSS, refusal, bulk confirmation, mobile controls, release module identity; zero production requests.');
     console.log(`Screenshots: ${output}`);
 } finally {
     try { await browser?.close(); }

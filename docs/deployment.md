@@ -7,6 +7,16 @@ This flow is for production changes to `https://padureanrazvan.github.io/WPS/`.
 1. Confirm the working tree only contains the intended slice.
 2. Confirm there is a recent Firestore backup before deploying production code. If the current backup is not acceptable for the risk level, create a fresh backup first.
 3. Run the focused tests for the slice.
+
+When cutting a release, update the three fields in `js/version.js`, then refresh and verify the complete browser cache identity:
+
+```powershell
+node scripts/refresh-release-assets.mjs
+node scripts/refresh-release-assets.mjs --check
+```
+
+The generated import map keeps versioned and unversioned imports on the same module instance. Commit `index.html` and refreshed imports with the release.
+
 4. Run the full suite:
 
 ```powershell

@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { SHERPA_VERSION } from '../js/version.js';
 import { readFileSync } from 'node:fs';
 
 const source = readFileSync(new URL('../js/reports.js', import.meta.url), 'utf8');
@@ -7,14 +8,14 @@ const indexSource = readFileSync(new URL('../index.html', import.meta.url), 'utf
 const configSource = readFileSync(new URL('../js/config.js', import.meta.url), 'utf8');
 
 test('reports shell delegates report calculation to the Report Read Model', () => {
-  assert.match(source, /import\s+\{\s*buildReportReadModel\s*\}\s+from\s+'\.\/report-read-model\.js\?v=2026\.09\.06\.2';/);
+  assert.ok(source.includes(`import { buildReportReadModel } from './report-read-model.js?v=${SHERPA_VERSION.number}';`));
   assert.match(source, /\bbuildReportReadModel\(/);
   assert.doesNotMatch(source, /\bcalculatePlannerReportData\b/);
   assert.doesNotMatch(source, /\bsortBucketsByHours\b/);
 });
 
 test('reports shell delegates report HTML to the Reports View Module', () => {
-  assert.match(source, /import\s+\{\s*renderReportsView\s*\}\s+from\s+'\.\/reports-view\.js\?v=2026\.09\.06\.2';/);
+  assert.ok(source.includes(`import { renderReportsView } from './reports-view.js?v=${SHERPA_VERSION.number}';`));
   assert.match(source, /\brenderReportsView\(/);
   assert.doesNotMatch(source, /\brenderHoursTableRows\b/);
   assert.doesNotMatch(source, /\brenderDistributionCards\b/);

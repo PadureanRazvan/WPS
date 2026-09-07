@@ -13,7 +13,7 @@ Implemented after the September 7, 2026 code review. This document describes the
 
 ## Verification
 
-Local validation passed on Node 22.23.2: 429 app tests and 6 Functions tests, the Functions syntax check, the Chrome desktop/mobile regression check, and `git diff --check`. The Functions production dependency audit returned zero known vulnerabilities.
+Local validation passed on Node 22.23.2: 431 app tests and 6 Functions tests, the Functions syntax check, the Chrome desktop/mobile regression check, and `git diff --check`. The Functions production dependency audit returned zero known vulnerabilities. The release browser check also verifies that Planner and UI imports share one module instance and that the new persistence and chat exports load together.
 
 Use Node 22, matching the Functions runtime:
 
@@ -33,6 +33,8 @@ Transaction tests use a deterministic Firestore adapter with contention and retr
 
 Follow [the deployment flow](deployment.md), including its backup and release checks. Before deployment, cut a new release in `js/version.js`, update the frontend cache queries, and ensure the changed unversioned modules are fetched fresh. The version queries of parent ES modules do not automatically apply to their imports. Have active users reload after the frontend is available; an already-open old client can still overwrite a monthly array.
 
+Release `2026.09.07` (Guarded Summit) uses a generated import map to give all 70 local modules one release URL each. Run `node scripts/refresh-release-assets.mjs` after changing the release identity and `node scripts/refresh-release-assets.mjs --check` before deployment. The URL mapping follows the [HTML import map standard](https://html.spec.whatwg.org/multipage/webappapis.html#import-maps).
+
 Deploy `generateSherpaChat` and the frontend as one coordinated release because the AI action and tool protocol now uses document IDs. Deploying the new function first makes old clients unable to resolve the new IDs; deploying the new frontend first makes it reject old name-based proposals. The short transition can interrupt AI actions, so complete both deployments before resuming them.
 
 No Firestore schema migration or Rules change is required. Monthly schedules remain arrays and existing documents remain readable. Transactions require connectivity and fail visibly when offline; users must retry after reconnecting. Ordinary Productivity `setDoc` writes retain Firestore's pending-write behavior, with success feedback waiting for server acknowledgement.
@@ -40,3 +42,9 @@ No Firestore schema migration or Rules change is required. Monthly schedules rem
 Rollback restores the previous frontend and function together. Existing data remains compatible, but rollback restores the original confirmation and overwrite risks. Review pending writes and reload active clients before resuming work. No automatic rollback deletes or rewrites Firestore documents.
 
 Role-specific Firestore permissions and App Check enforcement remain separate work requiring the intended staff permission model and App Check registration.
+
+## September 7 production preflight
+
+The production Firebase project reported billing disabled, no deployed functions, and Secret Manager disabled. The Firebase CLI also needs an authenticated deployment session. Frontend fixes can ship independently because there is no existing AI function to migrate; the AI backend remains unavailable until client-owned billing and the Gemini secret are configured. No billing account was linked and no secret was created during this release.
+
+A fixed-time Firestore snapshot was exported at `2026-09-07T19:49:09.458Z`: 16,674 documents across 6 collections, including a check for nested collections. The typed REST export and its verified SHA-256 manifest are stored privately outside the repository. Document and collection reads used the same read time, supported by the [Firestore document listing API](https://firebase.google.com/docs/firestore/reference/rest/v1/projects.databases.documents/list) and [collection listing API](https://firebase.google.com/docs/firestore/reference/rest/v1/projects.databases.documents/listCollectionIds). This backup operation performed no database writes.

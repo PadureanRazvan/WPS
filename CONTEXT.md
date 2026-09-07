@@ -16,6 +16,8 @@
 
 **Runtime Deploy Hardening** — the rules for proving a deployed Sherpa build is the intended version, reusing one external Chrome session for read-only production smoke checks, confirming GitHub Pages serves new Modules, and rolling back production without touching Firestore data.
 
+The release import map resolves local module imports to one versioned URL per module, including otherwise unversioned imports. `scripts/refresh-release-assets.mjs` refreshes module aliases and entry/CSS URLs from `SHERPA_VERSION`; its `--check` mode detects stale release assets.
+
 **Users Command** — the rules for turning Users form input, inline Agent edits, contract changes, primary team changes, deactivation, and reactivation into validated Agent update payloads, activity metadata, and user-facing diagnostics while keeping the Users shell responsible for DOM modals and Firestore writes.
 
 **Users Directory View** — the searchable and filterable roster projection of Agents, including query normalization, team/status filters, translated result states, and container-driven table-to-list reflow while preserving inline Users commands.
