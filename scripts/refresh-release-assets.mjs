@@ -41,7 +41,8 @@ html = html.replace(/((?:href|src)=["])((?:js|css)\/[^"?]+\.(?:js|css))(\?[^" ]*
 const map = JSON.stringify({ imports: Object.fromEntries(Object.entries(imports).sort(([a], [b]) => a.localeCompare(b))) }, null, 4);
 const block = `<!-- SHERPA_IMPORT_MAP_START -->\n    <script type="importmap" id="sherpa-module-map">\n${map}\n    </script>\n    <!-- SHERPA_IMPORT_MAP_END -->\n\n    `;
 html = html.replace('<!-- CSS Files -->', block + '<!-- CSS Files -->');
-if (html !== originalHtml) updates.set('index.html', html);
+// Git may normalize line endings on checkout; that does not invalidate module URLs.
+if (html.replace(/\r\n/g, '\n') !== originalHtml.replace(/\r\n/g, '\n')) updates.set('index.html', html);
 
 if (process.argv.includes('--check')) {
     if (updates.size) throw new Error(`Release assets need refreshing: ${[...updates.keys()].join(', ')}`);
