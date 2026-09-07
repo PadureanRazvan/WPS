@@ -1,8 +1,9 @@
 // js/users.js
+import { escapeHtml } from './html.js';
 import { db } from './firebase-config.js';
 import { collection, onSnapshot, Timestamp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 import { addAgent, updateAgent, deleteAgent } from './planner.js';
-import { showTemporaryMessage, t } from './ui.js?v=2026.09.06.2';
+import { showTemporaryMessage, showWriteError, t } from './ui.js?v=2026.09.06.2';
 import { logActivity } from './logs.js?v=2026.09.06.2';
 import {
     buildContractChangeCommand,
@@ -46,7 +47,7 @@ function getPrimaryTeamOptions(selectedValue = '') {
 
 function buildPrimaryTeamOptionsMarkup(selectedValue = '') {
     return getPrimaryTeamOptions(selectedValue)
-        .map(team => `<option value="${team}" ${team === selectedValue ? 'selected' : ''}>${team}</option>`)
+        .map(team => `<option value="${escapeHtml(team)}" ${team === selectedValue ? 'selected' : ''}>${escapeHtml(team)}</option>`)
         .join('');
 }
 
@@ -145,7 +146,7 @@ export function initializeUsers() {
             if (userData.hireDate && userData.hireDate.toDate) {
                 userData.hireDate = userData.hireDate.toDate();
             }
-            usersData.push({ id: doc.id, ...userData });
+            usersData.push({ ...userData, id: doc.id });
         });
         // Sort by fullName
         usersData.sort((a, b) => (a.fullName || '').localeCompare(b.fullName || ''));
@@ -170,7 +171,7 @@ function setupTableEventDelegation() {
             const userName = usersData.find(u => u.id === id)?.fullName || t('unknown-agent');
             const confirmMessage = `${t('confirm-delete-user').replace('{name}', userName)}\n\n${t('confirm-delete-user-impact')}`;
             if (confirm(confirmMessage)) {
-                deleteAgent(id);
+                deleteAgent(id, usersData.find(user => user.id === id)).catch(showWriteError);
             }
         }
         if (e.target.classList.contains('btn-status')) {
@@ -249,7 +250,8 @@ function setupNewUserForm() {
             return;
         }
 
-        await addAgent(createCommand.payload);
+        try { await addAgent(createCommand.payload); }
+        catch (error) { showWriteError(error); return; }
         form.reset();
         updateContractHoursVisibility();
         formContainer.style.display = 'none';
@@ -294,9 +296,9 @@ export function renderUsersTable() {
         const contractLabel = user.contractType || 'Full-time';
         const hoursLabel = user.contractHours || 8;
         tr.innerHTML = `
-            <td contenteditable="true" data-field="fullName" data-mobile-label="${t('full-name')}">${user.fullName || ''}</td>
-            <td class="hide-mobile" contenteditable="true" data-field="username" data-mobile-label="${t('username')}">${user.username || ''}</td>
-            <td class="hide-mobile-sm" data-mobile-label="${t('contract-hours')}"><input type="number" class="inline-input" min="4" max="8" value="${hoursLabel}" data-field="contractHours"></td>
+            <td contenteditable="true" data-field="fullName" data-mobile-label="${t('full-name')}">${escapeHtml(user.fullName)}</td>
+            <td class="hide-mobile" contenteditable="true" data-field="username" data-mobile-label="${t('username')}">${escapeHtml(user.username)}</td>
+            <td class="hide-mobile-sm" data-mobile-label="${t('contract-hours')}"><input type="number" class="inline-input" min="4" max="8" value="${escapeHtml(hoursLabel)}" data-field="contractHours"></td>
             <td data-mobile-label="${t('contract-type')}">
                 <select class="inline-select" data-field="contractType">
                     <option value="Full-time" ${contractLabel === 'Full-time' ? 'selected' : ''}>${t('form-full-time')}</option>
@@ -310,11 +312,11 @@ export function renderUsersTable() {
             </td>
             <td class="hide-mobile" data-mobile-label="${t('hire-date')}"><input type="date" class="inline-input" value="${hireDateStr}" data-field="hireDate"></td>
             <td data-mobile-label="${t('active')}" style="text-align: center;">
-                <button class="btn-status ${user.isActive ? 'active' : 'inactive'}" data-field="isActive" data-id="${user.id}">
+                <button class="btn-status ${user.isActive ? 'active' : 'inactive'}" data-field="isActive" data-id="${escapeHtml(user.id)}">
                     ${user.isActive ? t('active') : t('inactive')}
                 </button>
             </td>
-            <td data-mobile-label="${t('actions')}"><button class="btn-ghost delete-btn" data-id="${user.id}">${t('delete')}</button></td>
+            <td data-mobile-label="${t('actions')}"><button class="btn-ghost delete-btn" data-id="${escapeHtml(user.id)}">${t('delete')}</button></td>
         `;
 
         tr.querySelectorAll('[data-field]').forEach((fieldElement) => {
@@ -383,7 +385,8 @@ function openContractChangeModal(userId, newContractType) {
             return;
         }
 
-        await updateAgent(userId, changeCommand.updateData);
+        try { await updateAgent(userId, changeCommand.updateData, user); }
+        catch (error) { showWriteError(error); return; }
         logActivity('portal', 'change_contract', changeCommand.activity);
 
         modal.classList.remove('active');
@@ -440,7 +443,8 @@ function openPrimaryTeamChangeModal(userId, newPrimaryTeam) {
             return;
         }
 
-        await updateAgent(userId, teamCommand.updateData);
+        try { await updateAgent(userId, teamCommand.updateData, user); }
+        catch (error) { showWriteError(error); return; }
         logActivity('portal', 'change_primary_team', teamCommand.activity);
         modal.classList.remove('active');
         showTemporaryMessage(t('team-updated')
@@ -509,7 +513,8 @@ function openDeactivateModal(userId) {
 
         newSaveBtn.addEventListener('click', async () => {
             const reactivateCommand = buildReactivateAgentCommand(user, { now: new Date() });
-            await updateAgent(userId, reactivateCommand.updateData);
+            try { await updateAgent(userId, reactivateCommand.updateData, user); }
+            catch (error) { showWriteError(error); return; }
             logActivity('portal', 'reactivate_agent', reactivateCommand.activity);
             closeModal();
             showTemporaryMessage(t('agent-reactivated').replace('{name}', user.fullName), "success");
@@ -579,7 +584,8 @@ function openDeactivateModal(userId) {
             return;
         }
 
-        await updateAgent(userId, deactivateCommand.updateData);
+        try { await updateAgent(userId, deactivateCommand.updateData, user); }
+        catch (error) { showWriteError(error); return; }
 
         logActivity('portal', 'deactivate_agent', deactivateCommand.activity);
         closeModal();
@@ -638,7 +644,8 @@ async function handleInlineEdit(e) {
         return;
     }
 
-    await updateAgent(id, inlineCommand.updatePayload);
+    try { await updateAgent(id, inlineCommand.updatePayload, user); }
+    catch (error) { showWriteError(error); return; }
     target.dataset.initialValue = inlineCommand.nextState;
     logActivity('portal', 'edit_user', inlineCommand.logDetails);
     showTemporaryMessage(t('user-updated'), "success", 1000);

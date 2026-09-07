@@ -76,8 +76,8 @@ test('date commands remove date data, delete persistence, refresh views, and sho
   await commands.removeDate('2026-05-04');
 
   assert.deepEqual(calls, [
-    ['deleteDateEntry', '2026-05-04'],
     ['deletePersistedDate', '2026-05-04'],
+    ['deleteDateEntry', '2026-05-04'],
     ['refreshProductivityViews', 'delete'],
     ['showTemporaryMessage', 'Deleted Display 2026-05-04', 'success', 2000]
   ]);

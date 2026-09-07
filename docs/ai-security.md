@@ -14,6 +14,18 @@ The function runs in `europe-west8` alongside the existing Milan Firestore datab
 - Gemini credentials are never stored in Firestore, committed to Git, or returned to the browser.
 - The retired `config/gemini` document is denied by Firestore Rules and should remain deleted.
 
+## Confirmed Agent Changes
+
+Model responses can propose changes, but cannot execute them directly. The browser validates the entire proposal before showing any confirmation controls. All writes, including a single Planner Cell edit or a new Agent, require the **Apply changes** button. The confirmation lists the affected Agents and their usernames, dates, schedule values, contract details for new Agents, and a permanent-deletion warning where applicable.
+
+`SET_CELL` and `DELETE_AGENT` use exact Firestore document IDs returned by `get_agent_list`. The `get_agent_schedule` tool takes `agent_id`. Empty, partial, and ambiguous identities are rejected. Invalid dates, schedule values, duplicate or conflicting actions, and proposals containing more than 15 action tags reject the whole proposal. Calendar dates use Europe/Bucharest.
+
+Free-text replies never approve writes. A new message, Cancel, Clear, or logout invalidates the pending proposal. Responses arriving after Clear or logout are discarded. Apply consumes the proposal before awaiting persistence, preventing repeated clicks from committing it twice. Clear and logout do not reverse a transaction that was already approved and submitted.
+
+Confirmed edits, additions, and deletions commit together in one Firestore transaction. A conflict or rejected write produces an error without a success response. These browser controls protect the AI interaction; Firestore Rules remain the authorization boundary for direct clients. Existing approved staff identities retain their current collection permissions.
+
+Deploy the frontend and `generateSherpaChat` together when changing this protocol. Old name-based responses are rejected by the new client. See [the security-fix rollout notes](security-fixes.md).
+
 ## Activate A New Gemini Key
 
 Do not paste the key into source code, Firestore, GitHub, or chat. After the client-owned billing profile and Gemini project are ready, run this from the repository root and paste the key only into the CLI's hidden prompt:

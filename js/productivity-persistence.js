@@ -75,9 +75,17 @@ export function createProductivityFirestoreStore({
     requireFirestoreAdapter(firestore);
 
     return {
-        async saveDate(dateKey, entry) {
+        async saveDate(dateKey, entry, { fileType } = {}) {
             const ref = firestore.doc(db, collectionName, dateKey);
-            await firestore.setDoc(ref, buildProductivityDateDocument(entry, { now }));
+            const document = buildProductivityDateDocument(entry, { now });
+            if (fileType) {
+                if (!['tickets', 'calls'].includes(fileType)) throw new Error('Invalid productivity file type.');
+                const field = `${fileType}Data`;
+                // Replace this upload in full, preserving another user's other file type.
+                await firestore.setDoc(ref, { [field]: document[field], updatedAt: document.updatedAt }, { mergeFields: [field, 'updatedAt'] });
+            } else {
+                await firestore.setDoc(ref, document);
+            }
         },
 
         async deleteDate(dateKey) {

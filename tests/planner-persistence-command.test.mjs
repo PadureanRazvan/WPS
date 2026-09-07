@@ -76,17 +76,23 @@ test('buildPlannerUndoCommand restores monthly days and notes from undo snapshot
       agentId: 'agent-1',
       monthKey: '2026-05',
       previousDays: ['8RO', 'Co'],
-      previousDayNotes: { '1': 'Approved holiday' }
+      previousDayNotes: { '1': 'Approved holiday' },
+      appliedDays: ['8RO', 'CM'], appliedDayNotes: {}
     },
     {
       agentId: 'agent-2',
       monthKey: '2026-06',
       previousDays: ['8IT'],
-      previousDayNotes: {}
+      previousDayNotes: {},
+      appliedDays: ['Co'], appliedDayNotes: {}
     }
   ]);
 
   assert.deepEqual(command, {
+    baselines: [
+      { id: 'agent-1', monthlyDays: { '2026-05': ['8RO', 'CM'] }, monthlyNotes: { '2026-05': {} } },
+      { id: 'agent-2', monthlyDays: { '2026-06': ['Co'] }, monthlyNotes: { '2026-06': {} } }
+    ],
     updates: [
       {
         agentId: 'agent-1',
@@ -111,7 +117,7 @@ test('buildPlannerUndoCommand restores monthly days and notes from undo snapshot
 
 test('buildPlannerUndoCommand ignores incomplete snapshot entries', () => {
   const command = buildPlannerUndoCommand([
-    { agentId: 'agent-1', monthKey: '2026-05', previousDays: ['8RO'], previousDayNotes: {} },
+    { agentId: 'agent-1', monthKey: '2026-05', previousDays: ['8RO'], previousDayNotes: {}, appliedDays: ['Co'], appliedDayNotes: {} },
     { agentId: '', monthKey: '2026-05', previousDays: ['8RO'], previousDayNotes: {} },
     { agentId: 'agent-2', monthKey: '', previousDays: ['8IT'], previousDayNotes: {} }
   ]);

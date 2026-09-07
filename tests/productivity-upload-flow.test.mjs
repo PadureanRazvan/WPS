@@ -23,6 +23,23 @@ function fileNameElement() {
   return { textContent: '', style: {} };
 }
 
+test('upload persistence failure preserves the parsed input for reporting and never signals success', async () => {
+  const { processProductivityUploadFile } = await loadUploadFlowModule();
+  const parsed = new Map([['alice', { calls: 1 }]]), events = [];
+  await processProductivityUploadFile({
+    file: { name: 'calls.csv' }, fileType: 'calls', getUploadDate: () => '2026-09-07',
+    parseFile: async () => parsed,
+    saveDate: async (date, result, type) => {
+      assert.equal(date, '2026-09-07'); assert.equal(result, parsed); assert.equal(type, 'calls');
+      throw new Error('permission-denied');
+    },
+    showTemporaryMessage: (_message, type) => events.push(type),
+    showUploadSuccess: () => events.push('upload-success'),
+    refreshProductivityViews: () => events.push('refresh'), logError() {}
+  });
+  assert.deepEqual(events, ['error']);
+});
+
 test('upload flow rejects files when no upload date is selected', async () => {
   const { processProductivityUploadFile } = await loadUploadFlowModule();
   const messages = [];

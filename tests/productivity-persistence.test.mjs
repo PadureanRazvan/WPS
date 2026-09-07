@@ -28,6 +28,22 @@ function snapshotFrom(docs) {
   };
 }
 
+test('uploading one file type preserves the other type and removes replaced rows', async () => {
+  const { createProductivityFirestoreStore } = await loadPersistenceModule();
+  const stored = { ticketsData: { old: { tickets: 99 } }, callsData: { other: { calls: 7 } } };
+  const store = createProductivityFirestoreStore({ db: {}, firestore: {
+    collection() {}, doc() { return 'date'; }, deleteDoc() {}, getDocs() {}, onSnapshot() {},
+    async setDoc(_ref, data, options) {
+      assert.deepEqual(options.mergeFields, ['ticketsData', 'updatedAt']);
+      for (const field of options.mergeFields) stored[field] = data[field];
+    }
+  } });
+  await store.saveDate('2026-09-07', { ticketsData: new Map([['new', { tickets: 2, teams: new Map() }]]) }, { fileType: 'tickets' });
+  assert.deepEqual(stored.callsData, { other: { calls: 7 } });
+  assert.equal(stored.ticketsData.old, undefined);
+  assert.equal(stored.ticketsData.new.tickets, 2);
+});
+
 test('persistence serializes productivity entries for Firestore documents', async () => {
   const { buildProductivityDateDocument } = await loadPersistenceModule();
 

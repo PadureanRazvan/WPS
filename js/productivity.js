@@ -118,16 +118,10 @@ function replaceProductivityData(nextDataByDate) {
     });
 }
 
-async function saveToFirestore(dateKey) {
-    const entry = dataByDate.get(dateKey);
-    if (!entry) return;
-    try {
-        await productivityStore.saveDate(dateKey, entry);
-        console.log(`[Productivity] Saved data for ${dateKey} to Firestore.`);
-    } catch (err) {
-        console.error('[Productivity] Firestore save error:', err);
-        showTemporaryMessage(t('prod-save-error'), 'error');
-    }
+async function saveToFirestore(dateKey, parsedData, fileType) {
+    if (!['tickets', 'calls'].includes(fileType) || !(parsedData instanceof Map)) throw new Error('Invalid upload data.');
+    await productivityStore.saveDate(dateKey, { [`${fileType}Data`]: parsedData }, { fileType });
+    console.log(`[Productivity] Saved data for ${dateKey} to Firestore.`);
 }
 
 async function deleteFromFirestore(dateKey) {
@@ -136,6 +130,7 @@ async function deleteFromFirestore(dateKey) {
         console.log(`[Productivity] Deleted data for ${dateKey} from Firestore.`);
     } catch (err) {
         console.error('[Productivity] Firestore delete error:', err);
+        throw err;
     }
 }
 
@@ -181,13 +176,6 @@ function subscribeToProductivityData() {
 }
 
 // --- Per-date data helpers ---
-
-function getOrCreateDateEntry(dateKey) {
-    if (!dataByDate.has(dateKey)) {
-        dataByDate.set(dateKey, { ticketsData: null, callsData: null });
-    }
-    return dataByDate.get(dateKey);
-}
 
 function hasAnyData() {
     return hasAnyProductivityData(dataByDate);
@@ -540,7 +528,10 @@ function renderUploadCalendar() {
         renderUploadCalendar,
         getUploadDate: () => uploadDate,
         exportProductivityDate: dateCommands.exportDate,
-        removeProductivityDate: dateCommands.removeDate
+        removeProductivityDate: dateKey => dateCommands.removeDate(dateKey).catch(error => {
+            console.error('[Productivity] Delete failed:', error);
+            showTemporaryMessage(t('write-failed'), 'error');
+        })
     });
 }
 
@@ -595,17 +586,15 @@ export async function initializeProductivity() {
     // Setup uploads
     setupUploadArea('uploadTickets', 'ticketsFileInput', 'ticketsFileName', 'tickets', async (file, dateKey) => {
         const ticketsData = await parseTicketsXLSX(file);
-        const entry = getOrCreateDateEntry(dateKey);
-        entry.ticketsData = ticketsData;
         console.log(`[Productivity] Parsed ${ticketsData.size} agents from tickets file for ${dateKey}.`);
+        return ticketsData;
     });
 
     setupUploadArea('uploadCalls', 'callsFileInput', 'callsFileName', 'calls', async (file, dateKey) => {
         const text = await file.text();
         const callsData = parseCallsCSV(text);
-        const entry = getOrCreateDateEntry(dateKey);
-        entry.callsData = callsData;
         console.log(`[Productivity] Parsed ${callsData.size} agents from calls file for ${dateKey}.`);
+        return callsData;
     });
 
     const pickerInput = document.getElementById('productivityDateRange');

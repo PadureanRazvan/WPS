@@ -24,6 +24,8 @@ git diff --cached --check
 
 6. For AI or authorization changes, review `docs/ai-security.md`. Never place the Gemini key in Firestore, a local environment file, Git, or a browser prompt.
 
+7. For the September 2026 security and concurrency changes, follow [the coordinated frontend/function rollout and rollback notes](security-fixes.md). Run `node scripts/security-browser-smoke.mjs` locally before deployment; its fixtures never write production data.
+
 ## Firebase Backend
 
 Deploy Firestore Rules independently when their tests pass:

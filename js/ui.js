@@ -576,7 +576,15 @@ export function hideEditMessage() {
     }
 }
 
-export function saveModalChanges() {
+let plannerSavePending = false;
+
+export function showWriteError(error) {
+    console.error('[Persistence]', error);
+    showTemporaryMessage(t(error?.code === 'data-conflict' ? 'write-conflict' : 'write-failed'), 'error');
+}
+
+export async function saveModalChanges() {
+    if (plannerSavePending) return;
     const selectedOption = document.querySelector('.edit-option.selected');
     if (!selectedOption) {
         alert(t('edit-select-type'));
@@ -635,7 +643,18 @@ export function saveModalChanges() {
 
     // Call the refactored function in planner.js to handle the database update
     if (selectedCellKeys.size > 0) {
-        applyChangesToSelectedCells(selectedCellKeys, newValue, noteText);
+        const saveButton = document.getElementById('saveButton');
+        plannerSavePending = true;
+        if (saveButton) saveButton.disabled = true;
+        try {
+            await applyChangesToSelectedCells(selectedCellKeys, newValue, noteText);
+        } catch (error) {
+            showWriteError(error);
+            return;
+        } finally {
+            plannerSavePending = false;
+            if (saveButton) saveButton.disabled = false;
+        }
     }
 
     closeEditModal();
@@ -692,7 +711,8 @@ async function handleCreateAgent() {
     };
 
     // Call the Firestore function from planner.js
-    await addAgent(newAgent);
+    try { await addAgent(newAgent); }
+    catch (error) { showWriteError(error); return; }
 
     // Clear the form for the next entry
     document.getElementById('newUserForm').reset();

@@ -195,7 +195,7 @@ function updateTeamHoursTable(dailyStats, dateLabel) {
         const teamData = dailyStats.teams[teamCode];
         const row = document.createElement('tr');
         row.innerHTML = `
-            <td>${teamCode} zooplus</td>
+            <td>${escapeHtml(teamCode)} zooplus</td>
             <td>${teamData.agentIds.size}</td>
             <td>${formatPlannerHoursValue(teamData.hours)}</td>
         `;
@@ -224,3 +224,4 @@ export function updateAverageProductivityCard() {
         }
     }
 }
+import { escapeHtml } from './html.js';

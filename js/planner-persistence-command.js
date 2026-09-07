@@ -32,18 +32,26 @@ export function buildPlannerMigrationCommands(agents, currentMonthKey, migratedA
 }
 
 export function buildPlannerUndoCommand(snapshot = []) {
-    const updates = (snapshot || [])
-        .filter(entry => entry?.agentId && entry?.monthKey)
-        .map(entry => ({
-            agentId: entry.agentId,
-            updateData: {
-                [`monthlyDays.${entry.monthKey}`]: entry.previousDays,
-                [`monthlyNotes.${entry.monthKey}`]: entry.previousDayNotes
-            }
-        }));
+    const updatesById = new Map(), baselinesById = new Map();
+    for (const entry of snapshot || []) {
+        if (!entry?.agentId || !entry?.monthKey) continue;
+        if (!entry.appliedDays || !entry.appliedDayNotes) throw new Error('This undo snapshot cannot be safely restored.');
+        if (!updatesById.has(entry.agentId)) {
+            updatesById.set(entry.agentId, { agentId: entry.agentId, updateData: {} });
+            baselinesById.set(entry.agentId, { id: entry.agentId, monthlyDays: {}, monthlyNotes: {} });
+        }
+        const update = updatesById.get(entry.agentId).updateData;
+        update[`monthlyDays.${entry.monthKey}`] = entry.previousDays;
+        update[`monthlyNotes.${entry.monthKey}`] = entry.previousDayNotes;
+        const baseline = baselinesById.get(entry.agentId);
+        baseline.monthlyDays[entry.monthKey] = entry.appliedDays;
+        baseline.monthlyNotes[entry.monthKey] = entry.appliedDayNotes;
+    }
+    const updates = [...updatesById.values()];
 
     return {
         updates,
+        baselines: [...baselinesById.values()],
         activity: {
             agents: updates.length
         }

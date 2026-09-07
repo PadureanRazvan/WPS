@@ -40,8 +40,8 @@ export async function processProductivityUploadFile({
     }
 
     try {
-        await parseFile(file, dateKey);
-        await saveDate(dateKey);
+        const parsedData = await parseFile(file, dateKey);
+        await saveDate(dateKey, parsedData, fileType);
 
         const messageKey = wasOverride ? 'data-overwritten' : 'file-processed';
         showTemporaryMessage(

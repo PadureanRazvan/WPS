@@ -36,7 +36,9 @@ test('buildPlannerEditCommand prepares one Agent month update with an undo snaps
       agentId: 'agent-1',
       monthKey: '2026-05',
       previousDays: ['8RO', '8RO'],
-      previousDayNotes: { '0': 'Keep this note', '1': 'Clear this note' }
+      previousDayNotes: { '0': 'Keep this note', '1': 'Clear this note' },
+      appliedDays: ['8RO', 'Co', ...Array(29).fill('')],
+      appliedDayNotes: { '0': 'Keep this note', '1': 'Vacation approved' }
     }
   ]);
 
@@ -137,6 +139,7 @@ test('buildPlannerEditCommand returns an empty command for empty selection', () 
 
   assert.deepEqual(command, {
     updates: [],
+    baselines: [],
     snapshots: [],
     changedAgentIds: [],
     cellCount: 0,
