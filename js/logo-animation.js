@@ -1,3 +1,4 @@
+import { createGlobeCore, createHeartCore, createSummitCore, createInfinityCore } from './logo-cores.js?v=2026.09.07';
 import { createFspCore, loadFspTextures } from './logo-fsp-core.js?v=2026.09.07';
 import { createLogoStudioLighting } from './logo-materials.js?v=2026.09.07';
 import {
@@ -14,7 +15,7 @@ const SUMMIT_REVEAL_ANGLE = 0.36;
 const MORPH_DURATION = 1900;
 export const HOLD_DURATIONS = Object.freeze({
     fsp: 14000,
-    globe: 4300,
+    globe: 6200,
     heart: 5400,
     summit: 4300,
     infinity: 5000
@@ -135,6 +136,15 @@ export function getLogoShapePresence(shapeName, currentName, targetName = null, 
     return 0;
 }
 
+export function getLogoCorePresence(shapeName, currentName, targetName = null, progress = 0) {
+    if (!targetName || currentName === targetName) return shapeName === currentName ? 1 : 0;
+    // Give the moving particles the middle of the transition. Two opaque
+    // sculptures should never intersect while their silhouettes change.
+    if (shapeName === currentName) return 1 - smootherstep(progress / 0.5);
+    if (shapeName === targetName) return smootherstep((progress - 0.5) / 0.5);
+    return 0;
+}
+
 function loadThree() {
     if (!threeModulePromise) threeModulePromise = import(THREE_MODULE_URL);
     return threeModulePromise;
@@ -176,182 +186,8 @@ function createOrbit(THREE, radius = 1.31) {
     return orbit;
 }
 
-function rememberCoreOpacity(material, opacity) {
-    material.userData.logoOpacity = opacity;
-    material.userData.logoEmissiveIntensity = material.emissiveIntensity ?? 0;
-    material.opacity = 0;
-    return material;
-}
-
-function createCircleLine(THREE, radius, material) {
-    const vertices = [];
-    for (let index = 0; index < 72; index++) {
-        const angle = index / 72 * TAU;
-        vertices.push(new THREE.Vector3(Math.cos(angle) * radius, Math.sin(angle) * radius, 0));
-    }
-    return new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(vertices), material);
-}
-
-function createGlobeCore(THREE) {
-    const group = new THREE.Group();
-    const sphereMaterial = rememberCoreOpacity(new THREE.MeshStandardMaterial({
-        color: 0x087ccc,
-        emissive: 0x032d4f,
-        emissiveIntensity: 0.45,
-        metalness: 0.08,
-        roughness: 0.48,
-        transparent: true,
-        depthWrite: false
-    }), 0.075);
-    const sphere = new THREE.Mesh(new THREE.SphereGeometry(1.015, 24, 16), sphereMaterial);
-    sphere.renderOrder = 1;
-    group.add(sphere);
-
-    const ringMaterial = rememberCoreOpacity(new THREE.LineBasicMaterial({
-        color: 0x6ff7bd,
-        transparent: true,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false
-    }), 0.13);
-    const equator = createCircleLine(THREE, 1.035, ringMaterial);
-    equator.rotation.x = Math.PI / 2;
-    const meridian = createCircleLine(THREE, 1.035, ringMaterial);
-    const crossMeridian = createCircleLine(THREE, 1.035, ringMaterial);
-    crossMeridian.rotation.y = Math.PI / 2;
-    group.add(equator, meridian, crossMeridian);
-    group.visible = false;
-    return group;
-}
-
-function createHeartCore(THREE) {
-    const heart = new THREE.Shape();
-    heart.moveTo(0, -1.08);
-    heart.bezierCurveTo(-1.15, -0.34, -1.12, 0.48, -0.62, 0.72);
-    heart.bezierCurveTo(-0.25, 0.9, 0, 0.64, 0, 0.37);
-    heart.bezierCurveTo(0, 0.64, 0.25, 0.9, 0.62, 0.72);
-    heart.bezierCurveTo(1.12, 0.48, 1.15, -0.34, 0, -1.08);
-
-    const geometry = new THREE.ExtrudeGeometry(heart, {
-        curveSegments: 24,
-        steps: 1,
-        depth: 0.42,
-        bevelEnabled: true,
-        bevelThickness: 0.12,
-        bevelSize: 0.1,
-        bevelSegments: 4
-    });
-    geometry.center();
-    const material = rememberCoreOpacity(new THREE.MeshStandardMaterial({
-        color: 0xd8143a,
-        emissive: 0x5a0017,
-        emissiveIntensity: 0.78,
-        metalness: 0.16,
-        roughness: 0.28,
-        transparent: true,
-        depthWrite: false,
-        side: THREE.DoubleSide
-    }), 0.28);
-    const mesh = new THREE.Mesh(geometry, material);
-    mesh.renderOrder = 1;
-
-    const edgeMaterial = rememberCoreOpacity(new THREE.LineBasicMaterial({
-        color: 0xff778f,
-        transparent: true,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false
-    }), 0.36);
-    const edge = new THREE.LineSegments(new THREE.EdgesGeometry(geometry, 22), edgeMaterial);
-    edge.renderOrder = 2;
-
-    const group = new THREE.Group();
-    group.add(mesh, edge);
-    group.scale.setScalar(0.92);
-    group.position.y = -0.02;
-    group.visible = false;
-    return group;
-}
-
-function createSummitCore(THREE) {
-    const group = new THREE.Group();
-    const mountainGeometry = new THREE.ConeGeometry(1.08, 1.9, 4, 1, false);
-    const mountainMaterial = rememberCoreOpacity(new THREE.MeshStandardMaterial({
-        color: 0x0a6c85,
-        emissive: 0x053847,
-        emissiveIntensity: 0.5,
-        metalness: 0.2,
-        roughness: 0.38,
-        transparent: true,
-        depthWrite: false,
-        flatShading: true
-    }), 0.17);
-    const mountain = new THREE.Mesh(mountainGeometry, mountainMaterial);
-    mountain.position.y = 0.18;
-    mountain.rotation.y = Math.PI / 4;
-    mountain.renderOrder = 1;
-
-    const ridgeMaterial = rememberCoreOpacity(new THREE.LineBasicMaterial({
-        color: 0x6af5d3,
-        transparent: true,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false
-    }), 0.3);
-    const ridges = new THREE.LineSegments(new THREE.EdgesGeometry(mountainGeometry, 10), ridgeMaterial);
-    ridges.position.copy(mountain.position);
-    ridges.rotation.copy(mountain.rotation);
-    ridges.renderOrder = 2;
-
-    const snowGeometry = new THREE.ConeGeometry(0.33, 0.47, 4, 1, false);
-    const snowMaterial = rememberCoreOpacity(new THREE.MeshStandardMaterial({
-        color: 0xf2fff7,
-        emissive: 0x5fd7ad,
-        emissiveIntensity: 0.7,
-        roughness: 0.3,
-        transparent: true,
-        depthWrite: false,
-        flatShading: true
-    }), 0.36);
-    const snow = new THREE.Mesh(snowGeometry, snowMaterial);
-    snow.position.y = 0.895;
-    snow.rotation.y = Math.PI / 4;
-    snow.renderOrder = 2;
-
-    group.add(mountain, ridges, snow);
-    group.visible = false;
-    return group;
-}
-
-function createInfinityCore(THREE) {
-    class InfinityCurve extends THREE.Curve {
-        getPoint(t, target = new THREE.Vector3()) {
-            const angle = t * TAU;
-            return target.set(
-                1.23 * Math.sin(angle),
-                0.56 * Math.sin(angle * 2),
-                0.13 * Math.cos(angle * 2)
-            );
-        }
-    }
-
-    const geometry = new THREE.TubeGeometry(new InfinityCurve(), 112, 0.065, 8, true);
-    const material = rememberCoreOpacity(new THREE.MeshStandardMaterial({
-        color: 0x159fe7,
-        emissive: 0x075c9a,
-        emissiveIntensity: 0.9,
-        metalness: 0.22,
-        roughness: 0.24,
-        transparent: true,
-        depthWrite: false
-    }), 0.24);
-    const mesh = new THREE.Mesh(geometry, material);
-    mesh.renderOrder = 1;
-    const group = new THREE.Group();
-    group.add(mesh);
-    group.visible = false;
-    return group;
-}
-
 function setCorePresence(core, presence, energy = 0) {
-    const amount = smootherstep(presence);
+    const amount = clamp01(presence);
     core.visible = amount > 0.004;
     if (!core.visible) return;
     core.traverse(object => {
@@ -395,12 +231,14 @@ function createPointMaterial(THREE, pixelRatio) {
         uniforms: {
             uTime: { value: 0 },
             uPixelRatio: { value: pixelRatio },
+            uViewportScale: { value: 1 },
             uBreath: { value: 0.55 },
             uOpacity: { value: 1 }
         },
         vertexShader: `
             uniform float uTime;
             uniform float uPixelRatio;
+            uniform float uViewportScale;
             uniform float uBreath;
             attribute float aSize;
             attribute float aSeed;
@@ -412,7 +250,7 @@ function createPointMaterial(THREE, pixelRatio) {
                 vec3 animatedPosition = position * (1.0 + shimmer * 0.012 * uBreath);
                 vec4 viewPosition = modelViewMatrix * vec4(animatedPosition, 1.0);
                 gl_Position = projectionMatrix * viewPosition;
-                gl_PointSize = clamp(aSize * uPixelRatio * (7.15 / max(1.0, -viewPosition.z)), 1.1, 8.5);
+                gl_PointSize = clamp(aSize * uPixelRatio * uViewportScale * (7.15 / max(1.0, -viewPosition.z)), 0.8, 16.0 * uPixelRatio);
                 float depthLight = clamp((viewPosition.z + 5.9) / 1.7, 0.0, 1.0);
                 vColor = color * (0.82 + depthLight * 0.46);
                 vAlpha = 0.76 + shimmer * 0.14;
@@ -515,7 +353,7 @@ function createLogoScene(THREE, canvas, size, control, textures) {
     const sizes = currentShape.sizes.slice();
     const seeds = new Float32Array(LOGO_PARTICLE_COUNT);
     for (let index = 0; index < seeds.length; index++) {
-        seeds[index] = ((index * 16807 + 17) % 2147483647) / 2147483647;
+        seeds[index] = (index * 0.6180339887498949 + 0.37) % 1;
     }
 
     const pointGeometry = new THREE.BufferGeometry();
@@ -616,6 +454,7 @@ function createLogoScene(THREE, canvas, size, control, textures) {
         const bounds = control.getBoundingClientRect();
         const width = Math.max(1, bounds.width || size), height = Math.max(1, bounds.height || size);
         renderer.setSize(width, height, false);
+        pointMaterial.uniforms.uViewportScale.value = height / 150;
         camera.aspect = width / height;
         camera.zoom = Math.max(1, camera.aspect);
         camera.updateProjectionMatrix();
@@ -790,13 +629,18 @@ function createLogoScene(THREE, canvas, size, control, textures) {
         root.scale.setScalar(beat * settle * interfacePulse);
         root.position.y = reducedMotion ? 0 : Math.sin(now * 0.00105) * (heartPresence > 0.1 ? 0.045 : 0.022);
         for (const name of LOGO_SHAPE_NAMES) {
-            setCorePresence(cores[name], shapePresences[name], name === 'heart' ? (beat - 1) * 4.2 : 0);
+            const coverage = getLogoCorePresence(name, currentShape.name, transitionTarget, progress);
+            setCorePresence(cores[name], coverage, name === 'heart' ? (beat - 1) * 4.2 : 0);
+            if (cores[name].visible) cores[name].userData.animate?.(reducedMotion ? 0 : now);
         }
         glow.scale.setScalar((3.18 + Math.sin(now * 0.0014) * 0.08) * beat * (1 + (interfacePulse - 1) * 1.8));
-        // Keep the painted logo crisp at rest; its sampled particles emerge as
-        // the cutout dissolves and follow the same morph paths as every figure.
-        pointMaterial.uniforms.uOpacity.value = 1 - Math.pow(shapePresences.fsp, 4);
-        lineMaterial.opacity *= 1 - shapePresences.fsp;
+        const morphWave = transition ? Math.sin(progress * Math.PI) : 0;
+        // Finished sculptures are opaque at rest. Particles briefly carry
+        // their colors and silhouette between the departing and arriving core.
+        const sculptedRest = currentShape.name === 'fsp' || currentShape.name === 'globe';
+        pointMaterial.uniforms.uOpacity.value = transition ? Math.pow(morphWave, 0.7) : sculptedRest ? 0 : 1;
+        lineMaterial.opacity = transition ? 0.045 * morphWave : sculptedRest ? 0 : currentShape.lineOpacity;
+        orbit.material.opacity *= 1 - shapePresences.globe;
         glowMaterial.opacity *= 1 - shapePresences.fsp * 0.94;
         points.visible = pointMaterial.uniforms.uOpacity.value > 0.002;
         lines.visible = lineMaterial.opacity > 0.002;

@@ -2,12 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-import { HOLD_DURATIONS, getHeartBeatScale, getInterfacePulseScale, getLogoMotion, getLogoShapePresence } from '../js/logo-animation.js';
+import { HOLD_DURATIONS, getHeartBeatScale, getInterfacePulseScale, getLogoMotion, getLogoShapePresence, getLogoCorePresence } from '../js/logo-animation.js';
 import { SHERPA_VERSION } from '../js/version.js';
 
 const TWO_PI = Math.PI * 2;
 const HEART_REVEAL_ANGLE = 0.48;
 const animationSource = await readFile(new URL('../js/logo-animation.js', import.meta.url), 'utf8');
+const coreSource = await readFile(new URL('../js/logo-cores.js', import.meta.url), 'utf8');
 const indexSource = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const mainSource = await readFile(new URL('../js/main.js', import.meta.url), 'utf8');
 
@@ -178,6 +179,20 @@ test('solid figure cores crossfade without stacking at full strength', () => {
   assert.equal(getLogoShapePresence('globe', 'heart', 'summit', 0.5), 0);
 });
 
+test('opaque sculptures give the transition midpoint to particles without intersecting', () => {
+  for (let frame = 0; frame <= 120; frame++) {
+    const progress = frame / 120;
+    const source = getLogoCorePresence('fsp', 'fsp', 'globe', progress);
+    const target = getLogoCorePresence('globe', 'fsp', 'globe', progress);
+    assert.ok(source >= 0 && source <= 1 && target >= 0 && target <= 1);
+    assert.equal(source * target, 0, 'opaque figures must not occupy the same transition frame');
+  }
+  assert.equal(getLogoCorePresence('fsp', 'fsp', 'globe', 0), 1);
+  assert.equal(getLogoCorePresence('globe', 'fsp', 'globe', 1), 1);
+  assert.equal(getLogoCorePresence('fsp', 'fsp', 'globe', 0.5), 0);
+  assert.equal(getLogoCorePresence('globe', 'fsp', 'globe', 0.5), 0);
+});
+
 test('point shader uses the color attribute injected by Three.js', () => {
   assert.match(animationSource, /vertexColors:\s*true/);
   assert.doesNotMatch(animationSource, /attribute\s+vec3\s+color\s*;/);
@@ -185,7 +200,7 @@ test('point shader uses the color attribute injected by Three.js', () => {
 
 test('all four figures have a dedicated depth core', () => {
   for (const name of ['Globe', 'Heart', 'Summit', 'Infinity']) {
-    assert.match(animationSource, new RegExp(`function create${name}Core\\(THREE\\)`));
+    assert.match(coreSource, new RegExp(`function create${name}Core\\(THREE\\)`));
   }
 });
 

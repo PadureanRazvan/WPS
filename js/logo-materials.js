@@ -31,13 +31,13 @@ export function prepareLogoMaterial(material, opacity = 1) {
         `).replace('#include <clipping_planes_fragment>', `
             #include <clipping_planes_fragment>
             if (uLogoPresence < 0.999) {
-                float field = logoNoise(vLogoPosition * 9.0) * 0.76
+                float field = logoNoise(vLogoPosition * 32.0) * 0.76
                     + clamp((vLogoPosition.y + 1.5) / 3.0, 0.0, 1.0) * 0.24;
                 if (field > uLogoPresence) discard;
             }
         `);
     };
-    material.customProgramCacheKey = () => 'sherpa-sculpture-dissolve-v1';
+    material.customProgramCacheKey = () => 'sherpa-sculpture-dissolve-v2';
     return material;
 }
 

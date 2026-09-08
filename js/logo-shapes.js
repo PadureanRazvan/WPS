@@ -1,14 +1,15 @@
 import { FSP_SHAPE_DATA } from '../assets/branding/fsp-shape-data.js?v=2026.09.07';
 import { FSP_BEVEL, getFspRelief } from './logo-surfaces.js?v=2026.09.07';
+import { GLOBE_RADII, getGlobeColor, getGlobeOrbitPoint, getGlobePoint, isGlobeLand } from './logo-globe-surface.js?v=2026.09.07';
 
 const TAU = Math.PI * 2;
 
-export const LOGO_PARTICLE_COUNT = 520;
+export const LOGO_PARTICLE_COUNT = 768;
 export const LOGO_SHAPE_NAMES = Object.freeze(['fsp', 'globe', 'heart', 'summit', 'infinity']);
 
 const SHAPE_META = Object.freeze({
     fsp: { glow: [0.02, 0.64, 0.31], orbitOpacity: 0, lineOpacity: 0.025 },
-    globe: { glow: [0.08, 0.72, 0.46], orbitOpacity: 0.1, lineOpacity: 0.055 },
+    globe: { glow: [0.06, 0.43, 0.57], orbitOpacity: 0, lineOpacity: 0.04 },
     heart: { glow: [1.0, 0.16, 0.34], orbitOpacity: 0, lineOpacity: 0.07 },
     summit: { glow: [0.18, 0.72, 0.75], orbitOpacity: 0.03, lineOpacity: 0.085 },
     infinity: { glow: [0.08, 0.63, 0.94], orbitOpacity: 0, lineOpacity: 0.04 }
@@ -80,33 +81,23 @@ function generateFsp(count, random, variant) {
 function generateGlobe(count, random) {
     const shape = createShapeBuffer('globe', count);
     const goldenAngle = Math.PI * (3 - Math.sqrt(5));
-    const ocean = [0.03, 0.5, 0.88];
-    const deepOcean = [0.015, 0.16, 0.42];
-    const land = [0.02, 0.64, 0.31];
-    const sunlitLand = [0.48, 0.95, 0.42];
-    const coast = [0.24, 0.9, 0.68];
+    const orbitCount = Math.floor(count * 0.1);
+    const surfaceCount = count - orbitCount;
 
     for (let index = 0; index < count; index++) {
-        const yUnit = 1 - 2 * (index + 0.5) / count;
-        const ringRadius = Math.sqrt(Math.max(0, 1 - yUnit * yUnit));
-        const theta = goldenAngle * index;
-        const radius = 1.1 + (random() - 0.5) * 0.012;
-        const x = Math.cos(theta) * ringRadius * radius;
-        const y = yUnit * radius;
-        const z = Math.sin(theta) * ringRadius * radius;
-        const landSignal = Math.sin(x * 3.8 + z * 1.55)
-            + Math.cos(y * 5.8 - z * 2.25)
-            + Math.sin((x - y) * 4.65);
-        const isLand = landSignal > 0.58 && Math.abs(yUnit) < 0.92;
-        const isCoast = !isLand && landSignal > 0.42 && Math.abs(yUnit) < 0.92;
-        const latitudeLight = 0.22 + 0.58 * (1 - Math.abs(yUnit));
-        const color = isCoast
-            ? mixColor(ocean, coast, 0.48 + latitudeLight * 0.32)
-            : isLand
-            ? mixColor(land, sunlitLand, latitudeLight * 0.55 + random() * 0.12)
-            : mixColor(deepOcean, ocean, latitudeLight + random() * 0.14);
-        const size = (isLand ? 1.72 : isCoast ? 1.56 : 1.3) + random() * 0.42;
-        setPoint(shape, index, x, y, z, color, size);
+        if (index < orbitCount) {
+            const point = getGlobeOrbitPoint(index / orbitCount * TAU);
+            setPoint(shape, index, ...point, [0.88, 0.77, 0.56], 1.1 + random() * 0.25);
+            continue;
+        }
+        const surfaceIndex = index - orbitCount;
+        const latitude = Math.asin(1 - 2 * (surfaceIndex + 0.5) / surfaceCount) * 180 / Math.PI;
+        const longitude = goldenAngle * surfaceIndex * 180 / Math.PI % 360 - 180;
+        const land = isGlobeLand(longitude, latitude);
+        const radius = (land ? GLOBE_RADII.land : GLOBE_RADII.ocean) + 0.002 + random() * 0.002;
+        const point = getGlobePoint(longitude, latitude, radius);
+        const color = mixColor(getGlobeColor(latitude, land), [0.82, 0.94, 0.92], land ? 0.18 : 0.1);
+        setPoint(shape, index, ...point, color, (land ? 1.46 : 1.2) + random() * 0.28);
     }
 
     return shape;
