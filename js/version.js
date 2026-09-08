@@ -17,9 +17,9 @@
 // =============================================================================
 
 export const SHERPA_VERSION = Object.freeze({
-    number: '2026.09.07',
-    codename: 'Guarded Summit',
-    released: '2026-09-07'
+    number: '2026.09.09',
+    codename: 'Sculpted Horizons',
+    released: '2026-09-09'
 });
 
 // FNV-1a (32-bit) over the identifying fields -> short, stable hex fingerprint.

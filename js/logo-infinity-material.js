@@ -1,4 +1,4 @@
-import { prepareLogoMaterial } from './logo-materials.js?v=2026.09.07';
+import { prepareLogoMaterial } from './logo-materials.js?v=2026.09.09';
 
 export function createInfinityMaterials(THREE) {
     const flow = { value: 0 }, strength = { value: 1 };

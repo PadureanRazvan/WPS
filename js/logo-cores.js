@@ -1,12 +1,12 @@
-import { prepareLogoMaterial } from './logo-materials.js?v=2026.09.07';
-import { createGlobeGeometry } from './logo-globe-geometry.js?v=2026.09.07';
-import { createHeartGeometry, createHeartInlayGeometry } from './logo-heart-geometry.js?v=2026.09.07';
-import { getSummitRoutePoint, getSummitAscentState } from './logo-summit-surface.js?v=2026.09.07';
-import { createSummitGeometry } from './logo-summit-geometry.js?v=2026.09.07';
-import { GLOBE_RADII, getGlobeColor, getGlobeOrbitPoint, getGlobePoint } from './logo-globe-surface.js?v=2026.09.07';
+import { prepareLogoMaterial } from './logo-materials.js?v=2026.09.09';
+import { createGlobeGeometry } from './logo-globe-geometry.js?v=2026.09.09';
+import { createHeartGeometry, createHeartInlayGeometry } from './logo-heart-geometry.js?v=2026.09.09';
+import { getSummitRoutePoint, getSummitAscentState } from './logo-summit-surface.js?v=2026.09.09';
+import { createSummitGeometry } from './logo-summit-geometry.js?v=2026.09.09';
+import { GLOBE_RADII, getGlobeColor, getGlobeOrbitPoint, getGlobePoint } from './logo-globe-surface.js?v=2026.09.09';
 
-import { createInfinityGeometry } from './logo-infinity-geometry.js?v=2026.09.07';
-import { createInfinityMaterials } from './logo-infinity-material.js?v=2026.09.07';
+import { createInfinityGeometry } from './logo-infinity-geometry.js?v=2026.09.09';
+import { createInfinityMaterials } from './logo-infinity-material.js?v=2026.09.09';
 
 function createGlobeGraticule(THREE) {
     const vertices = [];

@@ -1,7 +1,7 @@
 import {
     INFINITY_PROFILE, getInfinityFrame, getInfinitySurfacePoint,
     getInfinityPathAngle, getInfinityColor, getInfinityOcclusion
-} from './logo-infinity-surface.js?v=2026.09.07';
+} from './logo-infinity-surface.js?v=2026.09.09';
 
 const templates = new WeakMap();
 

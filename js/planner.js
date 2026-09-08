@@ -8,7 +8,7 @@ import { showTemporaryMessage, showWriteError } from './ui.js';
 import { createAgentFirestoreStore } from './agent-persistence.js';
 import { updateDashboard } from './dashboard.js';
 import { translations, getMonthKey } from './config.js';
-import { logActivity } from './logs.js?v=2026.09.07';
+import { logActivity } from './logs.js?v=2026.09.09';
 import { buildPlannerEditCommand } from './planner-edit-command.js';
 import { buildPlannerMigrationCommands, buildPlannerUndoCommand, buildPlannerClearMonthCommand } from './planner-persistence-command.js';
 import { buildPlannerReadModel, filterPlannerAgents } from './planner-read-model.js';

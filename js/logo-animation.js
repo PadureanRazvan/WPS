@@ -1,13 +1,13 @@
-import { createGlobeCore, createHeartCore, createSummitCore, createInfinityCore } from './logo-cores.js?v=2026.09.07';
-import { createFspCore, loadFspTextures } from './logo-fsp-core.js?v=2026.09.07';
-import { createLogoStudioLighting } from './logo-materials.js?v=2026.09.07';
+import { createGlobeCore, createHeartCore, createSummitCore, createInfinityCore } from './logo-cores.js?v=2026.09.09';
+import { createFspCore, loadFspTextures } from './logo-fsp-core.js?v=2026.09.09';
+import { createLogoStudioLighting } from './logo-materials.js?v=2026.09.09';
 import {
     LOGO_PARTICLE_COUNT,
     LOGO_SHAPE_NAMES,
     buildLogoConnections,
     createLogoShape,
     matchLogoShape
-} from './logo-shapes.js?v=2026.09.07&fsp=20260906.3';
+} from './logo-shapes.js?v=2026.09.09&fsp=20260906.3';
 
 const TAU = Math.PI * 2;
 const HEART_REVEAL_ANGLE = 0.32;
