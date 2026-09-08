@@ -1,4 +1,5 @@
 import { createFspCore, loadFspTextures } from './logo-fsp-core.js?v=2026.09.07';
+import { createLogoStudioLighting } from './logo-materials.js?v=2026.09.07';
 import {
     LOGO_PARTICLE_COUNT,
     LOGO_SHAPE_NAMES,
@@ -357,7 +358,12 @@ function setCorePresence(core, presence, energy = 0) {
         if (!object.material) return;
         const materials = Array.isArray(object.material) ? object.material : [object.material];
         for (const material of materials) {
-            material.opacity = (material.userData.logoOpacity ?? 0) * amount;
+            if (material.userData.logoPresence) {
+                material.userData.logoPresence.value = amount;
+            } else {
+                material.opacity = (material.userData.logoOpacity ?? 0) * amount;
+                material.depthWrite = (material.userData.logoOpacity ?? 0) >= 0.99 && amount > 0.98;
+            }
             if ('emissiveIntensity' in material) {
                 material.emissiveIntensity = (material.userData.logoEmissiveIntensity ?? 0) + energy;
             }
@@ -485,6 +491,8 @@ function createLogoScene(THREE, canvas, size, control, textures) {
     renderer.setSize(size, size, false);
     renderer.setClearColor(0x000000, 0);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.05;
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 100);
@@ -567,13 +575,7 @@ function createLogoScene(THREE, canvas, size, control, textures) {
     const root = new THREE.Group();
     root.add(glow, orbit, coreRoot, lines, points);
     scene.add(root);
-    scene.add(new THREE.AmbientLight(0xe4f8ff, 1.35));
-    const keyLight = new THREE.DirectionalLight(0xfff4ed, 3.6);
-    keyLight.position.set(2.5, 3.2, 4.5);
-    scene.add(keyLight);
-    const rimLight = new THREE.DirectionalLight(0x49aaff, 1.8);
-    rimLight.position.set(-3, -1.5, -2);
-    scene.add(rimLight);
+    const studioLighting = createLogoStudioLighting(THREE, renderer, scene);
 
     const colorScratch = new THREE.Color();
     const pointerTarget = { x: 0, y: 0 };
@@ -796,6 +798,9 @@ function createLogoScene(THREE, canvas, size, control, textures) {
         pointMaterial.uniforms.uOpacity.value = 1 - Math.pow(shapePresences.fsp, 4);
         lineMaterial.opacity *= 1 - shapePresences.fsp;
         glowMaterial.opacity *= 1 - shapePresences.fsp * 0.94;
+        points.visible = pointMaterial.uniforms.uOpacity.value > 0.002;
+        lines.visible = lineMaterial.opacity > 0.002;
+        orbit.visible = orbit.material.opacity > 0.002;
         pointMaterial.uniforms.uTime.value = now / 1000;
         pointMaterial.uniforms.uBreath.value = reducedMotion ? 0 : targetName === 'infinity'
             ? 0.32
@@ -900,6 +905,15 @@ function createLogoScene(THREE, canvas, size, control, textures) {
         next: beginMorph,
         pause: () => setPaused(true),
         resume: () => setPaused(false),
+        getDiagnostics: () => ({
+            shape: currentShape.name, transitioning: Boolean(transition),
+            running, visible, paused, reducedMotion,
+            frame: renderer.info.render.frame,
+            drawCalls: renderer.info.render.calls,
+            triangles: renderer.info.render.triangles,
+            geometries: renderer.info.memory.geometries,
+            textures: renderer.info.memory.textures
+        }),
         dispose() {
             running = false;
             cancelAnimationFrame(frameId);
@@ -925,6 +939,7 @@ function createLogoScene(THREE, canvas, size, control, textures) {
             Object.values(textures).forEach(texture => texture.dispose());
             glowMaterial.map.dispose();
             glowMaterial.dispose();
+            studioLighting.dispose();
             renderer.dispose();
             if (control !== canvas) canvas.remove();
             control.dataset.logoRenderer = 'fallback';

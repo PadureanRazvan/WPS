@@ -1,4 +1,5 @@
 import { FSP_SHAPE_DATA } from '../assets/branding/fsp-shape-data.js?v=2026.09.07';
+import { FSP_BEVEL, getFspRelief } from './logo-surfaces.js?v=2026.09.07';
 
 const TAU = Math.PI * 2;
 
@@ -68,8 +69,9 @@ function generateFsp(count, random, variant) {
     const sampleCount = data.samples.length / 5;
     for (let index = 0; index < count; index++) {
         const offset = Math.min(sampleCount - 1, Math.floor((index + random()) / count * sampleCount)) * 5;
-        setPoint(shape, index, data.samples[offset], data.samples[offset + 1],
-            (index % 3 ? 1 : -1) * data.depth / 2,
+        const x = data.samples[offset], y = data.samples[offset + 1];
+        setPoint(shape, index, x, y,
+            (index % 3 ? 1 : -1) * ((data.depth + FSP_BEVEL.depth) / 2 + FSP_BEVEL.thickness + getFspRelief(x, y, variant).height),
             data.samples.slice(offset + 2, offset + 5), 1.38 + random() * 0.3);
     }
     return shape;
