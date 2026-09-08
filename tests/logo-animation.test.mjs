@@ -2,12 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-import { HOLD_DURATIONS, getHeartBeatScale, getInterfacePulseScale, getLogoMotion, getLogoShapePresence } from '../js/logo-animation.js';
+import { HOLD_DURATIONS, getHeartBeatScale, getInterfacePulseScale, getLogoMotion, getLogoShapePresence, getLogoCorePresence } from '../js/logo-animation.js';
 import { SHERPA_VERSION } from '../js/version.js';
 
 const TWO_PI = Math.PI * 2;
-const HEART_REVEAL_ANGLE = 0.48;
+const HEART_REVEAL_ANGLE = 0.32;
 const animationSource = await readFile(new URL('../js/logo-animation.js', import.meta.url), 'utf8');
+const coreSource = await readFile(new URL('../js/logo-cores.js', import.meta.url), 'utf8');
 const indexSource = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const mainSource = await readFile(new URL('../js/main.js', import.meta.url), 'utf8');
 
@@ -108,6 +109,24 @@ test('heart motion includes a restrained depth sway', () => {
   assert.ok(Math.abs(motion.rotZ) < 0.04);
 });
 
+test('a distant reveal angle settles without a sudden high-speed turn', () => {
+  for (const shapeName of ['heart', 'summit', 'infinity']) {
+    for (const start of [-9.4, -3.14, 3.14, 9.4]) {
+      let angle = start;
+      for (let frame = 0; frame < 180; frame++) {
+        const motion = getLogoMotion({ rotY: angle, dt: 1 / 60, now: frame * 1000 / 60, shapeName });
+        assert.ok(Math.abs(motion.rotY - angle) < 0.045, `${shapeName} turned too quickly`);
+        angle = motion.rotY;
+      }
+    }
+  }
+});
+
+test('an arriving heart does not redirect the departing globe before the motion handoff', () => {
+  const globe = getLogoMotion({rotY: 3, dt: 1 / 60, now: 500, shapeName: 'globe', heartFactor: 0.3});
+  assert.ok(globe.rotY > 3 && globe.rotY < 3.01);
+});
+
 test('heart beat has a softer second pulse and a calm resting phase', () => {
   const firstBeat = getHeartBeatScale(128);
   const secondBeat = getHeartBeatScale(384);
@@ -126,7 +145,8 @@ test('interface pulse lifts the identity briefly and returns to rest', () => {
 
 test('infinity ribbon settles front-biased while retaining a gentle 3D sway', () => {
   let rotY = Math.PI * 0.7;
-  const startError = Math.abs(rotY);
+  const revealAngle = 0.16;
+  const startError = Math.abs(rotY - revealAngle);
 
   for (let frame = 0; frame < 120; frame++) {
     rotY = getLogoMotion({
@@ -143,7 +163,7 @@ test('infinity ribbon settles front-biased while retaining a gentle 3D sway', ()
     now: 1500,
     shapeName: 'infinity'
   });
-  assert.ok(Math.abs(rotY) < startError * 0.05);
+  assert.ok(Math.abs(rotY - revealAngle) < startError * 0.05);
   assert.notEqual(settled.displayRotY, settled.rotY);
   assert.ok(Math.abs(settled.rotZ) < 0.1);
 });
@@ -178,6 +198,20 @@ test('solid figure cores crossfade without stacking at full strength', () => {
   assert.equal(getLogoShapePresence('globe', 'heart', 'summit', 0.5), 0);
 });
 
+test('opaque sculptures give the transition midpoint to particles without intersecting', () => {
+  for (let frame = 0; frame <= 120; frame++) {
+    const progress = frame / 120;
+    const source = getLogoCorePresence('fsp', 'fsp', 'globe', progress);
+    const target = getLogoCorePresence('globe', 'fsp', 'globe', progress);
+    assert.ok(source >= 0 && source <= 1 && target >= 0 && target <= 1);
+    assert.equal(source * target, 0, 'opaque figures must not occupy the same transition frame');
+  }
+  assert.equal(getLogoCorePresence('fsp', 'fsp', 'globe', 0), 1);
+  assert.equal(getLogoCorePresence('globe', 'fsp', 'globe', 1), 1);
+  assert.equal(getLogoCorePresence('fsp', 'fsp', 'globe', 0.5), 0);
+  assert.equal(getLogoCorePresence('globe', 'fsp', 'globe', 0.5), 0);
+});
+
 test('point shader uses the color attribute injected by Three.js', () => {
   assert.match(animationSource, /vertexColors:\s*true/);
   assert.doesNotMatch(animationSource, /attribute\s+vec3\s+color\s*;/);
@@ -185,7 +219,7 @@ test('point shader uses the color attribute injected by Three.js', () => {
 
 test('all four figures have a dedicated depth core', () => {
   for (const name of ['Globe', 'Heart', 'Summit', 'Infinity']) {
-    assert.match(animationSource, new RegExp(`function create${name}Core\\(THREE\\)`));
+    assert.match(coreSource, new RegExp(`function create${name}Core\\(THREE\\)`));
   }
 });
 

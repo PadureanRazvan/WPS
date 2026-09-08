@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sherpa · Sculpture studio</title>
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="/css/base.css">
+    <link rel="stylesheet" href="/css/fsp-logo.css">
+    <style>
+        body { margin: 0; min-width: 300px; background: var(--primary-dark); color: var(--text-primary); font: 14px/1.5 system-ui, sans-serif; }
+        header { display: flex; align-items: baseline; flex-wrap: wrap; gap: 10px 24px; padding: 25px 36px 18px; }
+        h1 { font-size: 21px; font-weight: 650; letter-spacing: -.035em; }
+        header p, footer { color: var(--text-secondary); font-size: 12px; }
+        .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 22px; padding: 0 36px 22px; border-bottom: 1px solid var(--border); }
+        .toolbar label { display: flex; align-items: center; gap: 8px; color: var(--text-secondary); font-size: 12px; }
+        .toolbar select, .toolbar button { font: inherit; color: var(--text-primary); background: var(--surface-elevated); border: 1px solid var(--border); border-radius: 9px; padding: 8px 12px; min-height: 38px; cursor: pointer; }
+        .toolbar button:hover { background: var(--hover); }
+        .toolbar input { width: 16px; height: 16px; }
+        .toolbar input[type="range"] { width: 100px; }
+        .toolbar output { min-width: 30px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+        main { padding: 26px 36px; }
+        .grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 18px; }
+        .study { background: var(--surface-elevated); border: 1px solid var(--border); border-radius: 20px; padding: 22px 12px 24px; text-align: center; }
+        .art { height: 250px; display: flex; align-items: center; justify-content: center; }
+        .fsp-brand-logo { width: 250px; height: 250px; max-width: 100%; margin: 0; }
+        .fsp-brand-logo img { object-fit: contain; }
+        .study h2 { margin-top: 12px; font-size: 14px; font-weight: 550; letter-spacing: .01em; }
+        .study p { margin-top: 4px; color: var(--text-secondary); font-size: 11px; }
+        .inspect { margin-top: 10px; padding: 4px 8px; color: var(--accent); border: 0; border-radius: 5px; background: transparent; cursor: pointer; font: inherit; font-size: 11px; }
+        .inspect:hover { background: var(--hover); }
+        footer { padding: 0 36px 22px; }
+        body[data-view="single"] .grid { display: block; max-width: 800px; margin: auto; }
+        body[data-view="single"] .study { display: none; }
+        body[data-view="single"] .study.selected { display: block; }
+        body[data-view="single"] .art { height: min(620px, 65vw); }
+        body[data-view="single"] .fsp-brand-logo { width: min(600px, 63vw); height: min(600px, 63vw); }
+        body[data-view="login"] .art { height: 230px; }
+        body[data-view="login"] .fsp-brand-logo { width: 220px; height: 184.94px; }
+        body[data-view="small"] .art { height: 180px; }
+        body[data-view="small"] .fsp-brand-logo { width: 150px; height: 126.09px; }
+        body[data-view="compact"] .art { height: 110px; }
+        body[data-view="compact"] .fsp-brand-logo { width: 44px; height: 44px; }
+        @media (max-width: 1150px) { .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+        @media (max-width: 780px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } header, .toolbar, main, footer { padding-inline: 20px; } }
+        @media (max-width: 520px) { .grid { grid-template-columns: 1fr; } .art { height: 260px; } }
+    </style>
+</head>
+<body>
+    <header><h1>Sherpa / sculpture studio</h1><p>FSP Global · Five figures</p></header>
+    <div class="toolbar" aria-label="Preview controls">
+        <label>Theme <select id="theme"><option value="dark">Dark</option><option value="light">Light</option><option value="fsp">FSP</option><option value="aurora">Aurora</option><option value="coral">Coral</option></select></label>
+        <label>Size <select id="view"><option value="grid">Gallery</option><option value="single">Close view</option><option value="login">Login · 220 px</option><option value="small">Sidebar · 150 px</option><option value="compact">Compact · 44 px</option></select></label>
+        <button id="pause" type="button" aria-pressed="false">Pause motion</button>
+        <button id="reset" type="button">Reset figures</button>
+        <label><input id="cycle" type="checkbox"> Cycle automatically</label>
+        <label>Turn <input id="yaw" type="range" min="-180" max="180" value="0"><output id="yaw-value">Auto</output></label>
+        <label>Tilt <input id="pitch" type="range" min="-90" max="90" value="0"><output id="pitch-value">Auto</output></label>
+        <button id="natural" type="button">Natural pose</button>
+    </div>
+    <main><div class="grid" id="grid"></div></main>
+    <footer>Activate a figure to morph · P to pause its motion · Reduced-motion preference respected</footer>
+    <script type="module">
+        import { initLogoAnimation } from '/js/logo-animation.js';
+        const params = new URLSearchParams(location.search);
+        const names = ['fsp', 'globe', 'heart', 'summit', 'infinity'];
+        const labels = ['FSP Global', 'Orbital globe', 'Ruby heart', 'Alpine summit', 'Infinity ribbon'];
+        const descriptions = ['Original identity, sculpted relief', 'Enamel ocean, raised geography', 'Rounded volume, golden pulse', 'Jade ridges, golden ascent', 'Continuous sculptural ribbon'];
+        const grid = document.getElementById('grid');
+        const theme = document.getElementById('theme'), view = document.getElementById('view');
+        const pause = document.getElementById('pause'), cycle = document.getElementById('cycle');
+        let selected = names.includes(params.get('shape')) ? params.get('shape') : 'fsp';
+        let paused = false;
+        if ([...theme.options].some(option => option.value === params.get('theme'))) theme.value = params.get('theme');
+        if ([...view.options].some(option => option.value === params.get('view'))) view.value = params.get('view');
+        document.documentElement.dataset.theme = theme.value;
+        document.body.dataset.view = view.value;
+        grid.innerHTML = names.map((name, index) => `
+            <section class="study ${name === selected ? 'selected' : ''}" data-figure="${name}">
+                <div class="art ${view.value === 'compact' ? 'sidebar collapsed' : ''}">
+                    <button id="figure-${index}" class="fsp-brand-logo" data-fsp-logo type="button">
+                        <img class="fsp-logo-full" src="/assets/branding/fsp-global-still.webp" width="960" height="807" alt="FSP Global">
+                        <img class="fsp-logo-compact" src="/assets/branding/fsp-global-compact-still.webp" width="960" height="768" alt="FSP Global">
+                    </button>
+                </div>
+                <h2>${labels[index]}</h2><p>${descriptions[index]}</p>
+                <button class="inspect" type="button" data-inspect="${name}">Inspect figure</button>
+            </section>`).join('');
+        const controllers = await Promise.all(names.map((_, i) => initLogoAnimation('figure-' + i, 300, { autoCycle: false })));
+        if (controllers.some(controller => !controller)) throw new Error('A sculpture could not initialize.');
+        controllers.forEach((controller, i) => { controller.pause(); for (let n = 0; n < i; n++) controller.next(); controller.resume(); });
+        window.logoStudio = { names, controllers, shapeIndices: names.map(() => 0), ready: true };
+        const yaw = document.getElementById('yaw'), pitch = document.getElementById('pitch');
+        function inspectRotation() {
+            controllers.forEach(controller => controller.setInspectionRotation([Number(pitch.value) * Math.PI / 180, Number(yaw.value) * Math.PI / 180, 0]));
+            document.getElementById('yaw-value').value = yaw.value + '°';
+            document.getElementById('pitch-value').value = pitch.value + '°';
+        }
+        yaw.addEventListener('input', inspectRotation);
+        pitch.addEventListener('input', inspectRotation);
+        function naturalPose() {
+            controllers.forEach(controller => controller.setInspectionRotation());
+            yaw.value = pitch.value = '0';
+            document.getElementById('yaw-value').value = document.getElementById('pitch-value').value = 'Auto';
+        }
+        document.getElementById('natural').addEventListener('click', naturalPose);
+        function setView() {
+            document.body.dataset.view = view.value;
+            grid.querySelectorAll('.study').forEach(card => card.classList.toggle('selected', card.dataset.figure === selected));
+            grid.querySelectorAll('.art').forEach(art => {
+                art.classList.toggle('sidebar', view.value === 'compact');
+                art.classList.toggle('collapsed', view.value === 'compact');
+            });
+        }
+        view.addEventListener('change', setView);
+        theme.addEventListener('change', () => {
+            const previousPause = controllers.map(controller => controller.getDiagnostics().paused);
+            controllers.forEach(controller => controller.pause());
+            document.documentElement.dataset.theme = theme.value;
+            window.dispatchEvent(new CustomEvent('sherpa-theme-changed'));
+            controllers.forEach((controller, i) => { if (!previousPause[i]) controller.resume(); });
+        });
+        pause.addEventListener('click', () => {
+            paused = !paused;
+            controllers.forEach(controller => paused ? controller.pause() : controller.resume());
+            pause.textContent = paused ? 'Resume motion' : 'Pause motion';
+            pause.setAttribute('aria-pressed', String(paused));
+        });
+        cycle.addEventListener('change', () => controllers.forEach(controller => controller.setAutoCycle(cycle.checked)));
+        document.getElementById('reset').addEventListener('click', () => {
+            naturalPose();
+            controllers.forEach((controller, i) => {
+                controller.pause();
+                for (let step = 0; step < 6 && (controller.getDiagnostics().shape !== names[i] || controller.getDiagnostics().transitioning); step++) controller.next();
+                if (!paused) controller.resume();
+            });
+        });
+        grid.addEventListener('click', event => {
+            const inspect = event.target.closest('[data-inspect]');
+            if (!inspect) return;
+            selected = inspect.dataset.inspect;
+            view.value = 'single';
+            setView();
+            document.getElementById('figure-' + names.indexOf(selected)).focus();
+        });
+        const updateLabels = () => grid.querySelectorAll('.study').forEach((card, i) => {
+            const state = card.querySelector('[data-fsp-logo]').dataset.logoShape || names[i];
+            card.querySelector('h2').textContent = state.split('-to-').map(name => labels[names.indexOf(name)] || name).join(' → ');
+            card.querySelector('p').textContent = descriptions[names.indexOf(state.split('-to-').at(-1))] || '';
+        });
+        const observer = new MutationObserver(updateLabels);
+        grid.querySelectorAll('[data-fsp-logo]').forEach(control => observer.observe(control, { attributes: true, attributeFilter: ['data-logo-shape'] }));
+        updateLabels();
+        window.addEventListener('pagehide', () => { observer.disconnect(); controllers.forEach(controller => controller.dispose()); }, { once: true });
+    </script>
+</body>
+</html>

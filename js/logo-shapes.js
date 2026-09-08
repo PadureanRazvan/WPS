@@ -1,16 +1,23 @@
-import { FSP_SHAPE_DATA } from '../assets/branding/fsp-shape-data.js?v=2026.09.07';
+import { FSP_SHAPE_DATA } from '../assets/branding/fsp-shape-data.js?v=2026.09.09';
+import { FSP_BEVEL, getFspRelief } from './logo-surfaces.js?v=2026.09.09';
+import { GLOBE_RADII, getGlobeColor, getGlobeOrbitPoint, getGlobePoint, isGlobeLand } from './logo-globe-surface.js?v=2026.09.09';
+import { getHeartPoint, getHeartColor, getHeartPulsePoint } from './logo-heart-surface.js?v=2026.09.09';
+
+import { sampleSummitSurface, SUMMIT_PEAK, getSummitRoutePoint } from './logo-summit-surface.js?v=2026.09.09';
+
+import { getInfinityPathAngle, getInfinityProfile, getInfinitySurfacePoint, getInfinityColor } from './logo-infinity-surface.js?v=2026.09.09';
 
 const TAU = Math.PI * 2;
 
-export const LOGO_PARTICLE_COUNT = 520;
+export const LOGO_PARTICLE_COUNT = 768;
 export const LOGO_SHAPE_NAMES = Object.freeze(['fsp', 'globe', 'heart', 'summit', 'infinity']);
 
 const SHAPE_META = Object.freeze({
-    fsp: { glow: [0.02, 0.64, 0.31], orbitOpacity: 0, lineOpacity: 0.025 },
-    globe: { glow: [0.08, 0.72, 0.46], orbitOpacity: 0.1, lineOpacity: 0.055 },
-    heart: { glow: [1.0, 0.16, 0.34], orbitOpacity: 0, lineOpacity: 0.07 },
-    summit: { glow: [0.18, 0.72, 0.75], orbitOpacity: 0.03, lineOpacity: 0.085 },
-    infinity: { glow: [0.08, 0.63, 0.94], orbitOpacity: 0, lineOpacity: 0.04 }
+    fsp: { glow: [0.02, 0.64, 0.31] },
+    globe: { glow: [0.06, 0.43, 0.57] },
+    heart: { glow: [1.0, 0.16, 0.34] },
+    summit: { glow: [0.18, 0.72, 0.75] },
+    infinity: { glow: [0.08, 0.63, 0.94] }
 });
 
 function clamp01(value) {
@@ -56,9 +63,7 @@ function createShapeBuffer(name, count) {
         positions: new Float32Array(count * 3),
         colors: new Float32Array(count * 3),
         sizes: new Float32Array(count),
-        glow: [...meta.glow],
-        orbitOpacity: meta.orbitOpacity,
-        lineOpacity: meta.lineOpacity
+        glow: [...meta.glow]
     };
 }
 
@@ -68,8 +73,9 @@ function generateFsp(count, random, variant) {
     const sampleCount = data.samples.length / 5;
     for (let index = 0; index < count; index++) {
         const offset = Math.min(sampleCount - 1, Math.floor((index + random()) / count * sampleCount)) * 5;
-        setPoint(shape, index, data.samples[offset], data.samples[offset + 1],
-            (index % 3 ? 1 : -1) * data.depth / 2,
+        const x = data.samples[offset], y = data.samples[offset + 1];
+        setPoint(shape, index, x, y,
+            (index % 3 ? 1 : -1) * ((data.depth + FSP_BEVEL.depth) / 2 + FSP_BEVEL.thickness + getFspRelief(x, y, variant).height),
             data.samples.slice(offset + 2, offset + 5), 1.38 + random() * 0.3);
     }
     return shape;
@@ -78,228 +84,73 @@ function generateFsp(count, random, variant) {
 function generateGlobe(count, random) {
     const shape = createShapeBuffer('globe', count);
     const goldenAngle = Math.PI * (3 - Math.sqrt(5));
-    const ocean = [0.03, 0.5, 0.88];
-    const deepOcean = [0.015, 0.16, 0.42];
-    const land = [0.02, 0.64, 0.31];
-    const sunlitLand = [0.48, 0.95, 0.42];
-    const coast = [0.24, 0.9, 0.68];
+    const orbitCount = Math.floor(count * 0.1);
+    const surfaceCount = count - orbitCount;
 
     for (let index = 0; index < count; index++) {
-        const yUnit = 1 - 2 * (index + 0.5) / count;
-        const ringRadius = Math.sqrt(Math.max(0, 1 - yUnit * yUnit));
-        const theta = goldenAngle * index;
-        const radius = 1.1 + (random() - 0.5) * 0.012;
-        const x = Math.cos(theta) * ringRadius * radius;
-        const y = yUnit * radius;
-        const z = Math.sin(theta) * ringRadius * radius;
-        const landSignal = Math.sin(x * 3.8 + z * 1.55)
-            + Math.cos(y * 5.8 - z * 2.25)
-            + Math.sin((x - y) * 4.65);
-        const isLand = landSignal > 0.58 && Math.abs(yUnit) < 0.92;
-        const isCoast = !isLand && landSignal > 0.42 && Math.abs(yUnit) < 0.92;
-        const latitudeLight = 0.22 + 0.58 * (1 - Math.abs(yUnit));
-        const color = isCoast
-            ? mixColor(ocean, coast, 0.48 + latitudeLight * 0.32)
-            : isLand
-            ? mixColor(land, sunlitLand, latitudeLight * 0.55 + random() * 0.12)
-            : mixColor(deepOcean, ocean, latitudeLight + random() * 0.14);
-        const size = (isLand ? 1.72 : isCoast ? 1.56 : 1.3) + random() * 0.42;
-        setPoint(shape, index, x, y, z, color, size);
+        if (index < orbitCount) {
+            const point = getGlobeOrbitPoint(index / orbitCount * TAU);
+            setPoint(shape, index, ...point, [0.88, 0.77, 0.56], 1.1 + random() * 0.25);
+            continue;
+        }
+        const surfaceIndex = index - orbitCount;
+        const latitude = Math.asin(1 - 2 * (surfaceIndex + 0.5) / surfaceCount) * 180 / Math.PI;
+        const longitude = goldenAngle * surfaceIndex * 180 / Math.PI % 360 - 180;
+        const land = isGlobeLand(longitude, latitude);
+        const radius = (land ? GLOBE_RADII.land : GLOBE_RADII.ocean) + 0.002 + random() * 0.002;
+        const point = getGlobePoint(longitude, latitude, radius);
+        const color = mixColor(getGlobeColor(latitude, land), [0.82, 0.94, 0.92], land ? 0.18 : 0.1);
+        setPoint(shape, index, ...point, color, (land ? 1.46 : 1.2) + random() * 0.28);
     }
 
     return shape;
-}
-
-function heartBoundaryPoint(t) {
-    const x = Math.pow(Math.sin(t), 3);
-    const y = (13 * Math.cos(t)
-        - 5 * Math.cos(2 * t)
-        - 2 * Math.cos(3 * t)
-        - Math.cos(4 * t)) / 17;
-    return { x, y };
-}
-
-function pointInPolygon(x, y, polygon) {
-    let inside = false;
-    for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-        const a = polygon[i];
-        const b = polygon[j];
-        const crosses = (a.y > y) !== (b.y > y)
-            && x < (b.x - a.x) * (y - a.y) / (b.y - a.y) + a.x;
-        if (crosses) inside = !inside;
-    }
-    return inside;
-}
-
-function distanceToBoundary(x, y, boundary) {
-    let minDistanceSquared = Infinity;
-    for (const point of boundary) {
-        const dx = x - point.x;
-        const dy = y - point.y;
-        minDistanceSquared = Math.min(minDistanceSquared, dx * dx + dy * dy);
-    }
-    return Math.sqrt(minDistanceSquared);
 }
 
 function generateHeart(count, random) {
     const shape = createShapeBuffer('heart', count);
-    const boundary = Array.from({ length: 160 }, (_, index) => heartBoundaryPoint(index / 160 * TAU));
-    const rimCount = Math.floor(count * 0.4);
-    const crimson = [0.88, 0.025, 0.16];
-    const coral = [1.0, 0.23, 0.39];
-    const highlight = [1.0, 0.76, 0.79];
-
-    for (let index = 0; index < rimCount; index++) {
-        const t = index / rimCount * TAU + (random() - 0.5) * 0.018;
-        const point = heartBoundaryPoint(t);
-        const z = 0.13 + Math.sin(t * 3.0) * 0.035 + (random() - 0.5) * 0.018;
-        const color = mixColor(coral, highlight, 0.5 + random() * 0.3);
-        setPoint(
-            shape,
-            index,
-            point.x * 1.09,
-            point.y * 1.12 - 0.035,
-            z,
-            color,
-            1.82 + random() * 0.48
-        );
-    }
-
-    for (let index = rimCount; index < count; index++) {
-        let x = 0;
-        let y = 0;
-        let accepted = false;
-        for (let attempt = 0; attempt < 120 && !accepted; attempt++) {
-            x = (random() * 2 - 1) * 1.02;
-            y = -1.04 + random() * 1.92;
-            accepted = pointInPolygon(x, y, boundary);
+    const inlayCount = Math.floor(count * 0.065);
+    const surfaceCount = count - inlayCount;
+    const outlineCount = Math.floor(surfaceCount * 0.22);
+    const goldenAngle = Math.PI * (3 - Math.sqrt(5));
+    for (let index = 0; index < count; index++) {
+        if (index < inlayCount) {
+            setPoint(shape, index, ...getHeartPulsePoint(index / Math.max(1, inlayCount - 1)), [0.88, 0.72, 0.51], 1.25);
+            continue;
         }
-
-        const boundaryDistance = distanceToBoundary(x, y, boundary);
-        const depthEnvelope = 0.59 * Math.pow(clamp01(boundaryDistance / 0.58), 0.52);
-        const layer = index % 5;
-        const z = layer === 0
-            ? (random() * 2 - 1) * depthEnvelope * 0.82
-            : (layer % 2 === 0 ? 1 : -1) * depthEnvelope * (0.82 + random() * 0.18);
-        const depthLight = clamp01((z / 0.59 + 1) * 0.5);
-        const color = mixColor(crimson, coral, 0.28 + depthLight * 0.62);
-        setPoint(
-            shape,
-            index,
-            x * 1.09,
-            y * 1.12 - 0.035,
-            z,
-            mixColor(color, highlight, Math.max(0, depthLight - 0.72) * 0.55),
-            1.34 + random() * 0.48
-        );
+        const surfaceIndex = index - inlayCount;
+        const outline = surfaceIndex < outlineCount;
+        const t = outline ? surfaceIndex / outlineCount * TAU : (surfaceIndex - outlineCount) * goldenAngle;
+        const depthAngle = outline ? 0 : Math.asin(1 - 2 * (surfaceIndex - outlineCount + 0.5) / (surfaceCount - outlineCount));
+        const point = getHeartPoint(t, depthAngle);
+        const color = mixColor(getHeartColor(...point), [1, 0.66, 0.73], outline ? 0.18 : 0.07);
+        setPoint(shape, index, ...point, color, 1.35 + random() * 0.3);
     }
-
     return shape;
 }
-
 function generateSummit(count, random) {
     const shape = createShapeBuffer('summit', count);
-    const apex = [0, 1.18, 0];
-    const baseCorners = [
-        [-1.08, -0.72, 0.68],
-        [1.08, -0.72, 0.68],
-        [0.88, -0.72, -0.72],
-        [-0.88, -0.72, -0.72]
-    ];
-    const base = [0.035, 0.24, 0.5];
-    const ridge = [0.08, 0.72, 0.62];
-    const peak = [1.0, 0.76, 0.3];
-    const snow = [0.94, 1.0, 0.96];
-    const ridgeCount = Math.floor(count * 0.22);
-
+    const routeCount = Math.floor(count * 0.07);
     for (let index = 0; index < count; index++) {
-        let x;
-        let y;
-        let z;
-        let isRidge = false;
-
-        if (index < ridgeCount) {
-            const cornerIndex = index % baseCorners.length;
-            const corner = baseCorners[cornerIndex];
-            const progress = (Math.floor(index / baseCorners.length) + random() * 0.18)
-                / Math.max(1, Math.ceil(ridgeCount / baseCorners.length) - 1);
-            x = apex[0] + (corner[0] - apex[0]) * progress;
-            y = apex[1] + (corner[1] - apex[1]) * progress;
-            z = apex[2] + (corner[2] - apex[2]) * progress;
-            const jitter = (1 - progress) * 0.012 + 0.004;
-            x += (random() - 0.5) * jitter;
-            z += (random() - 0.5) * jitter;
-            isRidge = true;
-        } else {
-            const face = (index - ridgeCount) % baseCorners.length;
-            const edgeA = baseCorners[face];
-            const edgeB = baseCorners[(face + 1) % baseCorners.length];
-            const root = Math.sqrt(random());
-            const a = 1 - root;
-            const b = root * (1 - random());
-            const c = 1 - a - b;
-            x = apex[0] * a + edgeA[0] * b + edgeB[0] * c;
-            y = apex[1] * a + edgeA[1] * b + edgeB[1] * c;
-            z = apex[2] * a + edgeA[2] * b + edgeB[2] * c;
+        if (index < routeCount) {
+            setPoint(shape, index, ...getSummitRoutePoint((index + 0.5) / routeCount), [0.86, 0.71, 0.48], 1.22);
+            continue;
         }
-
-        const elevation = clamp01((y + 0.72) / 1.9);
-        let color = elevation > 0.74
-            ? mixColor(peak, snow, (elevation - 0.74) / 0.26)
-            : elevation > 0.34
-                ? mixColor(ridge, peak, (elevation - 0.34) / 0.4)
-                : mixColor(base, ridge, elevation / 0.34);
-        if (isRidge) color = mixColor(color, snow, 0.22 + elevation * 0.34);
-        setPoint(shape, index, x, y - 0.05, z, color, (isRidge ? 1.8 : 1.38) + elevation * 0.42 + random() * 0.24);
+        const { point, color, kind } = sampleSummitSurface((index - routeCount + random()) / (count - routeCount), random(), random());
+        setPoint(shape, index, ...point, color, (kind === 'snow' ? 1.65 : 1.4) + random() * 0.2);
     }
-
+    setPoint(shape, count - 1, ...SUMMIT_PEAK, [0.9, 0.96, 0.98], 1.8);
     return shape;
-}
-
-function normalizeVector(x, y, z) {
-    const length = Math.hypot(x, y, z) || 1;
-    return [x / length, y / length, z / length];
 }
 
 function generateInfinity(count, random) {
     const shape = createShapeBuffer('infinity', count);
-    const teal = [0.08, 0.82, 0.69];
-    const cyan = [0.12, 0.58, 1.0];
-    const gold = [1.0, 0.67, 0.22];
-
-    const goldenAngle = Math.PI * (3 - Math.sqrt(5));
-
     for (let index = 0; index < count; index++) {
-        const t = (index + 0.5) / count * TAU;
-        const centerX = 1.23 * Math.sin(t);
-        const centerY = 0.56 * Math.sin(2 * t);
-        const centerZ = 0.13 * Math.cos(2 * t);
-        const tangent = normalizeVector(
-            1.23 * Math.cos(t),
-            1.12 * Math.cos(2 * t),
-            -0.26 * Math.sin(2 * t)
-        );
-        const normal = normalizeVector(tangent[1], -tangent[0], 0);
-        const binormal = normalizeVector(
-            tangent[1] * normal[2] - tangent[2] * normal[1],
-            tangent[2] * normal[0] - tangent[0] * normal[2],
-            tangent[0] * normal[1] - tangent[1] * normal[0]
-        );
-        const angle = index * goldenAngle + Math.sin(t * 3) * 0.1;
-        const tubeRadius = 0.1 + Math.sin(t * 3 + index * 0.17) * 0.009 + (random() - 0.5) * 0.004;
-        const cos = Math.cos(angle) * tubeRadius;
-        const sin = Math.sin(angle) * tubeRadius;
-        const x = centerX + normal[0] * cos + binormal[0] * sin;
-        const y = centerY + normal[1] * cos + binormal[1] * sin;
-        const z = centerZ + normal[2] * cos + binormal[2] * sin;
-        const colorPhase = (centerX / 1.23 + 1) * 0.5;
-        const color = colorPhase < 0.5
-            ? mixColor(teal, cyan, colorPhase * 2)
-            : mixColor(cyan, gold, (colorPhase - 0.5) * 2);
-        const frontLight = clamp01((z + 0.24) / 0.48);
-        setPoint(shape, index, x, y, z, mixColor(color, [0.82, 0.98, 1.0], frontLight * 0.16), 1.42 + frontLight * 0.28 + random() * 0.12);
+        const angle = getInfinityPathAngle((index + 0.5) / count);
+        const profile = getInfinityProfile(index * 0.6180339887498949);
+        const { point } = getInfinitySurfacePoint(angle, profile);
+        const color = profile.part === 'edge' ? [0.88, 0.77, 0.58] : getInfinityColor(angle);
+        setPoint(shape, index, ...point, mixColor(color, [0.8, 0.94, 1], 0.08), 1.3 + random() * 0.2);
     }
-
     return shape;
 }
 
@@ -334,13 +185,14 @@ export function matchLogoShape(source, target) {
         const sourceOffset = sourceIndex * 3;
         let nearestIndex = -1;
         let nearestDistance = Infinity;
+        const x = source.positions[sourceOffset], y = source.positions[sourceOffset + 1], z = source.positions[sourceOffset + 2];
 
         for (let targetIndex = 0; targetIndex < count; targetIndex++) {
             if (used[targetIndex]) continue;
             const targetOffset = targetIndex * 3;
-            const dx = source.positions[sourceOffset] - target.positions[targetOffset];
-            const dy = source.positions[sourceOffset + 1] - target.positions[targetOffset + 1];
-            const dz = source.positions[sourceOffset + 2] - target.positions[targetOffset + 2];
+            const dx = x - target.positions[targetOffset];
+            const dy = y - target.positions[targetOffset + 1];
+            const dz = z - target.positions[targetOffset + 2];
             const distance = dx * dx + dy * dy + dz * dz;
             if (distance < nearestDistance) {
                 nearestDistance = distance;
@@ -350,8 +202,10 @@ export function matchLogoShape(source, target) {
 
         used[nearestIndex] = 1;
         const targetOffset = nearestIndex * 3;
-        matched.positions.set(target.positions.subarray(targetOffset, targetOffset + 3), sourceOffset);
-        matched.colors.set(target.colors.subarray(targetOffset, targetOffset + 3), sourceOffset);
+        for (let axis = 0; axis < 3; axis++) {
+            matched.positions[sourceOffset + axis] = target.positions[targetOffset + axis];
+            matched.colors[sourceOffset + axis] = target.colors[targetOffset + axis];
+        }
         matched.sizes[sourceIndex] = target.sizes[nearestIndex];
     }
 
@@ -359,37 +213,38 @@ export function matchLogoShape(source, target) {
 }
 
 export function buildLogoConnections(shape, neighboursPerParticle = 2, maxDistance = 0.42) {
-    const pairs = [];
-    const seen = new Set();
-    const maxDistanceSquared = maxDistance * maxDistance;
-
-    for (let index = 0; index < shape.count; index++) {
-        const offset = index * 3;
-        const nearest = [];
-        for (let other = 0; other < shape.count; other++) {
+    if (!Number.isInteger(neighboursPerParticle) || neighboursPerParticle < 0 || !Number.isFinite(maxDistance) || maxDistance < 0) {
+        throw new RangeError('Logo connections need a non-negative neighbour count and finite distance');
+    }
+    if (shape.count > 65536) throw new RangeError('Logo connections exceed the 16-bit particle index limit');
+    const pairs = [], seen = new Set(), positions = shape.positions, count = shape.count;
+    const limit = Math.min(neighboursPerParticle, count - 1), maximum = maxDistance * maxDistance;
+    if (limit <= 0) return new Uint16Array();
+    // Reuse a small sorted shortlist instead of allocating a candidate object
+    // for every nearby point. Ascending source indices break distance ties.
+    const indices = new Uint32Array(limit), distances = new Float64Array(limit);
+    for (let index = 0; index < count; index++) {
+        const offset = index * 3, px = positions[offset], py = positions[offset + 1], pz = positions[offset + 2];
+        let found = 0;
+        for (let other = 0; other < count; other++) {
             if (other === index) continue;
-            const otherOffset = other * 3;
-            const dx = shape.positions[offset] - shape.positions[otherOffset];
-            const dy = shape.positions[offset + 1] - shape.positions[otherOffset + 1];
-            const dz = shape.positions[offset + 2] - shape.positions[otherOffset + 2];
+            const target = other * 3;
+            const dx = px - positions[target], dy = py - positions[target + 1], dz = pz - positions[target + 2];
             const distance = dx * dx + dy * dy + dz * dz;
-            if (distance > maxDistanceSquared) continue;
-
-            let insertAt = nearest.findIndex(candidate => distance < candidate.distance);
-            if (insertAt === -1) insertAt = nearest.length;
-            nearest.splice(insertAt, 0, { index: other, distance });
-            if (nearest.length > neighboursPerParticle) nearest.pop();
+            if (distance > maximum || (found === limit && distance >= distances[found - 1])) continue;
+            let at = Math.min(found, limit - 1);
+            while (at > 0 && distance < distances[at - 1]) {
+                distances[at] = distances[at - 1]; indices[at] = indices[at - 1]; at--;
+            }
+            distances[at] = distance; indices[at] = other;
+            found = Math.min(limit, found + 1);
         }
-
-        for (const candidate of nearest) {
-            const low = Math.min(index, candidate.index);
-            const high = Math.max(index, candidate.index);
-            const key = `${low}:${high}`;
+        for (let i = 0; i < found; i++) {
+            const low = Math.min(index, indices[i]), high = Math.max(index, indices[i]), key = low * count + high;
             if (seen.has(key)) continue;
             seen.add(key);
             pairs.push(low, high);
         }
     }
-
     return new Uint16Array(pairs);
 }

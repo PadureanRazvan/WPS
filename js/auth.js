@@ -2,7 +2,7 @@
 
 import { auth, googleProvider, signInWithPopup, signOut, onAuthStateChanged } from './firebase-config.js';
 import { t } from './ui.js';
-import { isAuthorizedUser } from './auth-policy.js?v=2026.09.07';
+import { isAuthorizedUser } from './auth-policy.js?v=2026.09.09';
 
 function createAuthError(code) {
     const error = new Error(code);
