@@ -6,7 +6,7 @@ import { HOLD_DURATIONS, getHeartBeatScale, getInterfacePulseScale, getLogoMotio
 import { SHERPA_VERSION } from '../js/version.js';
 
 const TWO_PI = Math.PI * 2;
-const HEART_REVEAL_ANGLE = 0.48;
+const HEART_REVEAL_ANGLE = 0.32;
 const animationSource = await readFile(new URL('../js/logo-animation.js', import.meta.url), 'utf8');
 const coreSource = await readFile(new URL('../js/logo-cores.js', import.meta.url), 'utf8');
 const indexSource = await readFile(new URL('../index.html', import.meta.url), 'utf8');
@@ -107,6 +107,24 @@ test('heart motion includes a restrained depth sway', () => {
 
   assert.notEqual(motion.displayRotY, motion.rotY);
   assert.ok(Math.abs(motion.rotZ) < 0.04);
+});
+
+test('a distant reveal angle settles without a sudden high-speed turn', () => {
+  for (const shapeName of ['heart', 'summit', 'infinity']) {
+    for (const start of [-9.4, -3.14, 3.14, 9.4]) {
+      let angle = start;
+      for (let frame = 0; frame < 180; frame++) {
+        const motion = getLogoMotion({ rotY: angle, dt: 1 / 60, now: frame * 1000 / 60, shapeName });
+        assert.ok(Math.abs(motion.rotY - angle) < 0.045, `${shapeName} turned too quickly`);
+        angle = motion.rotY;
+      }
+    }
+  }
+});
+
+test('an arriving heart does not redirect the departing globe before the motion handoff', () => {
+  const globe = getLogoMotion({rotY: 3, dt: 1 / 60, now: 500, shapeName: 'globe', heartFactor: 0.3});
+  assert.ok(globe.rotY > 3 && globe.rotY < 3.01);
 });
 
 test('heart beat has a softer second pulse and a calm resting phase', () => {

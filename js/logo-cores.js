@@ -1,5 +1,6 @@
 import { prepareLogoMaterial } from './logo-materials.js?v=2026.09.07';
 import { createGlobeGeometry } from './logo-globe-geometry.js?v=2026.09.07';
+import { createHeartGeometry, createHeartInlayGeometry } from './logo-heart-geometry.js?v=2026.09.07';
 import { GLOBE_RADII, getGlobeColor, getGlobeOrbitPoint, getGlobePoint } from './logo-globe-surface.js?v=2026.09.07';
 
 const TAU = Math.PI * 2;
@@ -81,53 +82,23 @@ export function createGlobeCore(THREE) {
 }
 
 export function createHeartCore(THREE) {
-    const heart = new THREE.Shape();
-    heart.moveTo(0, -1.08);
-    heart.bezierCurveTo(-1.15, -0.34, -1.12, 0.48, -0.62, 0.72);
-    heart.bezierCurveTo(-0.25, 0.9, 0, 0.64, 0, 0.37);
-    heart.bezierCurveTo(0, 0.64, 0.25, 0.9, 0.62, 0.72);
-    heart.bezierCurveTo(1.12, 0.48, 1.15, -0.34, 0, -1.08);
-
-    const geometry = new THREE.ExtrudeGeometry(heart, {
-        curveSegments: 24,
-        steps: 1,
-        depth: 0.42,
-        bevelEnabled: true,
-        bevelThickness: 0.12,
-        bevelSize: 0.1,
-        bevelSegments: 4
-    });
-    geometry.center();
-    const material = rememberCoreOpacity(new THREE.MeshStandardMaterial({
-        color: 0xd8143a,
-        emissive: 0x5a0017,
-        emissiveIntensity: 0.78,
-        metalness: 0.16,
-        roughness: 0.28,
-        transparent: true,
-        depthWrite: false,
-        side: THREE.DoubleSide
-    }), 0.28);
-    const mesh = new THREE.Mesh(geometry, material);
-    mesh.renderOrder = 1;
-
-    const edgeMaterial = rememberCoreOpacity(new THREE.LineBasicMaterial({
-        color: 0xff778f,
-        transparent: true,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false
-    }), 0.36);
-    const edge = new THREE.LineSegments(new THREE.EdgesGeometry(geometry, 22), edgeMaterial);
-    edge.renderOrder = 2;
-
     const group = new THREE.Group();
-    group.add(mesh, edge);
-    group.scale.setScalar(0.92);
-    group.position.y = -0.02;
+    const material = prepareLogoMaterial(new THREE.MeshPhysicalMaterial({
+        vertexColors: true, metalness: 0.3, roughness: 0.35, specularIntensity: 0.7,
+        clearcoat: 0.4, clearcoatRoughness: 0.3, envMapIntensity: 0.4,
+        emissive: 0x310009, emissiveIntensity: 0.1
+    }));
+    const heart = new THREE.Mesh(createHeartGeometry(THREE), material);
+    heart.name = 'ruby-heart';
+    const inlay = new THREE.Mesh(createHeartInlayGeometry(THREE), prepareLogoMaterial(new THREE.MeshPhysicalMaterial({
+        color: 0xe1b881, metalness: 0.72, roughness: 0.3,
+        clearcoat: 0.25, envMapIntensity: 0.65, emissive: 0x2a0d04, emissiveIntensity: 0.04
+    })));
+    inlay.name = 'pulse-inlay';
+    group.add(heart, inlay);
     group.visible = false;
     return group;
 }
-
 export function createSummitCore(THREE) {
     const group = new THREE.Group();
     const mountainGeometry = new THREE.ConeGeometry(1.08, 1.9, 4, 1, false);

@@ -10,13 +10,13 @@ import {
 } from './logo-shapes.js?v=2026.09.07&fsp=20260906.3';
 
 const TAU = Math.PI * 2;
-const HEART_REVEAL_ANGLE = 0.48;
+const HEART_REVEAL_ANGLE = 0.32;
 const SUMMIT_REVEAL_ANGLE = 0.36;
 const MORPH_DURATION = 1900;
 export const HOLD_DURATIONS = Object.freeze({
     fsp: 14000,
     globe: 6200,
-    heart: 5400,
+    heart: 6400,
     summit: 4300,
     infinity: 5000
 });
@@ -42,6 +42,12 @@ function nearestEquivalentAngle(current, baseAngle) {
     return Math.round((current - baseAngle) / TAU) * TAU + baseAngle;
 }
 
+function easeLogoAngle(current, target, dt, rate) {
+    const change = (target - current) * (1 - Math.exp(-dt * rate));
+    const limit = Math.max(0, dt) * 2.4;
+    return current + Math.max(-limit, Math.min(limit, change));
+}
+
 function getFspSpinSpeed(angle) {
     // Linger on the readable front, then smoothly accelerate past the back.
     return 0.22 + 0.88 * (1 - Math.cos(angle)) / 2;
@@ -58,14 +64,14 @@ export function getLogoMotion({
     const resolvedShape = shapeName || (heartFactor > 0.08 ? 'heart' : globeFactor > 0.5 ? 'globe' : 'infinity');
     const heartPresence = resolvedShape === 'heart' ? smoothstep(Math.max(heartFactor, 1)) : smoothstep(heartFactor);
 
-    if (heartPresence > 0.01) {
-        const reveal = HEART_REVEAL_ANGLE + Math.sin(now * 0.00068) * 0.17;
+    if (resolvedShape === 'heart') {
+        const reveal = HEART_REVEAL_ANGLE + Math.sin(now * 0.00068) * 0.08;
         const target = nearestEquivalentAngle(rotY, reveal);
         const rate = 4.6 + heartPresence * 2.8;
-        const nextRotY = rotY + (target - rotY) * (1 - Math.exp(-dt * rate));
+        const nextRotY = easeLogoAngle(rotY, target, dt, rate);
         return {
             rotY: nextRotY,
-            displayRotY: nextRotY + Math.sin(now * 0.00115) * 0.045 * heartPresence,
+            displayRotY: nextRotY + Math.sin(now * 0.00115) * 0.02 * heartPresence,
             rotX: 0.08 + Math.sin(now * 0.00082) * 0.055,
             rotZ: Math.sin(now * 0.00054) * 0.035,
             heartPresence
@@ -74,7 +80,7 @@ export function getLogoMotion({
 
     if (resolvedShape === 'infinity') {
         const target = nearestEquivalentAngle(rotY, 0);
-        const nextRotY = rotY + (target - rotY) * (1 - Math.exp(-dt * 3.4));
+        const nextRotY = easeLogoAngle(rotY, target, dt, 3.4);
         return {
             rotY: nextRotY,
             displayRotY: nextRotY + Math.sin(now * 0.00062) * 0.14,
@@ -87,7 +93,7 @@ export function getLogoMotion({
     if (resolvedShape === 'summit') {
         const reveal = SUMMIT_REVEAL_ANGLE + Math.sin(now * 0.00034) * 0.055;
         const target = nearestEquivalentAngle(rotY, reveal);
-        const nextRotY = rotY + (target - rotY) * (1 - Math.exp(-dt * 3.1));
+        const nextRotY = easeLogoAngle(rotY, target, dt, 3.1);
         return {
             rotY: nextRotY,
             displayRotY: nextRotY + Math.sin(now * 0.00051) * 0.025,
@@ -312,10 +318,11 @@ function drawFallbackLogo(canvas, size) {
     setCanvasAccessibility(canvas, 'globe');
 }
 
-function createLogoScene(THREE, canvas, size, control, textures) {
+function createLogoScene(THREE, canvas, size, control, textures, options) {
     const motionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');
     let reducedMotion = motionPreference.matches;
     let paused = false;
+    let autoCycle = options.autoCycle !== false;
     let needsRender = true;
     const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
     const renderer = new THREE.WebGLRenderer({
@@ -413,7 +420,7 @@ function createLogoScene(THREE, canvas, size, control, textures) {
     const root = new THREE.Group();
     root.add(glow, orbit, coreRoot, lines, points);
     scene.add(root);
-    const studioLighting = createLogoStudioLighting(THREE, renderer, scene);
+    let studioLighting = createLogoStudioLighting(THREE, renderer, scene);
 
     const colorScratch = new THREE.Color();
     const pointerTarget = { x: 0, y: 0 };
@@ -425,6 +432,7 @@ function createLogoScene(THREE, canvas, size, control, textures) {
     let lastTime = performance.now();
     let visible = true;
     let running = true;
+    let contextLost = false;
     let frameId = 0;
     let interactionPulseStartedAt = -Infinity;
 
@@ -601,7 +609,7 @@ function createLogoScene(THREE, canvas, size, control, textures) {
         if (!transition) {
             applyGlow(currentShape.glow, currentShape.orbitOpacity);
             lineMaterial.opacity = currentShape.lineOpacity;
-            if (!reducedMotion && !paused && now - holdStartedAt >= HOLD_DURATIONS[currentShape.name]) beginMorph(now);
+            if (autoCycle && !reducedMotion && !paused && now - holdStartedAt >= HOLD_DURATIONS[currentShape.name]) beginMorph(now);
         }
 
         const targetName = transition ? transition.target.name : currentShape.name;
@@ -611,9 +619,7 @@ function createLogoScene(THREE, canvas, size, control, textures) {
             getLogoShapePresence(name, currentShape.name, transitionTarget, progress)
         ]));
         const heartPresence = shapePresences.heart;
-        const motionShape = heartPresence > 0.06
-            ? 'heart'
-            : transition && progress < 0.52 ? currentShape.name : targetName;
+        const motionShape = transition && progress < 0.42 ? currentShape.name : targetName;
         const motion = getLogoMotion({ rotY, dt, now, shapeName: motionShape, heartFactor: heartPresence });
         rotY = motion.rotY;
         pointerCurrent.x += (pointerTarget.x - pointerCurrent.x) * Math.min(1, dt * 5.5);
@@ -626,8 +632,9 @@ function createLogoScene(THREE, canvas, size, control, textures) {
         const beat = reducedMotion ? 1 : 1 + (getHeartBeatScale(now) - 1) * heartPresence;
         const settle = transition ? 1 + Math.sin(progress * Math.PI) * 0.025 : 1;
         const interfacePulse = reducedMotion ? 1 : getInterfacePulseScale(now - interactionPulseStartedAt);
-        root.scale.setScalar(beat * settle * interfacePulse);
-        root.position.y = reducedMotion ? 0 : Math.sin(now * 0.00105) * (heartPresence > 0.1 ? 0.045 : 0.022);
+        const baseScale = settle * interfacePulse;
+        root.scale.set(baseScale * (1 + (beat - 1) * 0.65), baseScale * beat, baseScale * (1 - (beat - 1) * 0.35));
+        root.position.y = reducedMotion ? 0 : Math.sin(now * 0.00105) * 0.022;
         for (const name of LOGO_SHAPE_NAMES) {
             const coverage = getLogoCorePresence(name, currentShape.name, transitionTarget, progress);
             setCorePresence(cores[name], coverage, name === 'heart' ? (beat - 1) * 4.2 : 0);
@@ -637,7 +644,7 @@ function createLogoScene(THREE, canvas, size, control, textures) {
         const morphWave = transition ? Math.sin(progress * Math.PI) : 0;
         // Finished sculptures are opaque at rest. Particles briefly carry
         // their colors and silhouette between the departing and arriving core.
-        const sculptedRest = currentShape.name === 'fsp' || currentShape.name === 'globe';
+        const sculptedRest = ['fsp', 'globe', 'heart'].includes(currentShape.name);
         pointMaterial.uniforms.uOpacity.value = transition ? Math.pow(morphWave, 0.7) : sculptedRest ? 0 : 1;
         lineMaterial.opacity = transition ? 0.045 * morphWave : sculptedRest ? 0 : currentShape.lineOpacity;
         orbit.material.opacity *= 1 - shapePresences.globe;
@@ -711,10 +718,47 @@ function createLogoScene(THREE, canvas, size, control, textures) {
 
     function handleContextLost(event) {
         event.preventDefault();
+        contextLost = true;
         running = false;
         cancelAnimationFrame(frameId);
+        // Release listeners tied to the old GPU context while it is lost.
+        // Three's dispose methods retain the CPU geometry/image source data.
+        releaseSceneResources();
         canvas.dataset.logoRenderer = control.dataset.logoRenderer = 'context-lost';
         setCanvasAccessibility(control, 'fsp', true, true);
+    }
+
+    function handleContextRestored() {
+        if (!contextLost) return;
+        try {
+            // Geometry and image textures can be uploaded again by Three.
+            // The generated softbox environment needs a fresh GPU render.
+            studioLighting.dispose();
+            studioLighting = createLogoStudioLighting(THREE, renderer, scene);
+            contextLost = false;
+            running = true;
+            needsRender = true;
+            lastTime = performance.now();
+            canvas.dataset.logoRenderer = control.dataset.logoRenderer = 'three';
+            publishState();
+            frameId = requestAnimationFrame(render);
+        } catch (error) {
+            console.warn('Sherpa sculpture could not restore its studio lighting.', error);
+        }
+    }
+
+    function releaseSceneResources() {
+        pointGeometry.dispose();
+        lineGeometry.dispose();
+        pointMaterial.dispose();
+        lineMaterial.dispose();
+        orbit.geometry.dispose();
+        orbit.material.dispose();
+        Object.values(cores).forEach(disposeCore);
+        Object.values(textures).forEach(texture => texture.dispose());
+        glowMaterial.map.dispose();
+        glowMaterial.dispose();
+        studioLighting.dispose();
     }
 
     const observer = typeof IntersectionObserver === 'function'
@@ -738,6 +782,7 @@ function createLogoScene(THREE, canvas, size, control, textures) {
     window.addEventListener('sherpa:navigation', handleInterfaceMotion);
     window.addEventListener('sherpa-theme-changed', handleInterfaceMotion);
     canvas.addEventListener('webglcontextlost', handleContextLost);
+    canvas.addEventListener('webglcontextrestored', handleContextRestored);
 
     canvas.dataset.logoRenderer = control.dataset.logoRenderer = 'three';
     resize();
@@ -749,9 +794,10 @@ function createLogoScene(THREE, canvas, size, control, textures) {
         next: beginMorph,
         pause: () => setPaused(true),
         resume: () => setPaused(false),
+        setAutoCycle(value) { autoCycle = Boolean(value); holdStartedAt = timeline; },
         getDiagnostics: () => ({
             shape: currentShape.name, transitioning: Boolean(transition),
-            running, visible, paused, reducedMotion,
+            running, visible, paused, reducedMotion, autoCycle, contextLost,
             frame: renderer.info.render.frame,
             drawCalls: renderer.info.render.calls,
             triangles: renderer.info.render.triangles,
@@ -771,19 +817,10 @@ function createLogoScene(THREE, canvas, size, control, textures) {
             control.removeEventListener('keydown', handleKeydown);
             motionPreference.removeEventListener?.('change', handleMotionPreference);
             canvas.removeEventListener('webglcontextlost', handleContextLost);
+            canvas.removeEventListener('webglcontextrestored', handleContextRestored);
             window.removeEventListener('sherpa:navigation', handleInterfaceMotion);
             window.removeEventListener('sherpa-theme-changed', handleInterfaceMotion);
-            pointGeometry.dispose();
-            lineGeometry.dispose();
-            pointMaterial.dispose();
-            lineMaterial.dispose();
-            orbit.geometry.dispose();
-            orbit.material.dispose();
-            Object.values(cores).forEach(disposeCore);
-            Object.values(textures).forEach(texture => texture.dispose());
-            glowMaterial.map.dispose();
-            glowMaterial.dispose();
-            studioLighting.dispose();
+            releaseSceneResources();
             renderer.dispose();
             if (control !== canvas) canvas.remove();
             control.dataset.logoRenderer = 'fallback';
@@ -792,7 +829,7 @@ function createLogoScene(THREE, canvas, size, control, textures) {
     };
 }
 
-export function initLogoAnimation(canvasId = 'sherpaLogo', canvasSize = 120) {
+export function initLogoAnimation(canvasId = 'sherpaLogo', canvasSize = 120, options = {}) {
     const control = document.getElementById(canvasId);
     if (!control) return null;
     const existing = instances.get(control);
@@ -816,7 +853,7 @@ export function initLogoAnimation(canvasId = 'sherpaLogo', canvasSize = 120) {
                 return null;
             }
             let controller;
-            try { controller = createLogoScene(THREE, canvas, canvasSize, control, textures); }
+            try { controller = createLogoScene(THREE, canvas, canvasSize, control, textures, options); }
             catch (error) { Object.values(textures).forEach(texture => texture.dispose()); throw error; }
             instances.set(control, controller);
             return controller;

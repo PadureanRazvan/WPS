@@ -1,6 +1,7 @@
 import { FSP_SHAPE_DATA } from '../assets/branding/fsp-shape-data.js?v=2026.09.07';
 import { FSP_BEVEL, getFspRelief } from './logo-surfaces.js?v=2026.09.07';
 import { GLOBE_RADII, getGlobeColor, getGlobeOrbitPoint, getGlobePoint, isGlobeLand } from './logo-globe-surface.js?v=2026.09.07';
+import { getHeartPoint, getHeartColor, getHeartPulsePoint } from './logo-heart-surface.js?v=2026.09.07';
 
 const TAU = Math.PI * 2;
 
@@ -103,93 +104,27 @@ function generateGlobe(count, random) {
     return shape;
 }
 
-function heartBoundaryPoint(t) {
-    const x = Math.pow(Math.sin(t), 3);
-    const y = (13 * Math.cos(t)
-        - 5 * Math.cos(2 * t)
-        - 2 * Math.cos(3 * t)
-        - Math.cos(4 * t)) / 17;
-    return { x, y };
-}
-
-function pointInPolygon(x, y, polygon) {
-    let inside = false;
-    for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-        const a = polygon[i];
-        const b = polygon[j];
-        const crosses = (a.y > y) !== (b.y > y)
-            && x < (b.x - a.x) * (y - a.y) / (b.y - a.y) + a.x;
-        if (crosses) inside = !inside;
-    }
-    return inside;
-}
-
-function distanceToBoundary(x, y, boundary) {
-    let minDistanceSquared = Infinity;
-    for (const point of boundary) {
-        const dx = x - point.x;
-        const dy = y - point.y;
-        minDistanceSquared = Math.min(minDistanceSquared, dx * dx + dy * dy);
-    }
-    return Math.sqrt(minDistanceSquared);
-}
-
 function generateHeart(count, random) {
     const shape = createShapeBuffer('heart', count);
-    const boundary = Array.from({ length: 160 }, (_, index) => heartBoundaryPoint(index / 160 * TAU));
-    const rimCount = Math.floor(count * 0.4);
-    const crimson = [0.88, 0.025, 0.16];
-    const coral = [1.0, 0.23, 0.39];
-    const highlight = [1.0, 0.76, 0.79];
-
-    for (let index = 0; index < rimCount; index++) {
-        const t = index / rimCount * TAU + (random() - 0.5) * 0.018;
-        const point = heartBoundaryPoint(t);
-        const z = 0.13 + Math.sin(t * 3.0) * 0.035 + (random() - 0.5) * 0.018;
-        const color = mixColor(coral, highlight, 0.5 + random() * 0.3);
-        setPoint(
-            shape,
-            index,
-            point.x * 1.09,
-            point.y * 1.12 - 0.035,
-            z,
-            color,
-            1.82 + random() * 0.48
-        );
-    }
-
-    for (let index = rimCount; index < count; index++) {
-        let x = 0;
-        let y = 0;
-        let accepted = false;
-        for (let attempt = 0; attempt < 120 && !accepted; attempt++) {
-            x = (random() * 2 - 1) * 1.02;
-            y = -1.04 + random() * 1.92;
-            accepted = pointInPolygon(x, y, boundary);
+    const inlayCount = Math.floor(count * 0.065);
+    const surfaceCount = count - inlayCount;
+    const outlineCount = Math.floor(surfaceCount * 0.22);
+    const goldenAngle = Math.PI * (3 - Math.sqrt(5));
+    for (let index = 0; index < count; index++) {
+        if (index < inlayCount) {
+            setPoint(shape, index, ...getHeartPulsePoint(index / Math.max(1, inlayCount - 1)), [0.88, 0.72, 0.51], 1.25);
+            continue;
         }
-
-        const boundaryDistance = distanceToBoundary(x, y, boundary);
-        const depthEnvelope = 0.59 * Math.pow(clamp01(boundaryDistance / 0.58), 0.52);
-        const layer = index % 5;
-        const z = layer === 0
-            ? (random() * 2 - 1) * depthEnvelope * 0.82
-            : (layer % 2 === 0 ? 1 : -1) * depthEnvelope * (0.82 + random() * 0.18);
-        const depthLight = clamp01((z / 0.59 + 1) * 0.5);
-        const color = mixColor(crimson, coral, 0.28 + depthLight * 0.62);
-        setPoint(
-            shape,
-            index,
-            x * 1.09,
-            y * 1.12 - 0.035,
-            z,
-            mixColor(color, highlight, Math.max(0, depthLight - 0.72) * 0.55),
-            1.34 + random() * 0.48
-        );
+        const surfaceIndex = index - inlayCount;
+        const outline = surfaceIndex < outlineCount;
+        const t = outline ? surfaceIndex / outlineCount * TAU : (surfaceIndex - outlineCount) * goldenAngle;
+        const depthAngle = outline ? 0 : Math.asin(1 - 2 * (surfaceIndex - outlineCount + 0.5) / (surfaceCount - outlineCount));
+        const point = getHeartPoint(t, depthAngle);
+        const color = mixColor(getHeartColor(...point), [1, 0.66, 0.73], outline ? 0.18 : 0.07);
+        setPoint(shape, index, ...point, color, 1.35 + random() * 0.3);
     }
-
     return shape;
 }
-
 function generateSummit(count, random) {
     const shape = createShapeBuffer('summit', count);
     const apex = [0, 1.18, 0];

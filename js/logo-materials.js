@@ -31,13 +31,13 @@ export function prepareLogoMaterial(material, opacity = 1) {
         `).replace('#include <clipping_planes_fragment>', `
             #include <clipping_planes_fragment>
             if (uLogoPresence < 0.999) {
-                float field = logoNoise(vLogoPosition * 32.0) * 0.76
-                    + clamp((vLogoPosition.y + 1.5) / 3.0, 0.0, 1.0) * 0.24;
+                float field = logoNoise(vLogoPosition * 72.0) * 0.84
+                    + clamp((vLogoPosition.y + 1.5) / 3.0, 0.0, 1.0) * 0.16;
                 if (field > uLogoPresence) discard;
             }
         `);
     };
-    material.customProgramCacheKey = () => 'sherpa-sculpture-dissolve-v2';
+    material.customProgramCacheKey = () => 'sherpa-sculpture-dissolve-v3';
     return material;
 }
 
@@ -86,8 +86,20 @@ export function createLogoStudioLighting(THREE, renderer, scene) {
     const rim = new THREE.DirectionalLight(0xb2f3e6, 1.8);
     rim.position.set(-2, 1.5, -3);
     scene.add(ambient, key, fill, rim);
+    let disposed = false;
     return {
         dispose() {
+            if (disposed) return;
+            disposed = true;
+            scene.traverse(object => {
+                const materials = Array.isArray(object.material) ? object.material : [object.material];
+                for (const material of materials) {
+                    if (material?.envMap === environment.texture) {
+                        material.envMap = null;
+                        material.needsUpdate = true;
+                    }
+                }
+            });
             scene.environment = null;
             scene.remove(ambient, key, fill, rim);
             environment.dispose();
