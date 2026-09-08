@@ -12,6 +12,7 @@ import {
 const TAU = Math.PI * 2;
 const HEART_REVEAL_ANGLE = 0.32;
 const SUMMIT_REVEAL_ANGLE = 0.36;
+const INFINITY_REVEAL_ANGLE = 0.16;
 const MORPH_DURATION = 1900;
 const CONNECTIONS_PER_PARTICLE = 2;
 export const HOLD_DURATIONS = Object.freeze({
@@ -19,7 +20,7 @@ export const HOLD_DURATIONS = Object.freeze({
     globe: 6200,
     heart: 6400,
     summit: 6200,
-    infinity: 5000
+    infinity: 6600
 });
 const THREE_MODULE_URL = new URL('../assets/vendor/three.module.min.js', import.meta.url).href;
 const instances = new WeakMap();
@@ -80,12 +81,12 @@ export function getLogoMotion({
     }
 
     if (resolvedShape === 'infinity') {
-        const target = nearestEquivalentAngle(rotY, 0);
+        const target = nearestEquivalentAngle(rotY, INFINITY_REVEAL_ANGLE);
         const nextRotY = easeLogoAngle(rotY, target, dt, 3.4);
         return {
             rotY: nextRotY,
-            displayRotY: nextRotY + Math.sin(now * 0.00062) * 0.14,
-            rotX: 0.08 + Math.sin(now * 0.00044) * 0.04,
+            displayRotY: nextRotY + Math.sin(now * 0.00062) * 0.18,
+            rotX: 0.1 + Math.sin(now * 0.00044) * 0.06,
             rotZ: Math.sin(now * 0.00038) * 0.055,
             heartPresence: 0
         };
@@ -171,26 +172,6 @@ function createGlowTexture(THREE) {
     const texture = new THREE.CanvasTexture(textureCanvas);
     texture.colorSpace = THREE.SRGBColorSpace;
     return texture;
-}
-
-function createOrbit(THREE, radius = 1.31) {
-    const vertices = [];
-    for (let index = 0; index < 96; index++) {
-        const angle = index / 96 * TAU;
-        vertices.push(new THREE.Vector3(Math.cos(angle) * radius, 0, Math.sin(angle) * radius));
-    }
-    const geometry = new THREE.BufferGeometry().setFromPoints(vertices);
-    const material = new THREE.LineBasicMaterial({
-        color: 0xffffff,
-        transparent: true,
-        opacity: 0.12,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false
-    });
-    const orbit = new THREE.LineLoop(geometry, material);
-    orbit.rotation.x = Math.PI * 0.52;
-    orbit.rotation.z = Math.PI * 0.08;
-    return orbit;
 }
 
 function setCorePresence(core, presence, energy = 0) {
@@ -399,7 +380,7 @@ async function createLogoScene(THREE, canvas, size, control, textures, options) 
     const lineMaterial = new THREE.LineBasicMaterial({
         vertexColors: true,
         transparent: true,
-        opacity: currentShape.lineOpacity,
+        opacity: 0,
         blending: THREE.AdditiveBlending,
         depthWrite: false
     });
@@ -420,7 +401,6 @@ async function createLogoScene(THREE, canvas, size, control, textures, options) 
     glow.position.z = -0.9;
     glow.renderOrder = 0;
 
-    const orbit = createOrbit(THREE);
     const cores = {
         fsp: createFspCore(THREE, textures),
         globe: createGlobeCore(THREE),
@@ -431,7 +411,7 @@ async function createLogoScene(THREE, canvas, size, control, textures, options) 
     const coreRoot = new THREE.Group();
     coreRoot.add(...Object.values(cores));
     const root = new THREE.Group();
-    root.add(glow, orbit, coreRoot, lines, points);
+    root.add(glow, coreRoot, lines, points);
     scene.add(root);
     let studioLighting = createLogoStudioLighting(THREE, renderer, scene);
 
@@ -497,10 +477,15 @@ async function createLogoScene(THREE, canvas, size, control, textures, options) 
         const width = Math.max(1, bounds.width || size), height = Math.max(1, bounds.height || size);
         renderer.setSize(width, height, false);
         pointMaterial.uniforms.uViewportScale.value = height / 150;
-        camera.aspect = width / height;
-        camera.zoom = Math.max(1, camera.aspect);
-        camera.updateProjectionMatrix();
         const nextVariant = getVariant();
+        camera.aspect = width / height;
+        // Fit the short dimension. Enlarging wide wordmark slots crops the
+        // lower FSP lettering when a turn brings it closer to the camera.
+        // Optical centering leaves room for the full mark's lower word line,
+        // including its pointer tilt and brief interface pulse.
+        camera.zoom = Math.min(1, camera.aspect) * (nextVariant === 'full' ? 0.95 : 1);
+        camera.position.y = nextVariant === 'full' ? -0.12 : 0;
+        camera.updateProjectionMatrix();
         if (nextVariant !== variant) {
             variant = nextVariant;
             shapes.fsp = createLogoShape('fsp', LOGO_PARTICLE_COUNT, shapeSeed, variant);
@@ -516,14 +501,12 @@ async function createLogoScene(THREE, canvas, size, control, textures, options) 
         publishState();
     }
 
-    function applyGlow(glowColor, orbitOpacity, transitionAmount = 0) {
+    function applyGlow(glowColor, transitionAmount = 0) {
         colorScratch.setRGB(glowColor[0], glowColor[1], glowColor[2]);
         glowMaterial.color.copy(colorScratch);
-        orbit.material.color.copy(colorScratch);
         const darkTheme = ['dark', 'aurora'].includes(document.documentElement.getAttribute('data-theme'))
             || document.body.classList.contains('dark-theme');
         glowMaterial.opacity = (darkTheme ? 0.24 : 0.15) * (1 - transitionAmount * 0.22);
-        orbit.material.opacity = orbitOpacity * (1 - transitionAmount * 0.7);
     }
 
     function completeTransition(now) {
@@ -537,6 +520,17 @@ async function createLogoScene(THREE, canvas, size, control, textures, options) 
         publishState();
     }
 
+    function applyStillShape(shape, connections = null) {
+        // Selecting while paused is a new view; pausing an existing view still
+        // freezes its exact pose. Keep an explicit studio inspection override.
+        rotY = shape.name === 'heart' ? HEART_REVEAL_ANGLE
+            : shape.name === 'summit' ? SUMMIT_REVEAL_ANGLE
+                : shape.name === 'infinity' ? INFINITY_REVEAL_ANGLE : 0;
+        pointerCurrent.x = pointerCurrent.y = 0;
+        resetPointer();
+        applyShape(shape, connections);
+    }
+
     function beginMorph(now = timeline) {
         if (!Number.isFinite(now)) now = timeline;
         if (transition) {
@@ -545,7 +539,7 @@ async function createLogoScene(THREE, canvas, size, control, textures, options) 
                 currentIndex = transition.nextIndex;
                 transition = null;
                 holdStartedAt = timeline;
-                applyShape(target);
+                applyStillShape(target);
             }
             return;
         }
@@ -558,7 +552,7 @@ async function createLogoScene(THREE, canvas, size, control, textures, options) 
         if (reducedMotion || paused) {
             currentIndex = nextIndex;
             holdStartedAt = timeline;
-            applyShape(target, prepared?.connections);
+            applyStillShape(target, prepared?.connections);
             return;
         }
         transition = {
@@ -569,9 +563,7 @@ async function createLogoScene(THREE, canvas, size, control, textures, options) 
             fromPositions: positions.slice(),
             fromColors: colors.slice(),
             fromSizes: sizes.slice(),
-            fromGlow: [...currentShape.glow],
-            fromOrbitOpacity: currentShape.orbitOpacity,
-            fromLineOpacity: currentShape.lineOpacity
+            fromGlow: [...currentShape.glow]
         };
         updateConnections(target, prepared?.connections);
         publishState();
@@ -612,16 +604,10 @@ async function createLogoScene(THREE, canvas, size, control, textures, options) 
         positionAttribute.needsUpdate = true;
         colorAttribute.needsUpdate = true;
         sizeAttribute.needsUpdate = true;
-        const lineOpacity = transition.fromLineOpacity
-            + (transition.target.lineOpacity - transition.fromLineOpacity) * smoothstep(progress);
-        lineMaterial.opacity = lineOpacity * (1 - wave * 0.62);
-
         const glowColor = transition.fromGlow.map((value, index) => (
             value + (transition.target.glow[index] - value) * smoothstep(progress)
         ));
-        const orbitOpacity = transition.fromOrbitOpacity
-            + (transition.target.orbitOpacity - transition.fromOrbitOpacity) * smoothstep(progress);
-        applyGlow(glowColor, orbitOpacity, wave);
+        applyGlow(glowColor, wave);
 
         if (progress >= 1) completeTransition(now);
         return progress;
@@ -643,8 +629,7 @@ async function createLogoScene(THREE, canvas, size, control, textures, options) 
 
         const progress = updateMorph(now);
         if (!transition) {
-            applyGlow(currentShape.glow, currentShape.orbitOpacity);
-            lineMaterial.opacity = currentShape.lineOpacity;
+            applyGlow(currentShape.glow);
             if (autoCycle && !reducedMotion && !paused && now - holdStartedAt >= HOLD_DURATIONS[currentShape.name]) beginMorph(now);
         }
 
@@ -664,7 +649,6 @@ async function createLogoScene(THREE, canvas, size, control, textures, options) 
         root.rotation.x = reducedMotion ? 0 : motion.rotX + pointerCurrent.y;
         root.rotation.z = reducedMotion ? 0 : motion.rotZ;
         if (inspectionRotation) root.rotation.set(...inspectionRotation);
-        orbit.rotation.z += dt * (targetName === 'infinity' ? 0.28 : 0.12);
 
         const beat = reducedMotion ? 1 : 1 + (getHeartBeatScale(now) - 1) * heartPresence;
         const settle = transition ? 1 + Math.sin(progress * Math.PI) * 0.025 : 1;
@@ -684,14 +668,11 @@ async function createLogoScene(THREE, canvas, size, control, textures, options) 
         const morphWave = transition ? Math.sin(progress * Math.PI) : 0;
         // Finished sculptures are opaque at rest. Particles briefly carry
         // their colors and silhouette between the departing and arriving core.
-        const sculptedRest = ['fsp', 'globe', 'heart', 'summit'].includes(currentShape.name);
-        pointMaterial.uniforms.uOpacity.value = transition ? Math.pow(morphWave, 0.7) : sculptedRest ? 0 : 1;
-        lineMaterial.opacity = transition ? 0.045 * morphWave : sculptedRest ? 0 : currentShape.lineOpacity;
-        orbit.material.opacity *= 1 - shapePresences.globe;
+        pointMaterial.uniforms.uOpacity.value = Math.pow(morphWave, 0.7);
+        lineMaterial.opacity = 0.045 * morphWave;
         glowMaterial.opacity *= 1 - shapePresences.fsp * 0.94;
         points.visible = pointMaterial.uniforms.uOpacity.value > 0.002;
         lines.visible = lineMaterial.opacity > 0.002;
-        orbit.visible = orbit.material.opacity > 0.002;
         pointMaterial.uniforms.uTime.value = now / 1000;
         pointMaterial.uniforms.uBreath.value = reducedMotion ? 0 : targetName === 'infinity'
             ? 0.32
@@ -792,8 +773,6 @@ async function createLogoScene(THREE, canvas, size, control, textures, options) 
         lineGeometry.dispose();
         pointMaterial.dispose();
         lineMaterial.dispose();
-        orbit.geometry.dispose();
-        orbit.material.dispose();
         Object.values(cores).forEach(disposeCore);
         Object.values(textures).forEach(texture => texture.dispose());
         glowMaterial.map.dispose();
@@ -827,7 +806,7 @@ async function createLogoScene(THREE, canvas, size, control, textures, options) 
     canvas.dataset.logoRenderer = control.dataset.logoRenderer = 'three';
     resize();
     publishState();
-    applyGlow(currentShape.glow, currentShape.orbitOpacity);
+    applyGlow(currentShape.glow);
     frameId = requestAnimationFrame(render);
 
     return {
@@ -846,6 +825,7 @@ async function createLogoScene(THREE, canvas, size, control, textures, options) 
             shape: currentShape.name, transitioning: Boolean(transition),
             running, visible, paused, reducedMotion, autoCycle, contextLost,
             inspectionRotation: inspectionRotation?.slice() ?? null,
+            rotation: [root.rotation.x, root.rotation.y, root.rotation.z],
             frame: renderer.info.render.frame,
             drawCalls: renderer.info.render.calls,
             triangles: renderer.info.render.triangles,

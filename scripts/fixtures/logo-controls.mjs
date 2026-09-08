@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { verifySilhouettes } from './logo-bounds.mjs';
 
 export async function verifyControls(page) {
   const read = () => page.evaluate(() => window.logoStudio.controllers[0].getDiagnostics());
@@ -25,16 +26,27 @@ export async function verifyControls(page) {
   assert.equal((await read()).frame, before.frame);
   checks.push('P pauses/resumes; paused frames stop drawing');
 
+  const stoppedAtEdge = await page.evaluate(() => {
+    const controller = window.logoStudio.controllers[0];
+    controller.resume();
+    for (let i = 0; i < 180 && Math.abs(Math.cos(controller.getDiagnostics().rotation[1])) > 0.1; i++) window.stepLogo(80);
+    controller.pause(); window.stepLogo(1);
+    return controller.getDiagnostics();
+  });
+  assert.equal(stoppedAtEdge.shape, 'fsp');
+  assert.ok(Math.abs(Math.cos(stoppedAtEdge.rotation[1])) < 0.1, 'pause must preserve the current viewing angle');
+
   await page.keyboard.press('Enter');
   await step(1);
   assert.equal(await shape(), 'globe', 'native Enter must advance exactly once');
   await page.keyboard.press('Space');
   await step(1);
   assert.equal(await shape(), 'heart', 'native Space must advance exactly once');
+  assert.ok(Math.cos((await read()).rotation[1]) > 0.85, 'new paused figure must have a readable reveal instead of inheriting an edge-on pose');
   await page.evaluate(() => window.dispatchEvent(new CustomEvent('sherpa:navigation')));
   await step(1);
   assert.equal(await shape(), 'heart', 'navigation must not override pause');
-  checks.push('native Enter/Space advance once; navigation respects pause');
+  checks.push('native Enter/Space advance once to readable paused figures; navigation respects pause');
 
   await page.keyboard.press('p');
   await page.evaluate(() => window.logoStudio.controllers[0].next());
@@ -61,7 +73,10 @@ export async function verifyControls(page) {
   checks.push('reduced motion is static; keyboard shape selection still works');
 
   await page.setViewportSize({width:390,height:844});
-  await page.waitForFunction(() => document.getElementById('sherpaLogo').dataset.logoVariant === 'compact', null, {polling:50});
+  await page.waitForFunction(() => {
+    const control = document.getElementById('sherpaLogo');
+    return control.dataset.logoVariant === 'compact' && control.getBoundingClientRect().width === 44;
+  }, null, {polling:50});
   await step(1);
   assert.equal(await page.locator('#sherpaLogo').evaluate(el => el.getBoundingClientRect().width), 44);
   await page.evaluate(() => { for(let i=0;i<4;i++) window.logoStudio.controllers[0].next(); });
@@ -143,6 +158,22 @@ export async function verifyControls(page) {
   assert.deepEqual(cycles[2], cycles[0]);
   checks.push('repeated full figure cycles keep geometry and texture counts stable');
 
+  await page.evaluate(() => {
+    const controller = window.logoStudio.controllers[0];
+    for (let i = 0; i < 5 && controller.getDiagnostics().shape !== 'infinity'; i++) controller.next();
+    window.stepLogo(1);
+  });
+  assert.equal(await shape(), 'infinity');
+  const ribbonImage = await page.locator('#sherpaLogo canvas').evaluate(canvas => canvas.toDataURL());
+  await page.evaluate(() => window.logoContextExtension.loseContext());
+  await page.waitForFunction(() => window.logoStudio.controllers[0].getDiagnostics().contextLost, null, {polling:50});
+  await page.evaluate(() => window.logoContextExtension.restoreContext());
+  await page.waitForFunction(() => !window.logoStudio.controllers[0].getDiagnostics().contextLost, null, {polling:50});
+  await step(1);
+  assert.equal(await shape(), 'infinity');
+  assert.equal(await page.locator('#sherpaLogo canvas').evaluate(canvas => canvas.toDataURL()), ribbonImage);
+  checks.push('infinity enamel, gold edges and travelling highlight recover to identical paused pixels');
+
   const disposal = await page.evaluate(async () => {
     const old = window.logoStudio.controllers[0];
     old.dispose();
@@ -175,5 +206,6 @@ export async function verifyControls(page) {
   });
   assert.deepEqual(interrupted, { abandoned: true, clean: true, recovered: true });
   checks.push('removing a logo during startup clears its pending instance and permits reinitialization');
+  checks.push(...await verifySilhouettes(page));
   return checks;
 }

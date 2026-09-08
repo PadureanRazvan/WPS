@@ -31,9 +31,11 @@ const extraTime = numberOption('time', 0, 0, 120000);
 const morph = numberOption('morph', 0, 0, 1);
 const port = numberOption('port', 8766, 0, 65535);
 const yaw = numberOption('yaw', 0, -180, 180), pitch = numberOption('pitch', 0, -90, 90);
-const videoSeconds = numberOption('video', 0, 0, 30);
+const videoSeconds = numberOption('video', 0, 0, 60);
 const transitionAt = 'transition-at' in params ? numberOption('transition-at', 0, 0, videoSeconds) : null;
 if (transitionAt !== null && !videoSeconds) throw new Error('--transition-at requires --video');
+if (flag('cycle-video') && !videoSeconds) throw new Error('--cycle-video requires --video');
+if (flag('cycle-video') && transitionAt !== null) throw new Error('Use either --cycle-video or --transition-at');
 if (!Number.isInteger(port)) throw new Error('--port must be an integer');
 const server = createServer(async (req,res) => {
   try {
@@ -123,7 +125,7 @@ try {
     const { recordLogoVideo } = await import('./fixtures/logo-video.mjs');
     const video = await recordLogoVideo(page, resolve(out,shotName+'.webm'), {
       selector: params.app ? '[data-fsp-logo] canvas' : `[data-figure="${params.shape || 'fsp'}"] canvas`,
-      seconds: videoSeconds, transitionAt
+      seconds: videoSeconds, transitionAt, autoCycle: flag('cycle-video')
     });
     console.log(JSON.stringify({ video }));
   }

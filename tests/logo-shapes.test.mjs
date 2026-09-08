@@ -29,8 +29,7 @@ test('modern logo shape set is deterministic and structurally complete', () => {
     assert.equal(first.sizes.length, 160);
     assert.deepEqual(Array.from(first.positions.slice(0, 36)), Array.from(second.positions.slice(0, 36)));
     assert.ok(first.sizes.every(size => size > 1));
-    assert.ok(first.lineOpacity > 0 && first.lineOpacity < 0.1);
-    assert.ok(first.orbitOpacity >= 0 && first.orbitOpacity <= 0.1);
+    assert.ok(first.glow.every(channel => channel >= 0 && channel <= 1));
   }
 });
 
@@ -95,8 +94,8 @@ test('infinity is a balanced smooth ribbon with visible depth', () => {
     else right++;
   }
 
-  assert.ok(x.span > 2.6 && y.span > 1.25);
-  assert.ok(z.span > 0.45 && z.span < 0.55);
+  assert.ok(x.span > 2.5 && y.span > 1.3);
+  assert.ok(z.span > 0.65 && z.span < 0.9);
   assert.ok(Math.abs(left - right) <= 2, 'infinity loops should stay visually balanced');
 });
 

@@ -145,7 +145,8 @@ test('interface pulse lifts the identity briefly and returns to rest', () => {
 
 test('infinity ribbon settles front-biased while retaining a gentle 3D sway', () => {
   let rotY = Math.PI * 0.7;
-  const startError = Math.abs(rotY);
+  const revealAngle = 0.16;
+  const startError = Math.abs(rotY - revealAngle);
 
   for (let frame = 0; frame < 120; frame++) {
     rotY = getLogoMotion({
@@ -162,7 +163,7 @@ test('infinity ribbon settles front-biased while retaining a gentle 3D sway', ()
     now: 1500,
     shapeName: 'infinity'
   });
-  assert.ok(Math.abs(rotY) < startError * 0.05);
+  assert.ok(Math.abs(rotY - revealAngle) < startError * 0.05);
   assert.notEqual(settled.displayRotY, settled.rotY);
   assert.ok(Math.abs(settled.rotZ) < 0.1);
 });

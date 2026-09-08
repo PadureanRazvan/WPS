@@ -5,17 +5,19 @@ import { getHeartPoint, getHeartColor, getHeartPulsePoint } from './logo-heart-s
 
 import { sampleSummitSurface, SUMMIT_PEAK, getSummitRoutePoint } from './logo-summit-surface.js?v=2026.09.07';
 
+import { getInfinityPathAngle, getInfinityProfile, getInfinitySurfacePoint, getInfinityColor } from './logo-infinity-surface.js?v=2026.09.07';
+
 const TAU = Math.PI * 2;
 
 export const LOGO_PARTICLE_COUNT = 768;
 export const LOGO_SHAPE_NAMES = Object.freeze(['fsp', 'globe', 'heart', 'summit', 'infinity']);
 
 const SHAPE_META = Object.freeze({
-    fsp: { glow: [0.02, 0.64, 0.31], orbitOpacity: 0, lineOpacity: 0.025 },
-    globe: { glow: [0.06, 0.43, 0.57], orbitOpacity: 0, lineOpacity: 0.04 },
-    heart: { glow: [1.0, 0.16, 0.34], orbitOpacity: 0, lineOpacity: 0.07 },
-    summit: { glow: [0.18, 0.72, 0.75], orbitOpacity: 0, lineOpacity: 0.045 },
-    infinity: { glow: [0.08, 0.63, 0.94], orbitOpacity: 0, lineOpacity: 0.04 }
+    fsp: { glow: [0.02, 0.64, 0.31] },
+    globe: { glow: [0.06, 0.43, 0.57] },
+    heart: { glow: [1.0, 0.16, 0.34] },
+    summit: { glow: [0.18, 0.72, 0.75] },
+    infinity: { glow: [0.08, 0.63, 0.94] }
 });
 
 function clamp01(value) {
@@ -61,9 +63,7 @@ function createShapeBuffer(name, count) {
         positions: new Float32Array(count * 3),
         colors: new Float32Array(count * 3),
         sizes: new Float32Array(count),
-        glow: [...meta.glow],
-        orbitOpacity: meta.orbitOpacity,
-        lineOpacity: meta.lineOpacity
+        glow: [...meta.glow]
     };
 }
 
@@ -142,50 +142,15 @@ function generateSummit(count, random) {
     return shape;
 }
 
-function normalizeVector(x, y, z) {
-    const length = Math.hypot(x, y, z) || 1;
-    return [x / length, y / length, z / length];
-}
-
 function generateInfinity(count, random) {
     const shape = createShapeBuffer('infinity', count);
-    const teal = [0.08, 0.82, 0.69];
-    const cyan = [0.12, 0.58, 1.0];
-    const gold = [1.0, 0.67, 0.22];
-
-    const goldenAngle = Math.PI * (3 - Math.sqrt(5));
-
     for (let index = 0; index < count; index++) {
-        const t = (index + 0.5) / count * TAU;
-        const centerX = 1.23 * Math.sin(t);
-        const centerY = 0.56 * Math.sin(2 * t);
-        const centerZ = 0.13 * Math.cos(2 * t);
-        const tangent = normalizeVector(
-            1.23 * Math.cos(t),
-            1.12 * Math.cos(2 * t),
-            -0.26 * Math.sin(2 * t)
-        );
-        const normal = normalizeVector(tangent[1], -tangent[0], 0);
-        const binormal = normalizeVector(
-            tangent[1] * normal[2] - tangent[2] * normal[1],
-            tangent[2] * normal[0] - tangent[0] * normal[2],
-            tangent[0] * normal[1] - tangent[1] * normal[0]
-        );
-        const angle = index * goldenAngle + Math.sin(t * 3) * 0.1;
-        const tubeRadius = 0.1 + Math.sin(t * 3 + index * 0.17) * 0.009 + (random() - 0.5) * 0.004;
-        const cos = Math.cos(angle) * tubeRadius;
-        const sin = Math.sin(angle) * tubeRadius;
-        const x = centerX + normal[0] * cos + binormal[0] * sin;
-        const y = centerY + normal[1] * cos + binormal[1] * sin;
-        const z = centerZ + normal[2] * cos + binormal[2] * sin;
-        const colorPhase = (centerX / 1.23 + 1) * 0.5;
-        const color = colorPhase < 0.5
-            ? mixColor(teal, cyan, colorPhase * 2)
-            : mixColor(cyan, gold, (colorPhase - 0.5) * 2);
-        const frontLight = clamp01((z + 0.24) / 0.48);
-        setPoint(shape, index, x, y, z, mixColor(color, [0.82, 0.98, 1.0], frontLight * 0.16), 1.42 + frontLight * 0.28 + random() * 0.12);
+        const angle = getInfinityPathAngle((index + 0.5) / count);
+        const profile = getInfinityProfile(index * 0.6180339887498949);
+        const { point } = getInfinitySurfacePoint(angle, profile);
+        const color = profile.part === 'edge' ? [0.88, 0.77, 0.58] : getInfinityColor(angle);
+        setPoint(shape, index, ...point, mixColor(color, [0.8, 0.94, 1], 0.08), 1.3 + random() * 0.2);
     }
-
     return shape;
 }
 

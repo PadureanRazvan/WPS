@@ -12,6 +12,8 @@
 
 **Interface Theme System** — the named Sherpa palettes, semantic surface and liquid-scene tokens, System color preference, live chart colors, browser theme color, native disclosure popovers, container-driven reflow, dynamic viewport sizing, safe-area-aware fixed surfaces, progressive view transitions, reduced-transparency handling, and accessibility fallbacks that keep every operational Module visually consistent without changing its domain behavior.
 
+**Logo Sculptures** — the five local 3D identity figures: preserved FSP Global relief, orbital globe, ruby heart, alpine summit and infinity ribbon. Shared surface definitions keep solids and morph particles aligned; the controller owns motion, accessible shape selection, responsive variants and graphics recovery. See [the design and offline review guide](docs/logo-sculptures.md).
+
 **Notification Stack** — the shared non-modal feedback surface used by operational Modules for success, error, and information messages, including top-layer placement, polite and assertive announcements, bounded timing, pause-on-hover or focus, explicit dismissal, safe-area responsiveness, theme tokens, and reduced-motion or transparency fallbacks.
 
 **Runtime Deploy Hardening** — the rules for proving a deployed Sherpa build is the intended version, reusing one external Chrome session for read-only production smoke checks, confirming GitHub Pages serves new Modules, and rolling back production without touching Firestore data.

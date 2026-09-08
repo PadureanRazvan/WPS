@@ -5,14 +5,8 @@ import { getSummitRoutePoint, getSummitAscentState } from './logo-summit-surface
 import { createSummitGeometry } from './logo-summit-geometry.js?v=2026.09.07';
 import { GLOBE_RADII, getGlobeColor, getGlobeOrbitPoint, getGlobePoint } from './logo-globe-surface.js?v=2026.09.07';
 
-const TAU = Math.PI * 2;
-
-function rememberCoreOpacity(material, opacity) {
-    material.userData.logoOpacity = opacity;
-    material.userData.logoEmissiveIntensity = material.emissiveIntensity ?? 0;
-    material.opacity = 0;
-    return material;
-}
+import { createInfinityGeometry } from './logo-infinity-geometry.js?v=2026.09.07';
+import { createInfinityMaterials } from './logo-infinity-material.js?v=2026.09.07';
 
 function createGlobeGraticule(THREE) {
     const vertices = [];
@@ -137,32 +131,12 @@ export function createSummitCore(THREE) {
 }
 
 export function createInfinityCore(THREE) {
-    class InfinityCurve extends THREE.Curve {
-        getPoint(t, target = new THREE.Vector3()) {
-            const angle = t * TAU;
-            return target.set(
-                1.23 * Math.sin(angle),
-                0.56 * Math.sin(angle * 2),
-                0.13 * Math.cos(angle * 2)
-            );
-        }
-    }
-
-    const geometry = new THREE.TubeGeometry(new InfinityCurve(), 112, 0.065, 8, true);
-    const material = rememberCoreOpacity(new THREE.MeshStandardMaterial({
-        color: 0x159fe7,
-        emissive: 0x075c9a,
-        emissiveIntensity: 0.9,
-        metalness: 0.22,
-        roughness: 0.24,
-        transparent: true,
-        depthWrite: false
-    }), 0.24);
-    const mesh = new THREE.Mesh(geometry, material);
-    mesh.renderOrder = 1;
     const group = new THREE.Group();
-    group.add(mesh);
+    const { materials, animate } = createInfinityMaterials(THREE);
+    const ribbon = new THREE.Mesh(createInfinityGeometry(THREE), materials);
+    ribbon.name = 'continuous-ribbon';
+    group.add(ribbon);
+    group.userData.animate = animate;
     group.visible = false;
     return group;
 }
-
