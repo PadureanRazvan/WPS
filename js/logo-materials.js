@@ -15,29 +15,21 @@ export function prepareLogoMaterial(material, opacity = 1) {
             #include <common>
             uniform float uLogoPresence;
             varying vec3 vLogoPosition;
-            float logoHash(vec3 p) {
-                p = fract(p * 0.1031);
-                p += dot(p, p.yzx + 33.33);
-                return fract((p.x + p.y) * p.z);
-            }
-            float logoNoise(vec3 p) {
-                vec3 i = floor(p), f = fract(p);
-                f = f * f * (3.0 - 2.0 * f);
-                return mix(mix(mix(logoHash(i), logoHash(i + vec3(1,0,0)), f.x),
-                               mix(logoHash(i + vec3(0,1,0)), logoHash(i + vec3(1,1,0)), f.x), f.y),
-                           mix(mix(logoHash(i + vec3(0,0,1)), logoHash(i + vec3(1,0,1)), f.x),
-                               mix(logoHash(i + vec3(0,1,1)), logoHash(i + vec3(1,1,1)), f.x), f.y), f.z);
+            // Device-pixel coverage stays fine at every preview size, with a
+            // shared threshold across overlapping parts of the same sculpture.
+            float logoCoverageNoise(vec2 pixel) {
+                return fract(52.9829189 * fract(dot(floor(pixel), vec2(0.06711056, 0.00583715))));
             }
         `).replace('#include <clipping_planes_fragment>', `
             #include <clipping_planes_fragment>
             if (uLogoPresence < 0.999) {
-                float field = logoNoise(vLogoPosition * 72.0) * 0.84
-                    + clamp((vLogoPosition.y + 1.5) / 3.0, 0.0, 1.0) * 0.16;
+                float field = logoCoverageNoise(gl_FragCoord.xy) * 0.9
+                    + clamp((vLogoPosition.y + 1.5) / 3.0, 0.0, 1.0) * 0.1;
                 if (field > uLogoPresence) discard;
             }
         `);
     };
-    material.customProgramCacheKey = () => 'sherpa-sculpture-dissolve-v3';
+    material.customProgramCacheKey = () => 'sherpa-sculpture-dissolve-v4';
     return material;
 }
 

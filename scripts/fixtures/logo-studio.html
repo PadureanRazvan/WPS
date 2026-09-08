@@ -17,6 +17,8 @@
         .toolbar select, .toolbar button { font: inherit; color: var(--text-primary); background: var(--surface-elevated); border: 1px solid var(--border); border-radius: 9px; padding: 8px 12px; min-height: 38px; cursor: pointer; }
         .toolbar button:hover { background: var(--hover); }
         .toolbar input { width: 16px; height: 16px; }
+        .toolbar input[type="range"] { width: 100px; }
+        .toolbar output { min-width: 30px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
         main { padding: 26px 36px; }
         .grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 18px; }
         .study { background: var(--surface-elevated); border: 1px solid var(--border); border-radius: 20px; padding: 22px 12px 24px; text-align: center; }
@@ -52,6 +54,9 @@
         <button id="pause" type="button" aria-pressed="false">Pause motion</button>
         <button id="reset" type="button">Reset figures</button>
         <label><input id="cycle" type="checkbox"> Cycle automatically</label>
+        <label>Turn <input id="yaw" type="range" min="-180" max="180" value="0"><output id="yaw-value">Auto</output></label>
+        <label>Tilt <input id="pitch" type="range" min="-90" max="90" value="0"><output id="pitch-value">Auto</output></label>
+        <button id="natural" type="button">Natural pose</button>
     </div>
     <main><div class="grid" id="grid"></div></main>
     <footer>Activate a figure to morph · P to pause its motion · Reduced-motion preference respected</footer>
@@ -60,7 +65,7 @@
         const params = new URLSearchParams(location.search);
         const names = ['fsp', 'globe', 'heart', 'summit', 'infinity'];
         const labels = ['FSP Global', 'Orbital globe', 'Ruby heart', 'Alpine summit', 'Infinity'];
-        const descriptions = ['Original identity, sculpted relief', 'Enamel ocean, raised geography', 'Rounded volume, golden pulse', 'Faceted alpine terrain', 'Continuous sculptural ribbon'];
+        const descriptions = ['Original identity, sculpted relief', 'Enamel ocean, raised geography', 'Rounded volume, golden pulse', 'Jade ridges, golden ascent', 'Continuous sculptural ribbon'];
         const grid = document.getElementById('grid');
         const theme = document.getElementById('theme'), view = document.getElementById('view');
         const pause = document.getElementById('pause'), cycle = document.getElementById('cycle');
@@ -85,6 +90,20 @@
         if (controllers.some(controller => !controller)) throw new Error('A sculpture could not initialize.');
         controllers.forEach((controller, i) => { controller.pause(); for (let n = 0; n < i; n++) controller.next(); controller.resume(); });
         window.logoStudio = { names, controllers, shapeIndices: names.map(() => 0), ready: true };
+        const yaw = document.getElementById('yaw'), pitch = document.getElementById('pitch');
+        function inspectRotation() {
+            controllers.forEach(controller => controller.setInspectionRotation([Number(pitch.value) * Math.PI / 180, Number(yaw.value) * Math.PI / 180, 0]));
+            document.getElementById('yaw-value').value = yaw.value + '°';
+            document.getElementById('pitch-value').value = pitch.value + '°';
+        }
+        yaw.addEventListener('input', inspectRotation);
+        pitch.addEventListener('input', inspectRotation);
+        function naturalPose() {
+            controllers.forEach(controller => controller.setInspectionRotation());
+            yaw.value = pitch.value = '0';
+            document.getElementById('yaw-value').value = document.getElementById('pitch-value').value = 'Auto';
+        }
+        document.getElementById('natural').addEventListener('click', naturalPose);
         function setView() {
             document.body.dataset.view = view.value;
             grid.querySelectorAll('.study').forEach(card => card.classList.toggle('selected', card.dataset.figure === selected));
@@ -108,11 +127,14 @@
             pause.setAttribute('aria-pressed', String(paused));
         });
         cycle.addEventListener('change', () => controllers.forEach(controller => controller.setAutoCycle(cycle.checked)));
-        document.getElementById('reset').addEventListener('click', () => controllers.forEach((controller, i) => {
-            controller.pause();
-            for (let step = 0; step < 6 && (controller.getDiagnostics().shape !== names[i] || controller.getDiagnostics().transitioning); step++) controller.next();
-            if (!paused) controller.resume();
-        }));
+        document.getElementById('reset').addEventListener('click', () => {
+            naturalPose();
+            controllers.forEach((controller, i) => {
+                controller.pause();
+                for (let step = 0; step < 6 && (controller.getDiagnostics().shape !== names[i] || controller.getDiagnostics().transitioning); step++) controller.next();
+                if (!paused) controller.resume();
+            });
+        });
         grid.addEventListener('click', event => {
             const inspect = event.target.closest('[data-inspect]');
             if (!inspect) return;

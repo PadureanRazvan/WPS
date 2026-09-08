@@ -13,11 +13,12 @@ const TAU = Math.PI * 2;
 const HEART_REVEAL_ANGLE = 0.32;
 const SUMMIT_REVEAL_ANGLE = 0.36;
 const MORPH_DURATION = 1900;
+const CONNECTIONS_PER_PARTICLE = 2;
 export const HOLD_DURATIONS = Object.freeze({
     fsp: 14000,
     globe: 6200,
     heart: 6400,
-    summit: 4300,
+    summit: 6200,
     infinity: 5000
 });
 const THREE_MODULE_URL = new URL('../assets/vendor/three.module.min.js', import.meta.url).href;
@@ -91,7 +92,7 @@ export function getLogoMotion({
     }
 
     if (resolvedShape === 'summit') {
-        const reveal = SUMMIT_REVEAL_ANGLE + Math.sin(now * 0.00034) * 0.055;
+        const reveal = SUMMIT_REVEAL_ANGLE + Math.sin(now * 0.00034) * 0.14;
         const target = nearestEquivalentAngle(rotY, reveal);
         const nextRotY = easeLogoAngle(rotY, target, dt, 3.1);
         return {
@@ -318,11 +319,12 @@ function drawFallbackLogo(canvas, size) {
     setCanvasAccessibility(canvas, 'globe');
 }
 
-function createLogoScene(THREE, canvas, size, control, textures, options) {
+async function createLogoScene(THREE, canvas, size, control, textures, options) {
     const motionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');
     let reducedMotion = motionPreference.matches;
     let paused = false;
     let autoCycle = options.autoCycle !== false;
+    let inspectionRotation = null;
     let needsRender = true;
     const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
     const renderer = new THREE.WebGLRenderer({
@@ -354,6 +356,8 @@ function createLogoScene(THREE, canvas, size, control, textures, options) {
     ]));
     let currentIndex = 0;
     let currentShape = shapes[LOGO_SHAPE_NAMES[currentIndex]];
+    let firstMorph = { source: currentShape, target: matchLogoShape(currentShape, shapes.globe) };
+    firstMorph.connections = buildLogoConnections(firstMorph.target, CONNECTIONS_PER_PARTICLE);
 
     const positions = currentShape.positions.slice();
     const colors = currentShape.colors.slice();
@@ -382,7 +386,16 @@ function createLogoScene(THREE, canvas, size, control, textures, options) {
     const lineGeometry = new THREE.BufferGeometry();
     lineGeometry.setAttribute('position', positionAttribute);
     lineGeometry.setAttribute('color', colorAttribute);
-    lineGeometry.setIndex(new THREE.BufferAttribute(buildLogoConnections(currentShape), 1));
+    const lineIndices = new Uint16Array(LOGO_PARTICLE_COUNT * CONNECTIONS_PER_PARTICLE * 2);
+    const lineIndexAttribute = new THREE.BufferAttribute(lineIndices, 1).setUsage(THREE.DynamicDrawUsage);
+    lineGeometry.setIndex(lineIndexAttribute);
+    function updateConnections(shape, prepared = null) {
+        const connections = prepared ?? buildLogoConnections(shape, CONNECTIONS_PER_PARTICLE);
+        lineIndices.set(connections);
+        lineIndexAttribute.needsUpdate = true;
+        lineGeometry.setDrawRange(0, connections.length);
+    }
+    updateConnections(currentShape);
     const lineMaterial = new THREE.LineBasicMaterial({
         vertexColors: true,
         transparent: true,
@@ -436,6 +449,27 @@ function createLogoScene(THREE, canvas, size, control, textures, options) {
     let frameId = 0;
     let interactionPulseStartedAt = -Infinity;
 
+    // Compile hidden figures and particle materials while the approved image
+    // remains visible. First-use program linking otherwise stalls a morph.
+    try {
+        await renderer.compileAsync(scene, camera);
+        const warming = [...Object.values(cores), ...Object.values(cores.fsp.userData.variants)];
+        const visibility = warming.map(object => object.visible);
+        try {
+            warming.forEach(object => { object.visible = true; });
+            // Warm the real framebuffer format while this canvas is hidden.
+            // A separate render target would compile another output variant.
+            renderer.setSize(1, 1, false);
+            renderer.render(scene, camera);
+        } finally {
+            warming.forEach((object, index) => { object.visible = visibility[index]; });
+            renderer.setSize(size, size, false);
+        }
+    }
+    catch (error) { releaseSceneResources(); renderer.dispose(); throw error; }
+    reducedMotion = motionPreference.matches;
+    lastTime = performance.now();
+
     function publishState(shapeName = transition ? `${currentShape.name}-to-${transition.target.name}` : currentShape.name) {
         for (const element of new Set([canvas, control])) {
             element.dataset.logoShape = shapeName;
@@ -445,7 +479,7 @@ function createLogoScene(THREE, canvas, size, control, textures, options) {
         setCanvasAccessibility(control, transition?.target.name || currentShape.name, paused, reducedMotion);
     }
 
-    function applyShape(shape) {
+    function applyShape(shape, connections = null) {
         currentShape = shape;
         positions.set(shape.positions);
         colors.set(shape.colors);
@@ -453,7 +487,7 @@ function createLogoScene(THREE, canvas, size, control, textures, options) {
         positionAttribute.needsUpdate = true;
         colorAttribute.needsUpdate = true;
         sizeAttribute.needsUpdate = true;
-        lineGeometry.setIndex(new THREE.BufferAttribute(buildLogoConnections(shape), 1));
+        updateConnections(shape, connections);
         needsRender = true;
         publishState();
     }
@@ -518,11 +552,13 @@ function createLogoScene(THREE, canvas, size, control, textures, options) {
         const nextIndex = (currentIndex + 1) % LOGO_SHAPE_NAMES.length;
         const nextName = LOGO_SHAPE_NAMES[nextIndex];
         const source = { count: LOGO_PARTICLE_COUNT, positions };
-        const target = matchLogoShape(source, shapes[nextName]);
+        const prepared = firstMorph?.source === currentShape ? firstMorph : null;
+        const target = prepared?.target ?? matchLogoShape(source, shapes[nextName]);
+        firstMorph = null;
         if (reducedMotion || paused) {
             currentIndex = nextIndex;
             holdStartedAt = timeline;
-            applyShape(target);
+            applyShape(target, prepared?.connections);
             return;
         }
         transition = {
@@ -537,7 +573,7 @@ function createLogoScene(THREE, canvas, size, control, textures, options) {
             fromOrbitOpacity: currentShape.orbitOpacity,
             fromLineOpacity: currentShape.lineOpacity
         };
-        lineGeometry.setIndex(new THREE.BufferAttribute(buildLogoConnections(target), 1));
+        updateConnections(target, prepared?.connections);
         publishState();
     }
 
@@ -627,6 +663,7 @@ function createLogoScene(THREE, canvas, size, control, textures, options) {
         root.rotation.y = reducedMotion ? 0 : motion.displayRotY + pointerCurrent.x;
         root.rotation.x = reducedMotion ? 0 : motion.rotX + pointerCurrent.y;
         root.rotation.z = reducedMotion ? 0 : motion.rotZ;
+        if (inspectionRotation) root.rotation.set(...inspectionRotation);
         orbit.rotation.z += dt * (targetName === 'infinity' ? 0.28 : 0.12);
 
         const beat = reducedMotion ? 1 : 1 + (getHeartBeatScale(now) - 1) * heartPresence;
@@ -637,14 +674,17 @@ function createLogoScene(THREE, canvas, size, control, textures, options) {
         root.position.y = reducedMotion ? 0 : Math.sin(now * 0.00105) * 0.022;
         for (const name of LOGO_SHAPE_NAMES) {
             const coverage = getLogoCorePresence(name, currentShape.name, transitionTarget, progress);
+            if (coverage > 0.004 && !cores[name].visible) cores[name].userData.revealedAt = now;
             setCorePresence(cores[name], coverage, name === 'heart' ? (beat - 1) * 4.2 : 0);
-            if (cores[name].visible) cores[name].userData.animate?.(reducedMotion ? 0 : now);
+            if (cores[name].visible) cores[name].userData.animate?.(reducedMotion ? 0 : now, {
+                age: now - (cores[name].userData.revealedAt ?? now), reducedMotion
+            });
         }
         glow.scale.setScalar((3.18 + Math.sin(now * 0.0014) * 0.08) * beat * (1 + (interfacePulse - 1) * 1.8));
         const morphWave = transition ? Math.sin(progress * Math.PI) : 0;
         // Finished sculptures are opaque at rest. Particles briefly carry
         // their colors and silhouette between the departing and arriving core.
-        const sculptedRest = ['fsp', 'globe', 'heart'].includes(currentShape.name);
+        const sculptedRest = ['fsp', 'globe', 'heart', 'summit'].includes(currentShape.name);
         pointMaterial.uniforms.uOpacity.value = transition ? Math.pow(morphWave, 0.7) : sculptedRest ? 0 : 1;
         lineMaterial.opacity = transition ? 0.045 * morphWave : sculptedRest ? 0 : currentShape.lineOpacity;
         orbit.material.opacity *= 1 - shapePresences.globe;
@@ -795,9 +835,17 @@ function createLogoScene(THREE, canvas, size, control, textures, options) {
         pause: () => setPaused(true),
         resume: () => setPaused(false),
         setAutoCycle(value) { autoCycle = Boolean(value); holdStartedAt = timeline; },
+        setInspectionRotation(rotation = null) {
+            if (rotation !== null && (!Array.isArray(rotation) || rotation.length !== 3 || !rotation.every(Number.isFinite))) {
+                throw new TypeError('Inspection rotation must contain three finite angles or be null');
+            }
+            inspectionRotation = rotation?.slice() ?? null;
+            needsRender = true;
+        },
         getDiagnostics: () => ({
             shape: currentShape.name, transitioning: Boolean(transition),
             running, visible, paused, reducedMotion, autoCycle, contextLost,
+            inspectionRotation: inspectionRotation?.slice() ?? null,
             frame: renderer.info.render.frame,
             drawCalls: renderer.info.render.calls,
             triangles: renderer.info.render.triangles,
@@ -846,15 +894,22 @@ export function initLogoAnimation(canvasId = 'sherpaLogo', canvasSize = 120, opt
     canvas.dataset.logoRenderer = control.dataset.logoRenderer = 'loading';
     const pending = loadThree()
         .then(async THREE => {
-            if (!control.isConnected) return null;
+            if (!control.isConnected) {
+                if (imageHost) canvas.remove();
+                instances.delete(control);
+                return null;
+            }
             const textures = await loadFspTextures(THREE);
             if (!control.isConnected) {
                 Object.values(textures).forEach(texture => texture.dispose());
+                if (imageHost) canvas.remove();
+                instances.delete(control);
                 return null;
             }
             let controller;
-            try { controller = createLogoScene(THREE, canvas, canvasSize, control, textures, options); }
+            try { controller = await createLogoScene(THREE, canvas, canvasSize, control, textures, options); }
             catch (error) { Object.values(textures).forEach(texture => texture.dispose()); throw error; }
+            if (!control.isConnected) { controller.dispose(); return null; }
             instances.set(control, controller);
             return controller;
         })

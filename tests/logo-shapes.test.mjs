@@ -78,7 +78,7 @@ test('summit has a broad base, narrow peak, and no inverted lower point', () => 
   const peakSpan = Math.max(...peakX) - Math.min(...peakX);
   const baseSpan = Math.max(...baseX) - Math.min(...baseX);
   assert.ok(x.span > 2.1 && z.span > 1.3);
-  assert.ok(y.min > -0.8 && y.max > 1.1);
+  assert.ok(y.min >= -0.851 && y.max > 1.1);
   assert.ok(peakSpan < baseSpan * 0.25, 'summit should taper strongly toward its peak');
 });
 
@@ -115,6 +115,30 @@ test('nearest matching preserves every target particle and connection indices st
   const sourceSum = heart.positions.reduce((sum, value) => sum + value, 0);
   const matchedSum = matched.positions.reduce((sum, value) => sum + value, 0);
   assert.ok(Math.abs(sourceSum - matchedSum) < 1e-5);
+});
+
+test('particle connections keep exact nearest neighbours and stable distance ties', () => {
+  const reference = (shape, neighbours, radius) => {
+    const pairs = [], seen = new Set();
+    for (let i = 0; i < shape.count; i++) {
+      const candidates = Array.from({length: shape.count}, (_, j) => ({index: j,
+        distance: [0, 1, 2].reduce((sum, axis) => sum + (shape.positions[i * 3 + axis] - shape.positions[j * 3 + axis]) ** 2, 0)
+      })).filter(candidate => candidate.index !== i && candidate.distance <= radius * radius)
+        .sort((a, b) => a.distance - b.distance || a.index - b.index).slice(0, neighbours);
+      for (const candidate of candidates) {
+        const pair = [Math.min(i, candidate.index), Math.max(i, candidate.index)], key = pair.join(':');
+        if (!seen.has(key)) { seen.add(key); pairs.push(...pair); }
+      }
+    }
+    return new Uint16Array(pairs);
+  };
+  const positions = new Float32Array([0,0,0, 0,0,0, -0.5,0,0, 0.5,0,0, 0,0.5,0, 0,-0.5,0, 0,0,0.5, 0,0,-0.5]);
+  const cases = [{count: positions.length / 3, positions}, ...LOGO_SHAPE_NAMES.map(name => createLogoShape(name, 96, 42))];
+  for (const shape of cases) for (const neighbours of [0, 1, 2, 5]) for (const radius of [0, 0.42, 0.5, 2]) {
+    assert.deepEqual(buildLogoConnections(shape, neighbours, radius), reference(shape, neighbours, radius));
+  }
+  assert.throws(() => buildLogoConnections(cases[0], -1), RangeError);
+  assert.throws(() => buildLogoConnections(cases[0], 2, Infinity), RangeError);
 });
 
 test('FSP particles retain white oceans and green/blue artwork through a complete morph cycle', () => {

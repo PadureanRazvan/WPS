@@ -111,6 +111,38 @@ export async function verifyControls(page) {
   assert.equal(await page.locator('#sherpaLogo canvas').evaluate(canvas => canvas.toDataURL()), beforeRestore, 'restored sculpture and lighting must match the paused image');
   checks.push('graphics-context recovery restores the selected sculpture, studio lighting and pause state');
 
+  await page.evaluate(() => { const controller = window.logoStudio.controllers[0]; controller.resume(); controller.next(); });
+  await step(1500);
+  await page.evaluate(() => window.logoStudio.controllers[0].pause());
+  await step(1);
+  assert.equal(await shape(), 'heart-to-summit');
+  const morphImage = await page.locator('#sherpaLogo canvas').evaluate(canvas => canvas.toDataURL());
+  await page.evaluate(() => window.logoContextExtension.loseContext());
+  await page.waitForFunction(() => window.logoStudio.controllers[0].getDiagnostics().contextLost, null, {polling:50});
+  await page.evaluate(() => window.logoContextExtension.restoreContext());
+  await page.waitForFunction(() => !window.logoStudio.controllers[0].getDiagnostics().contextLost, null, {polling:50});
+  await step(1);
+  assert.equal(await shape(), 'heart-to-summit');
+  assert.equal(await page.locator('#sherpaLogo canvas').evaluate(canvas => canvas.toDataURL()), morphImage);
+  await page.evaluate(() => window.logoStudio.controllers[0].resume());
+  await step(450);
+  assert.equal(await shape(), 'summit');
+  checks.push('graphics recovery preserves a paused morph, then completes the ascent reveal');
+
+  const cycles = await page.evaluate(() => {
+    const controller = window.logoStudio.controllers[0], resources = [];
+    controller.pause();
+    for (let cycle = 0; cycle < 3; cycle++) {
+      for (let shape = 0; shape < 5; shape++) { controller.next(); window.stepLogo(1); }
+      const { geometries, textures } = controller.getDiagnostics();
+      resources.push({ geometries, textures });
+    }
+    return resources;
+  });
+  assert.deepEqual(cycles[1], cycles[0]);
+  assert.deepEqual(cycles[2], cycles[0]);
+  checks.push('repeated full figure cycles keep geometry and texture counts stable');
+
   const disposal = await page.evaluate(async () => {
     const old = window.logoStudio.controllers[0];
     old.dispose();
@@ -124,5 +156,24 @@ export async function verifyControls(page) {
   });
   assert.deepEqual(disposal,{removed:true,stopped:true,fresh:true,canvases:1,renderer:'three'});
   checks.push('dispose/reinitialize leaves exactly one working canvas');
+
+  const interrupted = await page.evaluate(async () => {
+    const { initLogoAnimation } = await import('/js/logo-animation.js');
+    const control = document.createElement('button');
+    control.id = 'temporary-sculpture'; control.dataset.fspLogo = '';
+    control.style.cssText = 'position:fixed;width:44px;height:44px;left:0;bottom:0';
+    document.body.append(control);
+    const pending = initLogoAnimation(control.id);
+    control.remove();
+    const abandoned = await pending;
+    const clean = control.querySelectorAll('canvas').length === 0;
+    document.body.append(control);
+    const fresh = await initLogoAnimation(control.id);
+    const recovered = Boolean(fresh?.getDiagnostics?.().running) && control.querySelectorAll('canvas').length === 1;
+    fresh.dispose(); control.remove();
+    return { abandoned: abandoned === null, clean, recovered };
+  });
+  assert.deepEqual(interrupted, { abandoned: true, clean: true, recovered: true });
+  checks.push('removing a logo during startup clears its pending instance and permits reinitialization');
   return checks;
 }

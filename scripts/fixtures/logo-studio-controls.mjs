@@ -43,6 +43,23 @@ export async function verifyControls(page) {
     assert.ok((await read()).every(state => !state.transitioning && !state.paused));
     checks.push('theme comparison preserves the selected figures and motion state');
 
+    await page.evaluate(() => document.getElementById('pause').click());
+    await step(1);
+    const natural = await page.locator('#figure-2 canvas').evaluate(canvas => canvas.toDataURL());
+    await page.evaluate(() => {
+        const yaw = document.getElementById('yaw'), pitch = document.getElementById('pitch');
+        yaw.value = '70'; pitch.value = '18'; yaw.dispatchEvent(new Event('input'));
+    });
+    await step(1);
+    assert.ok((await read()).every(state => Math.abs(state.inspectionRotation[1] - 70 * Math.PI / 180) < 1e-9));
+    assert.notEqual(await page.locator('#figure-2 canvas').evaluate(canvas => canvas.toDataURL()), natural);
+    await page.evaluate(() => document.getElementById('natural').click());
+    await step(1);
+    assert.ok((await read()).every(state => state.inspectionRotation === null));
+    assert.equal(await page.locator('#figure-2 canvas').evaluate(canvas => canvas.toDataURL()), natural);
+    await page.evaluate(() => document.getElementById('pause').click());
+    checks.push('turn/tilt inspection works while paused and restores the exact natural pose');
+
     await page.evaluate(() => {
         window.studioCanvases = [...document.querySelectorAll('[data-fsp-logo] canvas')];
         const view = document.getElementById('view'); view.value = 'compact'; view.dispatchEvent(new Event('change'));

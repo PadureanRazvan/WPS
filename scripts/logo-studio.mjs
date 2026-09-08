@@ -30,6 +30,10 @@ const elapsed = numberOption('elapsed', 1600, 0, 120000);
 const extraTime = numberOption('time', 0, 0, 120000);
 const morph = numberOption('morph', 0, 0, 1);
 const port = numberOption('port', 8766, 0, 65535);
+const yaw = numberOption('yaw', 0, -180, 180), pitch = numberOption('pitch', 0, -90, 90);
+const videoSeconds = numberOption('video', 0, 0, 30);
+const transitionAt = 'transition-at' in params ? numberOption('transition-at', 0, 0, videoSeconds) : null;
+if (transitionAt !== null && !videoSeconds) throw new Error('--transition-at requires --video');
 if (!Number.isInteger(port)) throw new Error('--port must be an integer');
 const server = createServer(async (req,res) => {
   try {
@@ -102,10 +106,27 @@ try {
     window.logoStudio.controllers.forEach(c => c.pause());
     window.stepLogo();
   }, morph);
-  const shotName=(params.theme || 'dark')+'-'+(params.app || params.view || 'grid')+'-'+(params.shape || 'all')+(params.elapsed ? '-'+params.elapsed : '')+('morph' in params ? '-morph-'+morph : '')+(flag('mobile') ? '-mobile' : '')+(flag('reduced') ? '-reduced' : '');
+  if ('yaw' in params || 'pitch' in params) await page.evaluate(({yaw, pitch}) => {
+    window.logoStudio.controllers.forEach(controller => controller.setInspectionRotation([pitch * Math.PI / 180, yaw * Math.PI / 180, 0]));
+    for (const [id, value] of [['yaw', yaw], ['pitch', pitch]]) {
+      const input = document.getElementById(id), output = document.getElementById(id + '-value');
+      if (input) input.value = String(value);
+      if (output) output.value = value + '°';
+    }
+    window.stepLogo();
+  }, {yaw, pitch});
+  const shotName=(params.theme || 'dark')+'-'+(params.app || params.view || 'grid')+'-'+(params.shape || 'all')+(params.elapsed ? '-'+params.elapsed : '')+('morph' in params ? '-morph-'+morph : '')+('yaw' in params || 'pitch' in params ? '-pose-'+yaw+'-'+pitch : '')+(flag('mobile') ? '-mobile' : '')+(flag('reduced') ? '-reduced' : '');
   await page.screenshot({path:resolve(out,shotName+'.png')});
   const state=await page.locator('[data-fsp-logo][data-logo-renderer]').evaluateAll(items => items.map((el,i)=>({shape:el.dataset.logoShape,renderer:el.dataset.logoRenderer,variant:el.dataset.logoVariant,bounds:el.getBoundingClientRect().toJSON(),diagnostics:window.logoStudio.controllers[i].getDiagnostics?.()})));
   await writeFile(resolve(out,shotName+'-state.json'),JSON.stringify({errors,warnings,state},null,2));
+  if (videoSeconds) {
+    const { recordLogoVideo } = await import('./fixtures/logo-video.mjs');
+    const video = await recordLogoVideo(page, resolve(out,shotName+'.webm'), {
+      selector: params.app ? '[data-fsp-logo] canvas' : `[data-figure="${params.shape || 'fsp'}"] canvas`,
+      seconds: videoSeconds, transitionAt
+    });
+    console.log(JSON.stringify({ video }));
+  }
   if (flag('verify')) {
     const { verifyControls } = await import(params.app ? './fixtures/logo-controls.mjs' : './fixtures/logo-studio-controls.mjs');
     const checks = await verifyControls(page);

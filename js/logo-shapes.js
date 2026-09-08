@@ -3,6 +3,8 @@ import { FSP_BEVEL, getFspRelief } from './logo-surfaces.js?v=2026.09.07';
 import { GLOBE_RADII, getGlobeColor, getGlobeOrbitPoint, getGlobePoint, isGlobeLand } from './logo-globe-surface.js?v=2026.09.07';
 import { getHeartPoint, getHeartColor, getHeartPulsePoint } from './logo-heart-surface.js?v=2026.09.07';
 
+import { sampleSummitSurface, SUMMIT_PEAK, getSummitRoutePoint } from './logo-summit-surface.js?v=2026.09.07';
+
 const TAU = Math.PI * 2;
 
 export const LOGO_PARTICLE_COUNT = 768;
@@ -12,7 +14,7 @@ const SHAPE_META = Object.freeze({
     fsp: { glow: [0.02, 0.64, 0.31], orbitOpacity: 0, lineOpacity: 0.025 },
     globe: { glow: [0.06, 0.43, 0.57], orbitOpacity: 0, lineOpacity: 0.04 },
     heart: { glow: [1.0, 0.16, 0.34], orbitOpacity: 0, lineOpacity: 0.07 },
-    summit: { glow: [0.18, 0.72, 0.75], orbitOpacity: 0.03, lineOpacity: 0.085 },
+    summit: { glow: [0.18, 0.72, 0.75], orbitOpacity: 0, lineOpacity: 0.045 },
     infinity: { glow: [0.08, 0.63, 0.94], orbitOpacity: 0, lineOpacity: 0.04 }
 });
 
@@ -127,60 +129,16 @@ function generateHeart(count, random) {
 }
 function generateSummit(count, random) {
     const shape = createShapeBuffer('summit', count);
-    const apex = [0, 1.18, 0];
-    const baseCorners = [
-        [-1.08, -0.72, 0.68],
-        [1.08, -0.72, 0.68],
-        [0.88, -0.72, -0.72],
-        [-0.88, -0.72, -0.72]
-    ];
-    const base = [0.035, 0.24, 0.5];
-    const ridge = [0.08, 0.72, 0.62];
-    const peak = [1.0, 0.76, 0.3];
-    const snow = [0.94, 1.0, 0.96];
-    const ridgeCount = Math.floor(count * 0.22);
-
+    const routeCount = Math.floor(count * 0.07);
     for (let index = 0; index < count; index++) {
-        let x;
-        let y;
-        let z;
-        let isRidge = false;
-
-        if (index < ridgeCount) {
-            const cornerIndex = index % baseCorners.length;
-            const corner = baseCorners[cornerIndex];
-            const progress = (Math.floor(index / baseCorners.length) + random() * 0.18)
-                / Math.max(1, Math.ceil(ridgeCount / baseCorners.length) - 1);
-            x = apex[0] + (corner[0] - apex[0]) * progress;
-            y = apex[1] + (corner[1] - apex[1]) * progress;
-            z = apex[2] + (corner[2] - apex[2]) * progress;
-            const jitter = (1 - progress) * 0.012 + 0.004;
-            x += (random() - 0.5) * jitter;
-            z += (random() - 0.5) * jitter;
-            isRidge = true;
-        } else {
-            const face = (index - ridgeCount) % baseCorners.length;
-            const edgeA = baseCorners[face];
-            const edgeB = baseCorners[(face + 1) % baseCorners.length];
-            const root = Math.sqrt(random());
-            const a = 1 - root;
-            const b = root * (1 - random());
-            const c = 1 - a - b;
-            x = apex[0] * a + edgeA[0] * b + edgeB[0] * c;
-            y = apex[1] * a + edgeA[1] * b + edgeB[1] * c;
-            z = apex[2] * a + edgeA[2] * b + edgeB[2] * c;
+        if (index < routeCount) {
+            setPoint(shape, index, ...getSummitRoutePoint((index + 0.5) / routeCount), [0.86, 0.71, 0.48], 1.22);
+            continue;
         }
-
-        const elevation = clamp01((y + 0.72) / 1.9);
-        let color = elevation > 0.74
-            ? mixColor(peak, snow, (elevation - 0.74) / 0.26)
-            : elevation > 0.34
-                ? mixColor(ridge, peak, (elevation - 0.34) / 0.4)
-                : mixColor(base, ridge, elevation / 0.34);
-        if (isRidge) color = mixColor(color, snow, 0.22 + elevation * 0.34);
-        setPoint(shape, index, x, y - 0.05, z, color, (isRidge ? 1.8 : 1.38) + elevation * 0.42 + random() * 0.24);
+        const { point, color, kind } = sampleSummitSurface((index - routeCount + random()) / (count - routeCount), random(), random());
+        setPoint(shape, index, ...point, color, (kind === 'snow' ? 1.65 : 1.4) + random() * 0.2);
     }
-
+    setPoint(shape, count - 1, ...SUMMIT_PEAK, [0.9, 0.96, 0.98], 1.8);
     return shape;
 }
 
@@ -262,13 +220,14 @@ export function matchLogoShape(source, target) {
         const sourceOffset = sourceIndex * 3;
         let nearestIndex = -1;
         let nearestDistance = Infinity;
+        const x = source.positions[sourceOffset], y = source.positions[sourceOffset + 1], z = source.positions[sourceOffset + 2];
 
         for (let targetIndex = 0; targetIndex < count; targetIndex++) {
             if (used[targetIndex]) continue;
             const targetOffset = targetIndex * 3;
-            const dx = source.positions[sourceOffset] - target.positions[targetOffset];
-            const dy = source.positions[sourceOffset + 1] - target.positions[targetOffset + 1];
-            const dz = source.positions[sourceOffset + 2] - target.positions[targetOffset + 2];
+            const dx = x - target.positions[targetOffset];
+            const dy = y - target.positions[targetOffset + 1];
+            const dz = z - target.positions[targetOffset + 2];
             const distance = dx * dx + dy * dy + dz * dz;
             if (distance < nearestDistance) {
                 nearestDistance = distance;
@@ -278,8 +237,10 @@ export function matchLogoShape(source, target) {
 
         used[nearestIndex] = 1;
         const targetOffset = nearestIndex * 3;
-        matched.positions.set(target.positions.subarray(targetOffset, targetOffset + 3), sourceOffset);
-        matched.colors.set(target.colors.subarray(targetOffset, targetOffset + 3), sourceOffset);
+        for (let axis = 0; axis < 3; axis++) {
+            matched.positions[sourceOffset + axis] = target.positions[targetOffset + axis];
+            matched.colors[sourceOffset + axis] = target.colors[targetOffset + axis];
+        }
         matched.sizes[sourceIndex] = target.sizes[nearestIndex];
     }
 
@@ -287,37 +248,38 @@ export function matchLogoShape(source, target) {
 }
 
 export function buildLogoConnections(shape, neighboursPerParticle = 2, maxDistance = 0.42) {
-    const pairs = [];
-    const seen = new Set();
-    const maxDistanceSquared = maxDistance * maxDistance;
-
-    for (let index = 0; index < shape.count; index++) {
-        const offset = index * 3;
-        const nearest = [];
-        for (let other = 0; other < shape.count; other++) {
+    if (!Number.isInteger(neighboursPerParticle) || neighboursPerParticle < 0 || !Number.isFinite(maxDistance) || maxDistance < 0) {
+        throw new RangeError('Logo connections need a non-negative neighbour count and finite distance');
+    }
+    if (shape.count > 65536) throw new RangeError('Logo connections exceed the 16-bit particle index limit');
+    const pairs = [], seen = new Set(), positions = shape.positions, count = shape.count;
+    const limit = Math.min(neighboursPerParticle, count - 1), maximum = maxDistance * maxDistance;
+    if (limit <= 0) return new Uint16Array();
+    // Reuse a small sorted shortlist instead of allocating a candidate object
+    // for every nearby point. Ascending source indices break distance ties.
+    const indices = new Uint32Array(limit), distances = new Float64Array(limit);
+    for (let index = 0; index < count; index++) {
+        const offset = index * 3, px = positions[offset], py = positions[offset + 1], pz = positions[offset + 2];
+        let found = 0;
+        for (let other = 0; other < count; other++) {
             if (other === index) continue;
-            const otherOffset = other * 3;
-            const dx = shape.positions[offset] - shape.positions[otherOffset];
-            const dy = shape.positions[offset + 1] - shape.positions[otherOffset + 1];
-            const dz = shape.positions[offset + 2] - shape.positions[otherOffset + 2];
+            const target = other * 3;
+            const dx = px - positions[target], dy = py - positions[target + 1], dz = pz - positions[target + 2];
             const distance = dx * dx + dy * dy + dz * dz;
-            if (distance > maxDistanceSquared) continue;
-
-            let insertAt = nearest.findIndex(candidate => distance < candidate.distance);
-            if (insertAt === -1) insertAt = nearest.length;
-            nearest.splice(insertAt, 0, { index: other, distance });
-            if (nearest.length > neighboursPerParticle) nearest.pop();
+            if (distance > maximum || (found === limit && distance >= distances[found - 1])) continue;
+            let at = Math.min(found, limit - 1);
+            while (at > 0 && distance < distances[at - 1]) {
+                distances[at] = distances[at - 1]; indices[at] = indices[at - 1]; at--;
+            }
+            distances[at] = distance; indices[at] = other;
+            found = Math.min(limit, found + 1);
         }
-
-        for (const candidate of nearest) {
-            const low = Math.min(index, candidate.index);
-            const high = Math.max(index, candidate.index);
-            const key = `${low}:${high}`;
+        for (let i = 0; i < found; i++) {
+            const low = Math.min(index, indices[i]), high = Math.max(index, indices[i]), key = low * count + high;
             if (seen.has(key)) continue;
             seen.add(key);
             pairs.push(low, high);
         }
     }
-
     return new Uint16Array(pairs);
 }

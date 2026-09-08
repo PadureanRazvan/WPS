@@ -1,6 +1,8 @@
 import { prepareLogoMaterial } from './logo-materials.js?v=2026.09.07';
 import { createGlobeGeometry } from './logo-globe-geometry.js?v=2026.09.07';
 import { createHeartGeometry, createHeartInlayGeometry } from './logo-heart-geometry.js?v=2026.09.07';
+import { getSummitRoutePoint, getSummitAscentState } from './logo-summit-surface.js?v=2026.09.07';
+import { createSummitGeometry } from './logo-summit-geometry.js?v=2026.09.07';
 import { GLOBE_RADII, getGlobeColor, getGlobeOrbitPoint, getGlobePoint } from './logo-globe-surface.js?v=2026.09.07';
 
 const TAU = Math.PI * 2;
@@ -101,49 +103,35 @@ export function createHeartCore(THREE) {
 }
 export function createSummitCore(THREE) {
     const group = new THREE.Group();
-    const mountainGeometry = new THREE.ConeGeometry(1.08, 1.9, 4, 1, false);
-    const mountainMaterial = rememberCoreOpacity(new THREE.MeshStandardMaterial({
-        color: 0x0a6c85,
-        emissive: 0x053847,
-        emissiveIntensity: 0.5,
-        metalness: 0.2,
-        roughness: 0.38,
-        transparent: true,
-        depthWrite: false,
-        flatShading: true
-    }), 0.17);
-    const mountain = new THREE.Mesh(mountainGeometry, mountainMaterial);
-    mountain.position.y = 0.18;
-    mountain.rotation.y = Math.PI / 4;
-    mountain.renderOrder = 1;
-
-    const ridgeMaterial = rememberCoreOpacity(new THREE.LineBasicMaterial({
-        color: 0x6af5d3,
-        transparent: true,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false
-    }), 0.3);
-    const ridges = new THREE.LineSegments(new THREE.EdgesGeometry(mountainGeometry, 10), ridgeMaterial);
-    ridges.position.copy(mountain.position);
-    ridges.rotation.copy(mountain.rotation);
-    ridges.renderOrder = 2;
-
-    const snowGeometry = new THREE.ConeGeometry(0.33, 0.47, 4, 1, false);
-    const snowMaterial = rememberCoreOpacity(new THREE.MeshStandardMaterial({
-        color: 0xf2fff7,
-        emissive: 0x5fd7ad,
-        emissiveIntensity: 0.7,
-        roughness: 0.3,
-        transparent: true,
-        depthWrite: false,
-        flatShading: true
-    }), 0.36);
-    const snow = new THREE.Mesh(snowGeometry, snowMaterial);
-    snow.position.y = 0.895;
-    snow.rotation.y = Math.PI / 4;
-    snow.renderOrder = 2;
-
-    group.add(mountain, ridges, snow);
+    const geometry = createSummitGeometry(THREE);
+    const rock = new THREE.Mesh(geometry.rock, prepareLogoMaterial(new THREE.MeshPhysicalMaterial({
+        vertexColors: true, metalness: 0.28, roughness: 0.4,
+        clearcoat: 0.4, clearcoatRoughness: 0.32, envMapIntensity: 0.6
+    })));
+    rock.name = 'alpine-rock';
+    const snow = new THREE.Mesh(geometry.snow, prepareLogoMaterial(new THREE.MeshPhysicalMaterial({
+        vertexColors: true, metalness: 0.06, roughness: 0.53,
+        clearcoat: 0.28, clearcoatRoughness: 0.3, envMapIntensity: 0.45
+    })));
+    snow.name = 'glacial-snow';
+    const route = new THREE.Mesh(geometry.route, prepareLogoMaterial(new THREE.MeshPhysicalMaterial({
+        color: 0xdcb67b, metalness: 0.74, roughness: 0.3, clearcoat: 0.25, envMapIntensity: 0.7
+    })));
+    route.name = 'golden-ascent';
+    const beacon = new THREE.Mesh(new THREE.SphereGeometry(0.023, 16, 10), prepareLogoMaterial(new THREE.MeshPhysicalMaterial({
+        color: 0xf1d49a, metalness: 0.58, roughness: 0.26, clearcoat: 0.4,
+        envMapIntensity: 0.8, emissive: 0x80541a, emissiveIntensity: 0.18
+    })));
+    beacon.name = 'ascent-beacon';
+    group.userData.animate = (now, { age = now, reducedMotion = false } = {}) => {
+        const { progress, strength } = getSummitAscentState(age, reducedMotion);
+        const [x, y, z] = getSummitRoutePoint(progress);
+        beacon.position.set(x, y, z + 0.014);
+        beacon.scale.setScalar(strength);
+        beacon.visible = strength > 0.002;
+    };
+    group.userData.animate(0);
+    group.add(rock, snow, route, beacon);
     group.visible = false;
     return group;
 }

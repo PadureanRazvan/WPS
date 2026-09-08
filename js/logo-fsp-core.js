@@ -151,6 +151,7 @@ function createFspFaceMaterial(THREE, texture) {
         map: texture, alphaTest: 0.04, toneMapped: false
     }));
     const compileDissolve = material.onBeforeCompile;
+    const dissolveCacheKey = material.customProgramCacheKey;
     material.onBeforeCompile = shader => {
         compileDissolve(shader);
         shader.vertexShader = shader.vertexShader
@@ -172,7 +173,7 @@ function createFspFaceMaterial(THREE, texture) {
                 #include <opaque_fragment>
             `);
     };
-    material.customProgramCacheKey = () => 'sherpa-fsp-relief-v1';
+    material.customProgramCacheKey = () => `${dissolveCacheKey()}:sherpa-fsp-relief-v1`;
     return material;
 }
 
