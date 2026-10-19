@@ -1,16 +1,17 @@
-import { FSP_SHAPE_DATA } from '../assets/branding/fsp-shape-data.js?v=2026.09.09';
-import { FSP_BEVEL, getFspRelief } from './logo-surfaces.js?v=2026.09.09';
-import { GLOBE_RADII, getGlobeColor, getGlobeOrbitPoint, getGlobePoint, isGlobeLand } from './logo-globe-surface.js?v=2026.09.09';
-import { getHeartPoint, getHeartColor, getHeartPulsePoint } from './logo-heart-surface.js?v=2026.09.09';
+import { FSP_SHAPE_DATA } from '../assets/branding/fsp-shape-data.js?v=2026.10.19';
+import { FSP_BEVEL, getFspRelief } from './logo-surfaces.js?v=2026.10.19';
+import { GLOBE_RADII, getGlobeColor, getGlobeOrbitPoint, getGlobePoint, isGlobeLand } from './logo-globe-surface.js?v=2026.10.19';
+import { getHeartPoint, getHeartColor, getHeartPulsePoint } from './logo-heart-surface.js?v=2026.10.19';
 
-import { sampleSummitSurface, SUMMIT_PEAK, getSummitRoutePoint } from './logo-summit-surface.js?v=2026.09.09';
+import { sampleSummitSurface, SUMMIT_PEAK, getSummitRoutePoint } from './logo-summit-surface.js?v=2026.10.19';
 
-import { getInfinityPathAngle, getInfinityProfile, getInfinitySurfacePoint, getInfinityColor } from './logo-infinity-surface.js?v=2026.09.09';
+import { getInfinityPathAngle, getInfinityProfile, getInfinitySurfacePoint, getInfinityColor } from './logo-infinity-surface.js?v=2026.10.19';
 
 const TAU = Math.PI * 2;
 
 export const LOGO_PARTICLE_COUNT = 768;
-export const LOGO_SHAPE_NAMES = Object.freeze(['fsp', 'globe', 'heart', 'summit', 'infinity']);
+import { LOGO_SHAPE_NAMES, getGlobeSpinState } from './logo-story.js?v=2026.10.19';
+export { LOGO_SHAPE_NAMES };
 
 const SHAPE_META = Object.freeze({
     fsp: { glow: [0.02, 0.64, 0.31] },
@@ -63,6 +64,7 @@ function createShapeBuffer(name, count) {
         positions: new Float32Array(count * 3),
         colors: new Float32Array(count * 3),
         sizes: new Float32Array(count),
+        parts: new Uint8Array(count),
         glow: [...meta.glow]
     };
 }
@@ -89,6 +91,7 @@ function generateGlobe(count, random) {
 
     for (let index = 0; index < count; index++) {
         if (index < orbitCount) {
+            shape.parts[index] = 1;
             const point = getGlobeOrbitPoint(index / orbitCount * TAU);
             setPoint(shape, index, ...point, [0.88, 0.77, 0.56], 1.1 + random() * 0.25);
             continue;
@@ -162,8 +165,8 @@ export function createLogoShape(name, count = LOGO_PARTICLE_COUNT, seed = 0x5EED
         throw new RangeError('Logo particle count must be an integer of at least 32');
     }
 
-    // Keep the original four figures' seeds stable when adding the brand shape.
-    const shapeSeed = seed ^ ((name === 'fsp' ? 5 : LOGO_SHAPE_NAMES.indexOf(name)) * 0x9E3779B9);
+    // A narrative reorder must not shuffle a figure's surface sampling.
+    const shapeSeed = seed ^ ({ fsp: 5, globe: 1, heart: 2, summit: 3, infinity: 4 }[name] * 0x9E3779B9);
     const random = createRandom(shapeSeed);
     if (name === 'fsp') return generateFsp(count, random, variant);
     if (name === 'globe') return generateGlobe(count, random);
@@ -207,9 +210,24 @@ export function matchLogoShape(source, target) {
             matched.colors[sourceOffset + axis] = target.colors[targetOffset + axis];
         }
         matched.sizes[sourceIndex] = target.sizes[nearestIndex];
+        matched.parts[sourceIndex] = target.parts?.[nearestIndex] ?? 0;
     }
 
     return matched;
+}
+
+export function copyLogoPosePositions(shape, age, output = new Float32Array(shape.positions.length), reducedMotion = false) {
+    output.set(shape.positions);
+    if (shape.name !== 'globe') return output;
+    const angle = getGlobeSpinState(age, reducedMotion).angle;
+    const cosine = Math.cos(angle), sine = Math.sin(angle);
+    for (let index = 0; index < shape.count; index++) {
+        if (shape.parts[index] === 1) continue;
+        const offset = index * 3, x = output[offset], z = output[offset + 2];
+        output[offset] = x * cosine + z * sine;
+        output[offset + 2] = -x * sine + z * cosine;
+    }
+    return output;
 }
 
 export function buildLogoConnections(shape, neighboursPerParticle = 2, maxDistance = 0.42) {

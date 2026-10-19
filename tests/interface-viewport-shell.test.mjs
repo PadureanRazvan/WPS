@@ -11,7 +11,7 @@ const infoSource = await readFile(new URL('../css/info.css', import.meta.url), '
 const layoutSource = await readFile(new URL('../css/layout.css', import.meta.url), 'utf8');
 const plannerSource = await readFile(new URL('../css/planner.css', import.meta.url), 'utf8');
 const responsiveSource = await readFile(new URL('../css/responsive.css', import.meta.url), 'utf8');
-const mainSource = await readFile(new URL('../js/main.js', import.meta.url), 'utf8');
+const runtimeSource = await readFile(new URL('../js/app-runtime.js', import.meta.url), 'utf8');
 const infoVersionSource = await readFile(new URL('../js/info-version.js', import.meta.url), 'utf8');
 
 test('viewport opts into device safe areas and exposes shared inset tokens', () => {
@@ -62,6 +62,6 @@ test('safe viewport release assets share one cache identity', () => {
     assert.ok(indexSource.includes(`${asset}?v=${SHERPA_VERSION.number}`), asset);
   }
 
-  assert.ok(mainSource.includes(`info-version.js?v=${SHERPA_VERSION.number}`));
+  assert.ok(runtimeSource.includes(`info-version.js?v=${SHERPA_VERSION.number}`));
   assert.ok(infoVersionSource.includes(`version.js?v=${SHERPA_VERSION.number}`));
 });

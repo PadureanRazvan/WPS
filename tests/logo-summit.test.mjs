@@ -75,7 +75,7 @@ test('gold ascent remains on the front rock and reaches the main summit without 
     }
     assert.ok(minimum > -0.004 && maximum < 0.017, `inlay leaves the stone: ${minimum}..${maximum}`);
     assert.ok(getSummitRoutePoint(1)[1] > 1.05);
-    assert.equal(getSummitAscentState(8999).strength, 0);
+    assert.equal(getSummitAscentState(10499).strength, 0);
     assert.equal(getSummitAscentState(0).strength, 0);
     assert.deepEqual(getSummitAscentState(4000, true), { progress: 1, strength: 1 });
     let lastProgress = 0;
@@ -85,6 +85,19 @@ test('gold ascent remains on the front rock and reaches the main summit without 
         assert.ok(state.strength >= 0 && state.strength <= 1);
         lastProgress = state.progress;
     }
+});
+
+test('the ascent advances at constant distance and rounds its switchbacks', () => {
+    const steps = [];
+    let previous = new THREE.Vector3(...getSummitRoutePoint(0)), direction;
+    for (let index = 1; index <= 1000; index++) {
+        const current = new THREE.Vector3(...getSummitRoutePoint(index / 1000));
+        const delta = current.clone().sub(previous);
+        steps.push(delta.length());
+        if (direction) assert.ok(delta.angleTo(direction) < 0.2, 'wire path turns too sharply');
+        previous = current; direction = delta;
+    }
+    assert.ok(Math.max(...steps) / Math.min(...steps) < 1.02, 'beacon must not accelerate at each route anchor');
 });
 
 test('summit particles sample the actual sculpture and separate instances own their buffers', () => {

@@ -314,7 +314,6 @@
         background: var(--accent);
         box-shadow: 0 0 12px rgba(var(--theme-accent-rgb), 0.35);
         pointer-events: none;
-        view-transition-name: sherpa-nav-rail;
         z-index: 2;
     }
 }

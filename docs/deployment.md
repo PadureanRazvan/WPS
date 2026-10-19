@@ -15,7 +15,7 @@ node scripts/refresh-release-assets.mjs
 node scripts/refresh-release-assets.mjs --check
 ```
 
-The generated import map keeps versioned and unversioned imports on the same module instance. Commit `index.html` and refreshed imports with the release.
+The generated import map keeps versioned and unversioned imports on the same module instance. The helper also refreshes favicon and touch-icon cache queries. Commit `index.html` and refreshed imports with the release.
 
 4. Run the full suite:
 

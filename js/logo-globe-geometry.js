@@ -1,5 +1,6 @@
-import { EARTH_LAND_POLYGONS, GLOBE_RADII, getGlobeColor, getGlobePoint } from './logo-globe-surface.js?v=2026.09.09';
-import { forEachGridTriangle, getGridEdgeParameters } from './logo-surface-grid.js?v=2026.09.09';
+import { EARTH_LAND_POLYGONS, GLOBE_RADII, getGlobeColor, getGlobePoint } from './logo-globe-surface.js?v=2026.10.19';
+import { forEachGridTriangle, getGridEdgeParameters } from './logo-surface-grid.js?v=2026.10.19';
+import { getPreparedLogoGeometry } from './logo-geometry-cache.js?v=2026.10.19';
 
 const templates = new WeakMap();
 const SURFACE_GRID = 5;
@@ -84,6 +85,8 @@ function buildGlobeGeometry(THREE) {
 }
 
 export function createGlobeGeometry(THREE) {
+    const prepared = Object.fromEntries(['land', 'cliffs', 'coastline'].map(name => [name, getPreparedLogoGeometry(THREE, `globe-${name}`)]));
+    if (Object.values(prepared).every(Boolean)) return Object.fromEntries(Object.entries(prepared).map(([name, geometry]) => [name, geometry.clone()]));
     if (!templates.has(THREE)) templates.set(THREE, buildGlobeGeometry(THREE));
     return Object.fromEntries(Object.entries(templates.get(THREE)).map(([name, geometry]) => [name, geometry.clone()]));
 }

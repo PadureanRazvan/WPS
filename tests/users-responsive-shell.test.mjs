@@ -7,7 +7,7 @@ const indexSource = await readFile(new URL('../index.html', import.meta.url), 'u
 const usersSource = await readFile(new URL('../js/users.js', import.meta.url), 'utf8');
 const configSource = await readFile(new URL('../js/config.js', import.meta.url), 'utf8');
 const componentsSource = await readFile(new URL('../css/components.css', import.meta.url), 'utf8');
-const mainSource = await readFile(new URL('../js/main.js', import.meta.url), 'utf8');
+const runtimeSource = await readFile(new URL('../js/app-runtime.js', import.meta.url), 'utf8');
 const uiSource = await readFile(new URL('../js/ui.js', import.meta.url), 'utf8');
 
 test('users directory exposes searchable and filterable controls with a live result count', () => {
@@ -19,7 +19,7 @@ test('users directory exposes searchable and filterable controls with a live res
   assert.match(usersSource, /usersDirectoryState\.query\s*=\s*searchInput\.value/);
   assert.match(usersSource, /usersDirectoryState\.team\s*=\s*teamFilter\.value/);
   assert.match(usersSource, /usersDirectoryState\.status\s*=\s*button\.dataset\.usersStatus/);
-  assert.ok(mainSource.includes(`from './users.js?v=${SHERPA_VERSION.number}'`));
+  assert.ok(runtimeSource.includes(`from './users.js?v=${SHERPA_VERSION.number}'`));
   assert.ok(uiSource.includes(`from './users.js?v=${SHERPA_VERSION.number}'`));
   assert.ok(usersSource.includes(`from './ui.js?v=${SHERPA_VERSION.number}'`));
   assert.ok(usersSource.includes(`from './users-directory.js?v=${SHERPA_VERSION.number}'`));

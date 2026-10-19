@@ -47,30 +47,29 @@ test('productivity view controls preserve theme contrast', () => {
   assert.doesNotMatch(productivitySource, /style\.color\s*=\s*view[^;]+\?\s*'#000'/);
 });
 
-test('active navigation rail progressively uses Anchor Positioning and View Transitions', () => {
+test('active navigation rail uses Anchor Positioning and local motion', () => {
   assert.match(indexSource, /<span class="nav-active-rail" aria-hidden="true"><\/span>/);
   assert.match(layoutSource, /\.nav-item\.active::before\s*\{/);
   assert.match(layoutSource, /@supports \(top:\s*anchor\(top\)\) and \(height:\s*anchor-size\(height\)\)/);
   assert.match(layoutSource, /anchor-name:\s*--sherpa-active-nav/);
   assert.match(layoutSource, /position-anchor:\s*--sherpa-active-nav/);
-  assert.match(layoutSource, /view-transition-name:\s*sherpa-nav-rail/);
-  assert.match(baseSource, /::view-transition-group\(sherpa-nav-rail\)/);
-  assert.match(baseSource, /\.nav-active-rail\s*\{[^}]*view-transition-name:\s*none\s*!important/s);
+  assert.doesNotMatch(layoutSource, /view-transition-name:\s*sherpa-nav-rail/);
+  assert.match(uiSource, /rail\.animate\(/);
 });
 
-test('native section transitions do not restart the fallback entrance animation', () => {
+test('section entry is local and does not require a page snapshot', () => {
   const activeSectionRule = baseSource.match(/\.section\.active\s*\{([^}]*)\}/)?.[1] || '';
 
   assert.doesNotMatch(activeSectionRule, /animation:\s*fadeIn/);
   assert.match(
     baseSource,
-    /\.section\.active\.section-enter-fallback\s*\{[^}]*animation:\s*fadeIn/s
+    /\.section\.active\.section-enter\s*\{[^}]*animation:\s*sherpa-section-enter/s
   );
-  assert.match(uiSource, /const useNativeSectionTransition\s*=/);
-  assert.match(uiSource, /classList\.remove\('active',\s*'section-enter-fallback'\)/);
+  assert.doesNotMatch(uiSource, /useNativeSectionTransition/);
+  assert.match(uiSource, /classList\.remove\('active',\s*'section-enter'\)/);
   assert.match(
     uiSource,
-    /classList\.toggle\('section-enter-fallback',\s*useFallbackSectionTransition\)/
+    /classList\.toggle\('section-enter',\s*sectionChanged && !reducedMotion\)/
   );
 });
 

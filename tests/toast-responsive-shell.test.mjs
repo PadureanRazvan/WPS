@@ -10,7 +10,7 @@ const baseSource = await readFile(new URL('../css/base.css', import.meta.url), '
 const componentsSource = await readFile(new URL('../css/components.css', import.meta.url), 'utf8');
 const toastSource = await readFile(new URL('../js/toast-notifications.js', import.meta.url), 'utf8');
 const uiSource = await readFile(new URL('../js/ui.js', import.meta.url), 'utf8');
-const mainSource = await readFile(new URL('../js/main.js', import.meta.url), 'utf8');
+const runtimeSource = await readFile(new URL('../js/app-runtime.js', import.meta.url), 'utf8');
 
 test('application shell owns persistent polite and assertive notification announcers', () => {
   assert.match(indexSource, /id="toastPoliteAnnouncer"[^>]*role="status"[^>]*aria-live="polite"/);
@@ -55,6 +55,6 @@ test('legacy temporary messages delegate to the shared translated notification s
 });
 
 test('the current release cache-busts the notification module and browser shell', () => {
-  assert.ok(mainSource.includes(`ui.js?v=${SHERPA_VERSION.number}`));
+  assert.ok(runtimeSource.includes(`ui.js?v=${SHERPA_VERSION.number}`));
   assert.ok(uiSource.includes(`toast-notifications.js?v=${SHERPA_VERSION.number}`));
 });

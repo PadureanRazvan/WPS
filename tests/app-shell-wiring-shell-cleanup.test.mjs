@@ -4,6 +4,7 @@ import { SHERPA_VERSION } from '../js/version.js';
 import { readFileSync } from 'node:fs';
 
 const mainSource = readFileSync(new URL('../js/main.js', import.meta.url), 'utf8');
+const runtimeSource = readFileSync(new URL('../js/app-runtime.js', import.meta.url), 'utf8');
 const indexSource = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 
 test('main shell delegates app visibility and DOM lifecycle wiring to App Shell Wiring', () => {
@@ -16,7 +17,7 @@ test('main shell delegates app visibility and DOM lifecycle wiring to App Shell 
     'showAuthenticatedShell',
     'showLoginScreen'
   ].forEach(name => {
-    assert.match(mainSource, new RegExp(`\\b${name}\\b`));
+    assert.match(mainSource + runtimeSource, new RegExp(`\\b${name}\\b`));
   });
 
   [

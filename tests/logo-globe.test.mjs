@@ -56,13 +56,15 @@ test('raised geography covers continent interiors and leaves the oceans open', (
 
 test('orbital bead follows the same three-dimensional path as the morph particles', () => {
   const globe = createGlobeCore(THREE);
-  for (const now of [0, 1000, 4500, 9000]) {
-    globe.userData.animate(now);
-    const expected = getGlobeOrbitPoint(0.8 + now * 0.00018);
+  for (const [age, angle] of [[0, 0.8], [6800, 0.8 + Math.PI], [13000, 0.8 + Math.PI * 2]]) {
+    globe.userData.animate(123456, { age });
+    const expected = getGlobeOrbitPoint(angle);
     const actual = globe.getObjectByName('orbital-bead').position;
     assert.ok(actual.distanceTo(new THREE.Vector3(...expected)) < 1e-9);
     assert.ok(Math.abs(actual.length() - GLOBE_RADII.orbit) < 1e-9);
   }
+  globe.userData.animate(1000, { age: 5000, reducedMotion: true });
+  assert.ok(globe.getObjectByName('orbital-bead').position.distanceTo(new THREE.Vector3(...getGlobeOrbitPoint(0.8))) < 1e-9);
   dispose(globe);
 });
 
@@ -76,6 +78,22 @@ test('separate globe instances own their geometry buffers', () => {
   dispose(first);
   assert.ok(b.array.every(Number.isFinite));
   dispose(second);
+});
+
+test('the Earth turns inside a stable orbital frame and settles at the chapter boundary', () => {
+  const globe = createGlobeCore(THREE);
+  const earth = globe.getObjectByName('rotating-earth');
+  const ring = globe.getObjectByName('orbital-frame');
+  const ringPose = ring.rotation.toArray();
+  globe.userData.animate(7000, { age: 7000 });
+  assert.ok(Math.abs(earth.rotation.y - Math.PI) < 1e-9);
+  assert.deepEqual(ring.rotation.toArray(), ringPose);
+  globe.userData.animate(13900, { age: 13900 });
+  assert.ok(Math.abs(earth.rotation.y - Math.PI * 2) < 1e-9);
+  globe.userData.animate(15000, { age: 7000, reducedMotion: true });
+  assert.equal(earth.rotation.y, 0);
+  assert.deepEqual(ring.rotation.toArray(), ringPose);
+  dispose(globe);
 });
 
 test('raised geography has no open joins or overlapping faces above the ocean', () => {

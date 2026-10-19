@@ -6,7 +6,7 @@ import { readFile } from 'node:fs/promises';
 const indexSource = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const componentsSource = await readFile(new URL('../css/components.css', import.meta.url), 'utf8');
 const responsiveSource = await readFile(new URL('../css/responsive.css', import.meta.url), 'utf8');
-const mainSource = await readFile(new URL('../js/main.js', import.meta.url), 'utf8');
+const runtimeSource = await readFile(new URL('../js/app-runtime.js', import.meta.url), 'utf8');
 const reportsSource = await readFile(new URL('../js/reports.js', import.meta.url), 'utf8');
 
 test('reports content exposes a live component workspace instead of inline placeholder styling', () => {
@@ -30,7 +30,7 @@ test('reports distribution avoids nested scrolling and stale viewport-only card 
 });
 
 test('report atlas cache-busts the complete Reports renderer chain', () => {
-  assert.ok(mainSource.includes(`from './reports.js?v=${SHERPA_VERSION.number}'`));
+  assert.ok(runtimeSource.includes(`from './reports.js?v=${SHERPA_VERSION.number}'`));
   assert.ok(reportsSource.includes(`from './report-read-model.js?v=${SHERPA_VERSION.number}'`));
   assert.ok(reportsSource.includes(`from './reports-view.js?v=${SHERPA_VERSION.number}'`));
 });

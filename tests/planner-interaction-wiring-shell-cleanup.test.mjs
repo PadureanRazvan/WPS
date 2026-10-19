@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const plannerSource = readFileSync(new URL('../js/planner.js', import.meta.url), 'utf8');
-const mainSource = readFileSync(new URL('../js/main.js', import.meta.url), 'utf8');
+const runtimeSource = readFileSync(new URL('../js/app-runtime.js', import.meta.url), 'utf8');
 
 test('planner shell delegates rendered table listener binding to Planner Interaction Wiring', () => {
   assert.match(plannerSource, /import\s+\{[^}]*\bbindPlannerTableInteractions\b[^}]*\}\s+from\s+'\.\/planner-interaction-wiring\.js';/s);
@@ -25,8 +25,8 @@ test('planner shell delegates rendered table listener binding to Planner Interac
 });
 
 test('app shell delegates Planner edit-modal opening and shortcut wiring to Planner Interaction Wiring', () => {
-  assert.match(mainSource, /import\s+\{[^}]*\bbindPlannerControlInteractions\b[^}]*\}\s+from\s+'\.\/planner-interaction-wiring\.js';/s);
-  assert.match(mainSource, /\bbindPlannerControlInteractions\(\{\s*root:\s*document,\s*documentTarget:\s*document,\s*actions:/s);
+  assert.match(runtimeSource, /import\s+\{[^}]*\bbindPlannerControlInteractions\b[^}]*\}\s+from\s+'\.\/planner-interaction-wiring\.js';/s);
+  assert.match(runtimeSource, /\bbindPlannerControlInteractions\(\{\s*root:\s*document,\s*documentTarget:\s*document,\s*actions:/s);
 
   [
     /getElementById\('editSelectionBtn'\)/,
@@ -38,6 +38,6 @@ test('app shell delegates Planner edit-modal opening and shortcut wiring to Plan
     /e\.key\s*===\s*'Enter'/,
     /e\.key\s*===\s*'Escape'/
   ].forEach(pattern => {
-    assert.doesNotMatch(mainSource, pattern);
+    assert.doesNotMatch(runtimeSource, pattern);
   });
 });

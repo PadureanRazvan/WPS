@@ -25,6 +25,7 @@ export function createCappedTubeGeometry(THREE, curve, segments, radius, radialS
     geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
     geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
     geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+    geometry.setAttribute('aLogoPath', new THREE.Float32BufferAttribute(uv.filter((_, index) => index % 2 === 0), 1));
     geometry.setIndex(indices);
     geometry.computeBoundingSphere();
     return geometry;

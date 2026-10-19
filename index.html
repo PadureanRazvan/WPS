@@ -1,125 +1,164 @@
 <!DOCTYPE html>
-<html lang="ro">
+<html lang="ro" data-auth-state="signed-out">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#111111">
     <title>Sherpa - Workforce Planning & Productivity System</title>
-    <link rel="icon" href="favicon.ico?v=20260626-global-centered-fallback" sizes="any">
-    <link rel="icon" type="image/png" sizes="32x32" href="assets/sherpa-favicon-32.png?v=20260626-global-centered-fallback">
-    <link rel="icon" type="image/svg+xml" href="assets/sherpa-favicon.svg?v=20260626-global-centered-fallback">
-    <link rel="shortcut icon" href="favicon.ico?v=20260626-global-centered-fallback">
-    <link rel="apple-touch-icon" sizes="180x180" href="assets/sherpa-apple-touch-icon.png?v=20260626-global-centered-fallback">
-    <link rel="icon" type="image/png" sizes="32x32" href="data:image/png;base64,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">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+    <link rel="icon" href="favicon.ico?v=2026.10.19" sizes="16x16 32x32 48x48">
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/sherpa-favicon-32.png?v=2026.10.19">
+    <link rel="icon" type="image/svg+xml" sizes="any" href="assets/sherpa-favicon.svg?v=2026.10.19">
+    <link rel="shortcut icon" href="favicon.ico?v=2026.10.19">
+    <link rel="apple-touch-icon" sizes="180x180" href="assets/sherpa-apple-touch-icon.png?v=2026.10.19">
+    <script>
+        // Match the saved appearance before CSS paints the sign-in screen.
+        try {
+            const saved = localStorage.getItem('theme');
+            const choices = ['dark', 'aurora', 'light', 'coral', 'fsp'];
+            const preference = !saved || saved === 'system' ? 'system' : choices.includes(saved) ? saved : 'dark';
+            document.documentElement.dataset.theme = preference === 'system'
+                ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : preference;
+            document.documentElement.dataset.themePreference = preference;
+            const language = localStorage.getItem('language');
+            document.documentElement.lang = ['en', 'it'].includes(language) ? language : 'ro';
+        } catch (_) { /* The default palette also works when storage is restricted. */ }
+        document.addEventListener('readystatechange', () => {
+            const label = document.querySelector('#googleLoginBtn [data-translate]');
+            const text = { ro: 'Conectează-te cu Google', en: 'Sign in with Google', it: 'Accedi con Google' };
+            if (label) label.textContent = text[document.documentElement.lang] || text.ro;
+        }, { once: true });
+        // This still runs if an authentication-module download fails.
+        window.addEventListener('error', event => {
+            if (event.target?.id !== 'sherpaEntry') return;
+            const message = {
+                ro: 'Sherpa nu s-a încărcat. Reîncarcă pagina.',
+                en: 'Sherpa could not load. Reload the page.',
+                it: 'Impossibile caricare Sherpa. Ricarica la pagina.'
+            }[document.documentElement.lang] || 'Sherpa could not load. Reload the page.';
+            const error = document.getElementById('loginError');
+            if (error) { error.textContent = message; error.style.display = 'block'; }
+        }, true);
+    </script>
+    <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
     
     <!-- SHERPA_IMPORT_MAP_START -->
     <script type="importmap" id="sherpa-module-map">
 {
     "imports": {
-        "./js/agent-lifecycle.js": "./js/agent-lifecycle.js?v=2026.09.09",
-        "./js/agent-persistence.js": "./js/agent-persistence.js?v=2026.09.09",
-        "./js/app-shell-wiring.js": "./js/app-shell-wiring.js?v=2026.09.09",
-        "./js/auth-policy.js": "./js/auth-policy.js?v=2026.09.09",
-        "./js/auth.js": "./js/auth.js?v=2026.09.09",
-        "./js/charts.js": "./js/charts.js?v=2026.09.09",
-        "./js/chat-actions.js": "./js/chat-actions.js?v=2026.09.09",
-        "./js/chat-service.js": "./js/chat-service.js?v=2026.09.09",
-        "./js/chat.js": "./js/chat.js?v=2026.09.09",
-        "./js/config.js": "./js/config.js?v=2026.09.09",
-        "./js/daily-greeting.js": "./js/daily-greeting.js?v=2026.09.09",
-        "./js/dashboard.js": "./js/dashboard.js?v=2026.09.09",
-        "./js/firebase-config.js": "./js/firebase-config.js?v=2026.09.09",
-        "./js/firebase-environments.js": "./js/firebase-environments.js?v=2026.09.09",
-        "./js/html.js": "./js/html.js?v=2026.09.09",
-        "./js/info-interactive.js": "./js/info-interactive.js?v=2026.09.09",
-        "./js/info-version.js": "./js/info-version.js?v=2026.09.09",
-        "./js/logo-animation.js": "./js/logo-animation.js?v=2026.09.09",
-        "./js/logo-animation.js?v=2026.09.09&fsp=20260906.3": "./js/logo-animation.js?v=2026.09.09",
-        "./js/logo-cores.js": "./js/logo-cores.js?v=2026.09.09",
-        "./js/logo-fsp-core.js": "./js/logo-fsp-core.js?v=2026.09.09",
-        "./js/logo-globe-geometry.js": "./js/logo-globe-geometry.js?v=2026.09.09",
-        "./js/logo-globe-surface.js": "./js/logo-globe-surface.js?v=2026.09.09",
-        "./js/logo-heart-geometry.js": "./js/logo-heart-geometry.js?v=2026.09.09",
-        "./js/logo-heart-surface.js": "./js/logo-heart-surface.js?v=2026.09.09",
-        "./js/logo-infinity-geometry.js": "./js/logo-infinity-geometry.js?v=2026.09.09",
-        "./js/logo-infinity-material.js": "./js/logo-infinity-material.js?v=2026.09.09",
-        "./js/logo-infinity-surface.js": "./js/logo-infinity-surface.js?v=2026.09.09",
-        "./js/logo-materials.js": "./js/logo-materials.js?v=2026.09.09",
-        "./js/logo-shapes.js": "./js/logo-shapes.js?v=2026.09.09",
-        "./js/logo-shapes.js?v=2026.09.09&fsp=20260906.3": "./js/logo-shapes.js?v=2026.09.09",
-        "./js/logo-summit-geometry.js": "./js/logo-summit-geometry.js?v=2026.09.09",
-        "./js/logo-summit-surface.js": "./js/logo-summit-surface.js?v=2026.09.09",
-        "./js/logo-surface-grid.js": "./js/logo-surface-grid.js?v=2026.09.09",
-        "./js/logo-surfaces.js": "./js/logo-surfaces.js?v=2026.09.09",
-        "./js/logo-tube-geometry.js": "./js/logo-tube-geometry.js?v=2026.09.09",
-        "./js/logs-view.js": "./js/logs-view.js?v=2026.09.09",
-        "./js/logs.js": "./js/logs.js?v=2026.09.09",
-        "./js/main.js": "./js/main.js?v=2026.09.09",
-        "./js/planner-edit-command.js": "./js/planner-edit-command.js?v=2026.09.09",
-        "./js/planner-export-command.js": "./js/planner-export-command.js?v=2026.09.09",
-        "./js/planner-interaction-wiring.js": "./js/planner-interaction-wiring.js?v=2026.09.09",
-        "./js/planner-persistence-command.js": "./js/planner-persistence-command.js?v=2026.09.09",
-        "./js/planner-read-model.js": "./js/planner-read-model.js?v=2026.09.09",
-        "./js/planner-selection-state.js": "./js/planner-selection-state.js?v=2026.09.09",
-        "./js/planner-table-view.js": "./js/planner-table-view.js?v=2026.09.09",
-        "./js/planner-view-state.js": "./js/planner-view-state.js?v=2026.09.09",
-        "./js/planner.js": "./js/planner.js?v=2026.09.09",
-        "./js/productivity-agent-actions.js": "./js/productivity-agent-actions.js?v=2026.09.09",
-        "./js/productivity-agent-combobox.js": "./js/productivity-agent-combobox.js?v=2026.09.09",
-        "./js/productivity-agent-selection-view.js": "./js/productivity-agent-selection-view.js?v=2026.09.09",
-        "./js/productivity-calculation.js": "./js/productivity-calculation.js?v=2026.09.09",
-        "./js/productivity-controls.js": "./js/productivity-controls.js?v=2026.09.09",
-        "./js/productivity-dashboard-metrics.js": "./js/productivity-dashboard-metrics.js?v=2026.09.09",
-        "./js/productivity-date-commands.js": "./js/productivity-date-commands.js?v=2026.09.09",
-        "./js/productivity-date-range-picker.js": "./js/productivity-date-range-picker.js?v=2026.09.09",
-        "./js/productivity-detail-rows.js": "./js/productivity-detail-rows.js?v=2026.09.09",
-        "./js/productivity-export-command.js": "./js/productivity-export-command.js?v=2026.09.09",
-        "./js/productivity-metrics.js": "./js/productivity-metrics.js?v=2026.09.09",
-        "./js/productivity-persistence.js": "./js/productivity-persistence.js?v=2026.09.09",
-        "./js/productivity-upload-area.js": "./js/productivity-upload-area.js?v=2026.09.09",
-        "./js/productivity-upload-calendar-actions.js": "./js/productivity-upload-calendar-actions.js?v=2026.09.09",
-        "./js/productivity-upload-calendar-view.js": "./js/productivity-upload-calendar-view.js?v=2026.09.09",
-        "./js/productivity-upload-calendar.js": "./js/productivity-upload-calendar.js?v=2026.09.09",
-        "./js/productivity-upload-flow.js": "./js/productivity-upload-flow.js?v=2026.09.09",
-        "./js/productivity-upload-parsing.js": "./js/productivity-upload-parsing.js?v=2026.09.09",
-        "./js/productivity-view.js": "./js/productivity-view.js?v=2026.09.09",
-        "./js/productivity.js": "./js/productivity.js?v=2026.09.09",
-        "./js/report-read-model.js": "./js/report-read-model.js?v=2026.09.09",
-        "./js/reports-view.js": "./js/reports-view.js?v=2026.09.09",
-        "./js/reports.js": "./js/reports.js?v=2026.09.09",
-        "./js/schedule-import.js": "./js/schedule-import.js?v=2026.09.09",
-        "./js/schedule-overview.js": "./js/schedule-overview.js?v=2026.09.09",
-        "./js/schedule-persistence.js": "./js/schedule-persistence.js?v=2026.09.09",
-        "./js/schedule-semantics.js": "./js/schedule-semantics.js?v=2026.09.09",
-        "./js/schedule-template.js": "./js/schedule-template.js?v=2026.09.09",
-        "./js/schedule-time.js": "./js/schedule-time.js?v=2026.09.09",
-        "./js/schedule-validation.js": "./js/schedule-validation.js?v=2026.09.09",
-        "./js/schedule.js": "./js/schedule.js?v=2026.09.09",
-        "./js/theme-system.js": "./js/theme-system.js?v=2026.09.09",
-        "./js/toast-notifications.js": "./js/toast-notifications.js?v=2026.09.09",
-        "./js/ui.js": "./js/ui.js?v=2026.09.09",
-        "./js/users-command.js": "./js/users-command.js?v=2026.09.09",
-        "./js/users-directory.js": "./js/users-directory.js?v=2026.09.09",
-        "./js/users.js": "./js/users.js?v=2026.09.09",
-        "./js/version.js": "./js/version.js?v=2026.09.09"
+        "./js/agent-lifecycle.js": "./js/agent-lifecycle.js?v=2026.10.19",
+        "./js/agent-persistence.js": "./js/agent-persistence.js?v=2026.10.19",
+        "./js/animation-scheduler.js": "./js/animation-scheduler.js?v=2026.10.19",
+        "./js/app-dependencies.js": "./js/app-dependencies.js?v=2026.10.19",
+        "./js/app-runtime.js": "./js/app-runtime.js?v=2026.10.19",
+        "./js/app-shell-wiring.js": "./js/app-shell-wiring.js?v=2026.10.19",
+        "./js/app-startup.js": "./js/app-startup.js?v=2026.10.19",
+        "./js/auth-policy.js": "./js/auth-policy.js?v=2026.10.19",
+        "./js/auth.js": "./js/auth.js?v=2026.10.19",
+        "./js/charts.js": "./js/charts.js?v=2026.10.19",
+        "./js/chat-actions.js": "./js/chat-actions.js?v=2026.10.19",
+        "./js/chat-service.js": "./js/chat-service.js?v=2026.10.19",
+        "./js/chat.js": "./js/chat.js?v=2026.10.19",
+        "./js/config.js": "./js/config.js?v=2026.10.19",
+        "./js/daily-greeting.js": "./js/daily-greeting.js?v=2026.10.19",
+        "./js/dashboard.js": "./js/dashboard.js?v=2026.10.19",
+        "./js/firebase-config.js": "./js/firebase-config.js?v=2026.10.19",
+        "./js/firebase-environments.js": "./js/firebase-environments.js?v=2026.10.19",
+        "./js/firebase-session.js": "./js/firebase-session.js?v=2026.10.19",
+        "./js/html.js": "./js/html.js?v=2026.10.19",
+        "./js/info-interactive.js": "./js/info-interactive.js?v=2026.10.19",
+        "./js/info-version.js": "./js/info-version.js?v=2026.10.19",
+        "./js/localization.js": "./js/localization.js?v=2026.10.19",
+        "./js/logo-animation.js": "./js/logo-animation.js?v=2026.10.19",
+        "./js/logo-cores.js": "./js/logo-cores.js?v=2026.10.19",
+        "./js/logo-fsp-core.js": "./js/logo-fsp-core.js?v=2026.10.19",
+        "./js/logo-geometry-cache.js": "./js/logo-geometry-cache.js?v=2026.10.19",
+        "./js/logo-globe-geometry.js": "./js/logo-globe-geometry.js?v=2026.10.19",
+        "./js/logo-globe-surface.js": "./js/logo-globe-surface.js?v=2026.10.19",
+        "./js/logo-guidance-material.js": "./js/logo-guidance-material.js?v=2026.10.19",
+        "./js/logo-heart-geometry.js": "./js/logo-heart-geometry.js?v=2026.10.19",
+        "./js/logo-heart-surface.js": "./js/logo-heart-surface.js?v=2026.10.19",
+        "./js/logo-infinity-geometry.js": "./js/logo-infinity-geometry.js?v=2026.10.19",
+        "./js/logo-infinity-material.js": "./js/logo-infinity-material.js?v=2026.10.19",
+        "./js/logo-infinity-surface.js": "./js/logo-infinity-surface.js?v=2026.10.19",
+        "./js/logo-interaction.js": "./js/logo-interaction.js?v=2026.10.19",
+        "./js/logo-materials.js": "./js/logo-materials.js?v=2026.10.19",
+        "./js/logo-preparation.js": "./js/logo-preparation.js?v=2026.10.19",
+        "./js/logo-prepare.worker.js": "./js/logo-prepare.worker.js?v=2026.10.19",
+        "./js/logo-shapes.js": "./js/logo-shapes.js?v=2026.10.19",
+        "./js/logo-shapes.js?v=2026.10.19&fsp=20260906.3": "./js/logo-shapes.js?v=2026.10.19",
+        "./js/logo-story.js": "./js/logo-story.js?v=2026.10.19",
+        "./js/logo-summit-geometry.js": "./js/logo-summit-geometry.js?v=2026.10.19",
+        "./js/logo-summit-surface.js": "./js/logo-summit-surface.js?v=2026.10.19",
+        "./js/logo-surface-grid.js": "./js/logo-surface-grid.js?v=2026.10.19",
+        "./js/logo-surfaces.js": "./js/logo-surfaces.js?v=2026.10.19",
+        "./js/logo-tube-geometry.js": "./js/logo-tube-geometry.js?v=2026.10.19",
+        "./js/logs-view.js": "./js/logs-view.js?v=2026.10.19",
+        "./js/logs.js": "./js/logs.js?v=2026.10.19",
+        "./js/main.js": "./js/main.js?v=2026.10.19",
+        "./js/planner-edit-command.js": "./js/planner-edit-command.js?v=2026.10.19",
+        "./js/planner-export-command.js": "./js/planner-export-command.js?v=2026.10.19",
+        "./js/planner-interaction-wiring.js": "./js/planner-interaction-wiring.js?v=2026.10.19",
+        "./js/planner-persistence-command.js": "./js/planner-persistence-command.js?v=2026.10.19",
+        "./js/planner-read-model.js": "./js/planner-read-model.js?v=2026.10.19",
+        "./js/planner-selection-state.js": "./js/planner-selection-state.js?v=2026.10.19",
+        "./js/planner-table-view.js": "./js/planner-table-view.js?v=2026.10.19",
+        "./js/planner-view-state.js": "./js/planner-view-state.js?v=2026.10.19",
+        "./js/planner.js": "./js/planner.js?v=2026.10.19",
+        "./js/productivity-agent-actions.js": "./js/productivity-agent-actions.js?v=2026.10.19",
+        "./js/productivity-agent-combobox.js": "./js/productivity-agent-combobox.js?v=2026.10.19",
+        "./js/productivity-agent-selection-view.js": "./js/productivity-agent-selection-view.js?v=2026.10.19",
+        "./js/productivity-calculation.js": "./js/productivity-calculation.js?v=2026.10.19",
+        "./js/productivity-controls.js": "./js/productivity-controls.js?v=2026.10.19",
+        "./js/productivity-dashboard-metrics.js": "./js/productivity-dashboard-metrics.js?v=2026.10.19",
+        "./js/productivity-date-commands.js": "./js/productivity-date-commands.js?v=2026.10.19",
+        "./js/productivity-date-range-picker.js": "./js/productivity-date-range-picker.js?v=2026.10.19",
+        "./js/productivity-detail-rows.js": "./js/productivity-detail-rows.js?v=2026.10.19",
+        "./js/productivity-export-command.js": "./js/productivity-export-command.js?v=2026.10.19",
+        "./js/productivity-metrics.js": "./js/productivity-metrics.js?v=2026.10.19",
+        "./js/productivity-persistence.js": "./js/productivity-persistence.js?v=2026.10.19",
+        "./js/productivity-upload-area.js": "./js/productivity-upload-area.js?v=2026.10.19",
+        "./js/productivity-upload-calendar-actions.js": "./js/productivity-upload-calendar-actions.js?v=2026.10.19",
+        "./js/productivity-upload-calendar-view.js": "./js/productivity-upload-calendar-view.js?v=2026.10.19",
+        "./js/productivity-upload-calendar.js": "./js/productivity-upload-calendar.js?v=2026.10.19",
+        "./js/productivity-upload-flow.js": "./js/productivity-upload-flow.js?v=2026.10.19",
+        "./js/productivity-upload-parsing.js": "./js/productivity-upload-parsing.js?v=2026.10.19",
+        "./js/productivity-view.js": "./js/productivity-view.js?v=2026.10.19",
+        "./js/productivity.js": "./js/productivity.js?v=2026.10.19",
+        "./js/report-read-model.js": "./js/report-read-model.js?v=2026.10.19",
+        "./js/reports-view.js": "./js/reports-view.js?v=2026.10.19",
+        "./js/reports.js": "./js/reports.js?v=2026.10.19",
+        "./js/schedule-import.js": "./js/schedule-import.js?v=2026.10.19",
+        "./js/schedule-overview.js": "./js/schedule-overview.js?v=2026.10.19",
+        "./js/schedule-persistence.js": "./js/schedule-persistence.js?v=2026.10.19",
+        "./js/schedule-semantics.js": "./js/schedule-semantics.js?v=2026.10.19",
+        "./js/schedule-template.js": "./js/schedule-template.js?v=2026.10.19",
+        "./js/schedule-time.js": "./js/schedule-time.js?v=2026.10.19",
+        "./js/schedule-validation.js": "./js/schedule-validation.js?v=2026.10.19",
+        "./js/schedule.js": "./js/schedule.js?v=2026.10.19",
+        "./js/sign-in-ui.js": "./js/sign-in-ui.js?v=2026.10.19",
+        "./js/theme-system.js": "./js/theme-system.js?v=2026.10.19",
+        "./js/toast-notifications.js": "./js/toast-notifications.js?v=2026.10.19",
+        "./js/ui.js": "./js/ui.js?v=2026.10.19",
+        "./js/users-command.js": "./js/users-command.js?v=2026.10.19",
+        "./js/users-directory.js": "./js/users-directory.js?v=2026.10.19",
+        "./js/users.js": "./js/users.js?v=2026.10.19",
+        "./js/version.js": "./js/version.js?v=2026.10.19"
     }
 }
     </script>
     <!-- SHERPA_IMPORT_MAP_END -->
 
     <!-- CSS Files -->
-    <link rel="stylesheet" href="css/base.css?v=2026.09.09">
-    <link rel="stylesheet" href="css/layout.css?v=2026.09.09">
-    <link rel="stylesheet" href="css/components.css?v=2026.09.09">
-    <link rel="stylesheet" href="css/planner.css?v=2026.09.09">
-    <link rel="stylesheet" href="css/responsive.css?v=2026.09.09">
-    <link rel="stylesheet" href="css/chat.css?v=2026.09.09">
-    <link rel="stylesheet" href="css/schedule.css?v=2026.09.09">
-    <link rel="stylesheet" href="css/info.css?v=2026.09.09">
-    <link rel="stylesheet" href="css/fsp-logo.css?v=2026.09.09">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/litepicker/dist/css/litepicker.css"/>
+    <link rel="stylesheet" href="css/base.css?v=2026.10.19">
+    <link rel="stylesheet" href="css/layout.css?v=2026.10.19">
+    <link rel="stylesheet" href="css/components.css?v=2026.10.19">
+    <link rel="stylesheet" href="css/planner.css?v=2026.10.19">
+    <link rel="stylesheet" href="css/responsive.css?v=2026.10.19">
+    <link rel="stylesheet" href="css/chat.css?v=2026.10.19">
+    <link rel="stylesheet" href="css/schedule.css?v=2026.10.19">
+    <link rel="stylesheet" href="css/info.css?v=2026.10.19">
+    <link rel="stylesheet" href="css/fsp-logo.css?v=2026.10.19">
     <style>
         /* FIX: Styles for the selection counter visibility */
         .selection-counter {
@@ -147,22 +186,25 @@
     <div id="loginScreen" class="login-screen">
         <div class="login-container">
             <div class="login-logo">
-                <button id="loginLogo" class="fsp-brand-logo" type="button" data-fsp-logo aria-label="FSP Global — click pentru forma următoare">
+                <button id="loginLogo" class="fsp-brand-logo" type="button" data-fsp-logo aria-label="FSP Global">
                     <img class="fsp-logo-full" src="assets/branding/fsp-global-still.webp?v=20260906.3" width="960" height="807" alt="FSP Global" draggable="false" fetchpriority="high">
                 </button>
                 <h1 class="login-title">Sherpa</h1>
                 <p class="login-subtitle" id="loginGreeting">Workforce Planning System</p>
             </div>
-            <button id="googleLoginBtn" class="google-login-btn">
+            <button id="googleLoginBtn" class="google-login-btn" type="button" aria-busy="false" disabled>
+                <span class="login-indicator" aria-hidden="true">
                 <svg class="google-icon" viewBox="0 0 24 24" width="20" height="20">
                     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.27-4.74 3.27-8.1z"/>
                     <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
                     <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
                     <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                 </svg>
+                <span class="login-spinner" hidden></span>
+                </span>
                 <span data-translate="login-google">Conecteaza-te cu Google</span>
             </button>
-            <div id="loginError" class="login-error" style="display: none;"></div>
+            <div id="loginError" class="login-error" role="alert" aria-atomic="true" style="display: none;"></div>
         </div>
     </div>
 
@@ -177,7 +219,7 @@
                 </span>
             </button>
             <div class="logo">
-                <button id="sherpaLogo" class="fsp-brand-logo" type="button" data-fsp-logo aria-label="FSP Global — click pentru forma următoare">
+                <button id="sherpaLogo" class="fsp-brand-logo" type="button" data-fsp-logo aria-label="FSP Global">
                     <img class="fsp-logo-full" src="assets/branding/fsp-global-still.webp?v=20260906.3" width="960" height="807" alt="FSP Global" draggable="false">
                     <img class="fsp-logo-compact" src="assets/branding/fsp-global-compact-still.webp?v=20260906.3" width="512" height="410" alt="FSP Global" draggable="false">
                 </button>
@@ -307,10 +349,11 @@
                     <span id="userName" class="user-name"></span>
                     <span id="userEmail" class="user-email"></span>
                 </div>
-                <button id="logoutBtn" class="logout-btn" data-translate="logout" title="Deconectare">
-                    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                <button id="logoutBtn" class="logout-btn" type="button" data-translate-title="logout" aria-label="Deconectare" title="Deconectare">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true" focusable="false">
                         <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
                     </svg>
+                    <span class="logout-label" data-translate="logout">Deconectare</span>
                 </button>
             </div>
         </aside>
@@ -962,9 +1005,8 @@
     <!-- Smoke Effect Canvas -->
 
     <!-- JavaScript Files -->
-    <script src="https://cdn.jsdelivr.net/npm/litepicker/dist/litepicker.js"></script>
     <!-- main.js owns the application module graph so each module has one identity. -->
-    <script src="js/main.js?v=2026.09.09" type="module"></script>
+    <script id="sherpaEntry" src="js/main.js?v=2026.10.19" type="module"></script>
 
     <!-- Deactivate User Modal -->
     <div id="deactivateModal" class="edit-modal">

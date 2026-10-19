@@ -1,40 +1,49 @@
+import { getPreparedLogoEnvironment } from './logo-geometry-cache.js?v=2026.10.19';
+
 /** Material controls shared by the sculptural logo figures. */
 export function prepareLogoMaterial(material, opacity = 1) {
     material.userData.logoOpacity = opacity;
     material.userData.logoEmissiveIntensity = material.emissiveIntensity ?? 0;
     material.userData.logoPresence = { value: 0 };
+    material.userData.logoDissolve = { value: new Float32Array([1, 0, 0]) };
     material.transparent = opacity < 1;
     material.opacity = opacity;
     material.depthWrite = opacity >= 0.99;
     material.onBeforeCompile = shader => {
         shader.uniforms.uLogoPresence = material.userData.logoPresence;
+        shader.uniforms.uLogoDissolve = material.userData.logoDissolve;
         shader.vertexShader = shader.vertexShader
             .replace('#include <common>', '#include <common>\nvarying vec3 vLogoPosition;')
-            .replace('#include <begin_vertex>', '#include <begin_vertex>\nvLogoPosition = position;');
+            .replace('#include <begin_vertex>', '#include <begin_vertex>\nvLogoPosition = (modelViewMatrix * vec4(position, 1.0)).xyz;');
         shader.fragmentShader = shader.fragmentShader.replace('#include <common>', `
             #include <common>
             uniform float uLogoPresence;
+            uniform vec3 uLogoDissolve;
             varying vec3 vLogoPosition;
             // Device-pixel coverage stays fine at every preview size, with a
             // shared threshold across overlapping parts of the same sculpture.
+            // View-space coordinates keep the sweep aligned across independently
+            // transformed Earth, orbit, route, inlay and identity meshes.
             float logoCoverageNoise(vec2 pixel) {
                 return fract(52.9829189 * fract(dot(floor(pixel), vec2(0.06711056, 0.00583715))));
             }
         `).replace('#include <clipping_planes_fragment>', `
             #include <clipping_planes_fragment>
             if (uLogoPresence < 0.999) {
-                float field = logoCoverageNoise(gl_FragCoord.xy) * 0.9
-                    + clamp((vLogoPosition.y + 1.5) / 3.0, 0.0, 1.0) * 0.1;
+                float radial = clamp(length(vLogoPosition.xy) / 1.65, 0.0, 1.0);
+                float directional = clamp((dot(vLogoPosition.xy, uLogoDissolve.yz) + 1.5) / 3.0, 0.0, 1.0);
+                float spatial = mix(directional, radial, uLogoDissolve.x);
+                float field = logoCoverageNoise(gl_FragCoord.xy) * 0.3 + spatial * 0.7;
                 if (field > uLogoPresence) discard;
             }
         `);
     };
-    material.customProgramCacheKey = () => 'sherpa-sculpture-dissolve-v4';
+    material.customProgramCacheKey = () => 'sherpa-sculpture-dissolve-v6';
     return material;
 }
 
 /** Soft boxes are generated locally; no remote HDR download or extra request. */
-export function createLogoStudioLighting(THREE, renderer, scene) {
+function buildStudioEnvironment(THREE, renderer) {
     const room = new THREE.Scene();
     room.background = new THREE.Color(0.14, 0.18, 0.2);
     const panelGeometry = new THREE.PlaneGeometry(1, 1);
@@ -60,6 +69,18 @@ export function createLogoStudioLighting(THREE, renderer, scene) {
         panelGeometry.dispose();
         panelMaterials.forEach(material => material.dispose());
     }
+    return environment;
+}
+
+export function createLogoStudioLighting(THREE, renderer, scene) {
+    const prepared = getPreparedLogoEnvironment(THREE);
+    let environment;
+    if (prepared) {
+        const texture = new THREE.DataTexture(prepared.pixels, prepared.width, prepared.height, THREE.RGBAFormat, THREE.HalfFloatType);
+        Object.assign(texture, prepared.texture);
+        texture.needsUpdate = true;
+        environment = { texture, dispose: () => texture.dispose() };
+    } else environment = buildStudioEnvironment(THREE, renderer);
     scene.environment = environment.texture;
     scene.environmentIntensity = 0.8;
     // Explicit maps let each finish keep its own reflection strength. Three
@@ -80,6 +101,8 @@ export function createLogoStudioLighting(THREE, renderer, scene) {
     scene.add(ambient, key, fill, rim);
     let disposed = false;
     return {
+        environment,
+        preparation: prepared ? prepared.source || 'worker' : 'main-thread',
         dispose() {
             if (disposed) return;
             disposed = true;

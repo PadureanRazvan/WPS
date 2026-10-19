@@ -1,7 +1,12 @@
 /* ===== LOGIN SCREEN ===== */
+html[data-auth-state="signed-out"] :is(.edit-modal, .rotate-landscape-overlay, #selectionCounter) {
+    display: none;
+}
+
 .login-screen {
     display: flex;
     align-items: center;
+    align-items: safe center;
     justify-content: center;
     position: fixed;
     top: 0;
@@ -12,7 +17,8 @@
     padding: max(1rem, var(--safe-area-top)) max(1rem, var(--safe-area-right)) max(1rem, var(--safe-area-bottom)) max(1rem, var(--safe-area-left));
     background: var(--space-gradient);
     z-index: 9999;
-    overflow: hidden;
+    overflow: auto;
+    overscroll-behavior: contain;
 }
 
 .login-screen::before {
@@ -52,13 +58,15 @@
     box-shadow: var(--overlay-shadow-raised);
     position: relative;
     z-index: 1;
-    animation: loginFadeIn 0.6s ease-out;
+    max-width: 100%;
+    flex-shrink: 0;
+    animation: loginFadeIn 0.42s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @keyframes loginFadeIn {
     from {
         opacity: 0;
-        transform: translateY(20px) scale(0.95);
+        transform: translateY(10px) scale(0.99);
     }
     to {
         opacity: 1;
@@ -71,6 +79,7 @@
     flex-direction: column;
     align-items: center;
     gap: 0.5rem;
+    max-width: 100%;
 }
 
 .login-logo canvas {
@@ -99,6 +108,10 @@
     font-size: 0.95rem;
     color: var(--text-secondary);
     letter-spacing: 1px;
+    max-width: 52ch;
+    text-align: center;
+    line-height: 1.6;
+    text-wrap: balance;
 }
 
 .google-login-btn {
@@ -113,7 +126,9 @@
     font-size: 1rem;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.3s ease;
+    max-width: 100%;
+    min-height: 44px;
+    transition: background-color 160ms ease, border-color 160ms ease, box-shadow 180ms ease, transform 140ms ease;
     white-space: nowrap;
 }
 
@@ -129,19 +144,43 @@
 }
 
 .google-login-btn:disabled {
-    opacity: 0.6;
+    opacity: 0.82;
     cursor: not-allowed;
     transform: none;
 }
 
 .google-icon {
     flex-shrink: 0;
+    transition: opacity 120ms ease;
+}
+
+.login-indicator {
+    display: grid;
+    place-items: center;
+    width: 20px;
+    height: 20px;
+    flex: 0 0 20px;
+}
+
+.login-indicator > * { grid-area: 1 / 1; }
+.google-login-btn[aria-busy="true"] .google-icon { opacity: 0; }
+.login-indicator [hidden] { display: none; }
+.google-login-btn > [data-translate] { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+
+@media (max-height: 480px) {
+    .login-container { padding-block: 1.25rem; gap: 1.25rem; }
+}
+
+@media (max-height: 420px) {
+    .login-screen { align-items: flex-start; }
+    .login-container { margin-block: auto; }
 }
 
 .login-spinner {
     width: 20px;
     height: 20px;
-    border: 2px solid rgba(255, 255, 255, 0.3);
+    border: 2px solid var(--border);
+    border-color: color-mix(in srgb, var(--text-secondary) 30%, transparent);
     border-top-color: var(--accent);
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
@@ -152,14 +191,26 @@
 }
 
 .login-error {
+    /* A failure message wraps within the original card's existing width. */
+    contain: inline-size;
+    align-self: stretch;
     padding: 10px 20px;
-    background: rgba(244, 67, 54, 0.15);
-    border: 1px solid rgba(244, 67, 54, 0.4);
+    background: var(--surface-elevated);
+    background: color-mix(in srgb, var(--error) 12%, transparent);
+    border: 1px solid var(--error);
+    border-color: color-mix(in srgb, var(--error) 38%, transparent);
     border-radius: 8px;
-    color: #ff6b6b;
+    color: var(--text-primary);
+    color: color-mix(in srgb, var(--error) 80%, var(--text-primary));
     font-size: 0.85rem;
     text-align: center;
-    max-width: 320px;
+    max-width: 100%;
+}
+
+.login-error[data-kind="info"] {
+    color: var(--text-secondary);
+    background: var(--surface-highlight);
+    border-color: var(--border);
 }
 
 /* ===== SIDEBAR USER INFO ===== */
@@ -254,7 +305,7 @@
     cursor: pointer;
     padding: 5px;
     border-radius: 6px;
-    transition: all 0.2s ease;
+    transition: background-color 160ms ease, color 160ms ease;
     flex-shrink: 0;
     display: flex;
     align-items: center;
@@ -266,16 +317,22 @@
     background: rgba(244, 67, 54, 0.1);
 }
 
-/* Collapsed sidebar: hide user details, show only avatar */
+.logout-btn > svg { display: none; }
+
+/* Keep sign-out available in the narrow navigation rail. */
 .sidebar.collapsed .sidebar-user-info {
     justify-content: center;
-    padding: 10px 6px;
+    padding: 6px 0;
 }
 
 .sidebar.collapsed .user-details,
-.sidebar.collapsed .logout-btn {
+.sidebar.collapsed .logout-label {
     display: none;
 }
+
+.sidebar.collapsed .user-avatar { display: none !important; }
+.sidebar.collapsed .logout-btn { display: flex; width: 44px; min-height: 44px; padding: 0; }
+.sidebar.collapsed .logout-btn > svg { display: block; }
 
 /* Buttons */
 .btn {

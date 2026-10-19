@@ -97,12 +97,18 @@
 
     .sidebar-user-info {
         justify-content: center;
-        padding: 12px 8px;
+        padding: 6px 0;
     }
 
     .sidebar-user-info .logout-btn {
-        display: none;
+        display: flex;
+        width: 44px;
+        min-height: 44px;
+        padding: 0;
     }
+    .sidebar-user-info .logout-btn > svg { display: block; }
+    .sidebar-user-info .logout-label { display: none; }
+    .sidebar-user-info .user-avatar { display: none !important; }
 
     .sidebar-utilities {
         padding: 8px 4px;
@@ -536,12 +542,11 @@
 
     /* Sidebar user info */
     .sidebar-user-info {
-        padding: 8px 4px;
+        padding: 6px 0;
         justify-content: center;
     }
 
-    .sidebar-user-info .user-details,
-    .sidebar-user-info .logout-btn {
+    .sidebar-user-info .user-details {
         display: none;
     }
 

@@ -2,14 +2,14 @@
 import { db } from './firebase-config.js';
 import { collection, doc, setDoc, deleteDoc, getDocs, onSnapshot } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 import { getPlannerData } from './planner.js';
-import { getUsersData } from './users.js?v=2026.09.09';
-import { showTemporaryMessage } from './ui.js?v=2026.09.09';
-import { translations, getMonthKey } from './config.js?v=2026.09.09';
+import { getUsersData } from './users.js?v=2026.10.19';
+import { showTemporaryMessage } from './ui.js?v=2026.10.19';
+import { translations, getMonthKey } from './config.js?v=2026.10.19';
 import { hasPerAgentProductivityEligibleDate, normalizeProductivityName } from './productivity-metrics.js';
 import { buildProductivityExportCsv, getProductivityDateStatus } from './productivity-upload-calendar.js';
 import { createProductivityDateCommands } from './productivity-date-commands.js';
-import { buildProductivityUploadCalendarView, buildProductivityUploadDateStatusView, buildProductivityUploadSuccessView } from './productivity-upload-calendar-view.js?v=2026.09.09';
-import { bindProductivityUploadCalendarActions } from './productivity-upload-calendar-actions.js?v=2026.09.09';
+import { buildProductivityUploadCalendarView, buildProductivityUploadDateStatusView, buildProductivityUploadSuccessView } from './productivity-upload-calendar-view.js?v=2026.10.19';
+import { bindProductivityUploadCalendarActions } from './productivity-upload-calendar-actions.js?v=2026.10.19';
 import { bindProductivityUploadArea } from './productivity-upload-area.js';
 import { processProductivityUploadFile } from './productivity-upload-flow.js';
 import { parseCallsCSV, parseTicketsXLSX } from './productivity-upload-parsing.js';
@@ -22,13 +22,13 @@ import {
     exportProductivityWorkbook
 } from './productivity-export-command.js';
 import { bindProductivityDateRangePicker } from './productivity-date-range-picker.js';
-import { bindProductivityControls } from './productivity-controls.js?v=2026.09.09';
-import { bindProductivityAgentActions, createProductivityAgentActions } from './productivity-agent-actions.js?v=2026.09.09';
-import { bindProductivityAgentCombobox } from './productivity-agent-combobox.js?v=2026.09.09';
+import { bindProductivityControls } from './productivity-controls.js?v=2026.10.19';
+import { bindProductivityAgentActions, createProductivityAgentActions } from './productivity-agent-actions.js?v=2026.10.19';
+import { bindProductivityAgentCombobox } from './productivity-agent-combobox.js?v=2026.10.19';
 import {
     buildProductivityAgentSelectionView,
     filterProductivityAgentSelection
-} from './productivity-agent-selection-view.js?v=2026.09.09';
+} from './productivity-agent-selection-view.js?v=2026.10.19';
 import {
     calculateProductivityOverview,
     formatProductivityDateKey,
@@ -54,6 +54,8 @@ let selectedAgents = new Set(); // normalized names of selected agents
 let detailSearchCommitted = false;
 let uploadCalendarMonth = new Date();
 let unsubscribeFromProductivity = null;
+let productivitySession = 0;
+let cancelInitialProductivity = null;
 let visibleAgentSearchResults = [];
 let agentCombobox = null;
 const productivityStore = createProductivityFirestoreStore({
@@ -134,9 +136,10 @@ async function deleteFromFirestore(dateKey) {
     }
 }
 
-async function loadAllFromFirestore() {
+async function loadAllFromFirestore(session = productivitySession) {
     try {
         const result = await productivityStore.loadAll();
+        if (session !== productivitySession) return;
         replaceProductivityData(result.dataByDate);
         console.log(`[Productivity] Loaded ${result.size} dates from Firestore.`);
     } catch (err) {
@@ -144,7 +147,8 @@ async function loadAllFromFirestore() {
     }
 }
 
-function subscribeToProductivityData() {
+function subscribeToProductivityData(session) {
+    cancelInitialProductivity?.();
     if (unsubscribeFromProductivity) {
         unsubscribeFromProductivity();
         unsubscribeFromProductivity = null;
@@ -152,24 +156,28 @@ function subscribeToProductivityData() {
 
     return new Promise(resolve => {
         let resolved = false;
+        const finish = () => {
+            if (resolved) return;
+            resolved = true;
+            if (cancelInitialProductivity === finish) cancelInitialProductivity = null;
+            resolve();
+        };
+        cancelInitialProductivity = finish;
         unsubscribeFromProductivity = productivityStore.subscribe({
             onData(result) {
+                if (session !== productivitySession) return;
                 replaceProductivityData(result.dataByDate);
                 console.log(`[Productivity] Synced ${result.size} dates from Firestore.`);
                 refreshProductivityViews({ source: 'snapshot' });
-                if (!resolved) {
-                    resolved = true;
-                    resolve();
-                }
+                finish();
             },
             async onError(err) {
+                if (session !== productivitySession) return;
                 console.error('[Productivity] Firestore listener error:', err);
-                await loadAllFromFirestore();
+                await loadAllFromFirestore(session);
+                if (session !== productivitySession) return;
                 refreshProductivityViews({ source: 'fallback-load' });
-                if (!resolved) {
-                    resolved = true;
-                    resolve();
-                }
+                finish();
             }
         });
     });
@@ -378,8 +386,9 @@ function refreshProductivityViews({ source = 'manual' } = {}) {
 }
 
 export async function refreshProductivityData() {
-    await loadAllFromFirestore();
-    refreshProductivityViews({ source: 'manual-refresh' });
+    const session = productivitySession;
+    await loadAllFromFirestore(session);
+    if (session === productivitySession) refreshProductivityViews({ source: 'manual-refresh' });
 }
 
 function exportCurrentSelection() {
@@ -567,6 +576,7 @@ function setupUploadArea(areaId, fileInputId, fileNameId, fileType, onParsed) {
 // --- Initialization ---
 
 export async function initializeProductivity() {
+    const session = ++productivitySession;
     // Upload date selector — inline calendar
     const dateInput = document.getElementById('uploadDate');
     if (dateInput && !uploadDate) {
@@ -577,7 +587,8 @@ export async function initializeProductivity() {
     }
 
     // Load persisted data from Firestore and keep it fresh across sessions.
-    await subscribeToProductivityData();
+    await subscribeToProductivityData(session);
+    if (session !== productivitySession) return;
 
     if (dateInput) {
         setUploadDate(uploadDate);
@@ -646,6 +657,9 @@ export async function initializeProductivity() {
 }
 
 export function cleanupProductivity() {
+    productivitySession++;
+    cancelInitialProductivity?.();
+    cancelInitialProductivity = null;
     agentCombobox?.cleanup();
     agentCombobox = null;
     if (unsubscribeFromProductivity) {

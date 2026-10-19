@@ -1,12 +1,14 @@
-import { prepareLogoMaterial } from './logo-materials.js?v=2026.09.09';
-import { createGlobeGeometry } from './logo-globe-geometry.js?v=2026.09.09';
-import { createHeartGeometry, createHeartInlayGeometry } from './logo-heart-geometry.js?v=2026.09.09';
-import { getSummitRoutePoint, getSummitAscentState } from './logo-summit-surface.js?v=2026.09.09';
-import { createSummitGeometry } from './logo-summit-geometry.js?v=2026.09.09';
-import { GLOBE_RADII, getGlobeColor, getGlobeOrbitPoint, getGlobePoint } from './logo-globe-surface.js?v=2026.09.09';
+import { prepareLogoMaterial } from './logo-materials.js?v=2026.10.19';
+import { createGlobeGeometry } from './logo-globe-geometry.js?v=2026.10.19';
+import { createHeartGeometry, createHeartInlayGeometry } from './logo-heart-geometry.js?v=2026.10.19';
+import { getSummitRoutePoint, getSummitAscentState } from './logo-summit-surface.js?v=2026.10.19';
+import { createSummitGeometry } from './logo-summit-geometry.js?v=2026.10.19';
+import { GLOBE_RADII, getGlobeColor, getGlobeOrbitPoint, getGlobePoint } from './logo-globe-surface.js?v=2026.10.19';
 
-import { createInfinityGeometry } from './logo-infinity-geometry.js?v=2026.09.09';
-import { createInfinityMaterials } from './logo-infinity-material.js?v=2026.09.09';
+import { createInfinityGeometry } from './logo-infinity-geometry.js?v=2026.10.19';
+import { createInfinityMaterials } from './logo-infinity-material.js?v=2026.10.19';
+import { getGlobeOrbitState, getGlobeSpinState, getHeartSignalState } from './logo-story.js?v=2026.10.19';
+import { addGuidanceHighlight } from './logo-guidance-material.js?v=2026.10.19';
 
 function createGlobeGraticule(THREE) {
     const vertices = [];
@@ -59,10 +61,11 @@ export function createGlobeCore(THREE) {
     const coastline = new THREE.LineSegments(geometry.coastline, prepareLogoMaterial(new THREE.LineBasicMaterial({
         color: 0xa9e5cb, toneMapped: false
     }), 0.18));
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(GLOBE_RADII.orbit, 0.009, 8, 160), prepareLogoMaterial(new THREE.MeshPhysicalMaterial({
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(GLOBE_RADII.orbit, 0.012, 12, 160), prepareLogoMaterial(new THREE.MeshPhysicalMaterial({
         color: 0xe5c891, metalness: 0.7, roughness: 0.3, clearcoat: 0.3, envMapIntensity: 0.85
     })));
     const orbitalFrame = new THREE.Group();
+    orbitalFrame.name = 'orbital-frame';
     ring.rotation.x = 0.88;
     orbitalFrame.rotation.z = -0.38;
     orbitalFrame.add(ring);
@@ -70,9 +73,19 @@ export function createGlobeCore(THREE) {
         color: 0xf0dcb1, metalness: 0.64, roughness: 0.23, clearcoat: 0.6, envMapIntensity: 0.8
     })));
     satellite.name = 'orbital-bead';
-    group.userData.animate = now => satellite.position.set(...getGlobeOrbitPoint(0.8 + now * 0.00018));
+    const graticule = createGlobeGraticule(THREE);
+    const earth = new THREE.Group();
+    earth.name = 'rotating-earth';
+    earth.add(ocean, land, cliffs, coastline, graticule);
+    group.userData.animate = (now, { age = now, reducedMotion = false, compact = false } = {}) => {
+        earth.rotation.y = getGlobeSpinState(age, reducedMotion).angle;
+        satellite.position.set(...getGlobeOrbitPoint(getGlobeOrbitState(age, reducedMotion).angle));
+        satellite.scale.setScalar(compact ? 1.3 : 1);
+        graticule.visible = !compact;
+        coastline.visible = !compact;
+    };
     group.userData.animate(0);
-    group.add(ocean, land, cliffs, coastline, createGlobeGraticule(THREE), orbitalFrame, satellite);
+    group.add(earth, orbitalFrame, satellite);
     group.visible = false;
     return group;
 }
@@ -80,8 +93,8 @@ export function createGlobeCore(THREE) {
 export function createHeartCore(THREE) {
     const group = new THREE.Group();
     const material = prepareLogoMaterial(new THREE.MeshPhysicalMaterial({
-        vertexColors: true, metalness: 0.3, roughness: 0.35, specularIntensity: 0.7,
-        clearcoat: 0.4, clearcoatRoughness: 0.3, envMapIntensity: 0.4,
+        vertexColors: true, metalness: 0.24, roughness: 0.38, specularIntensity: 0.58,
+        clearcoat: 0.46, clearcoatRoughness: 0.32, envMapIntensity: 0.4,
         emissive: 0x310009, emissiveIntensity: 0.1
     }));
     const heart = new THREE.Mesh(createHeartGeometry(THREE), material);
@@ -91,6 +104,8 @@ export function createHeartCore(THREE) {
         clearcoat: 0.25, envMapIntensity: 0.65, emissive: 0x2a0d04, emissiveIntensity: 0.04
     })));
     inlay.name = 'pulse-inlay';
+    const guidance = addGuidanceHighlight(inlay.material);
+    group.userData.animate = (now, { age = now, reducedMotion = false } = {}) => guidance.set(getHeartSignalState(age, reducedMotion));
     group.add(heart, inlay);
     group.visible = false;
     return group;
@@ -112,6 +127,7 @@ export function createSummitCore(THREE) {
         color: 0xdcb67b, metalness: 0.74, roughness: 0.3, clearcoat: 0.25, envMapIntensity: 0.7
     })));
     route.name = 'golden-ascent';
+    const guidance = addGuidanceHighlight(route.material, { width: 0.045, intensity: 0.24 });
     const beacon = new THREE.Mesh(new THREE.SphereGeometry(0.023, 16, 10), prepareLogoMaterial(new THREE.MeshPhysicalMaterial({
         color: 0xf1d49a, metalness: 0.58, roughness: 0.26, clearcoat: 0.4,
         envMapIntensity: 0.8, emissive: 0x80541a, emissiveIntensity: 0.18
@@ -119,6 +135,7 @@ export function createSummitCore(THREE) {
     beacon.name = 'ascent-beacon';
     group.userData.animate = (now, { age = now, reducedMotion = false } = {}) => {
         const { progress, strength } = getSummitAscentState(age, reducedMotion);
+        guidance.set({ progress, strength: reducedMotion ? 0 : strength });
         const [x, y, z] = getSummitRoutePoint(progress);
         beacon.position.set(x, y, z + 0.014);
         beacon.scale.setScalar(strength);

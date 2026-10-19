@@ -4,7 +4,7 @@ export async function verifyControls(page) {
     const read = () => page.evaluate(() => window.logoStudio.controllers.map(controller => controller.getDiagnostics()));
     const step = (ms, frameMs = 1000 / 60) => page.evaluate(([ms, frameMs]) => window.stepLogo(ms, frameMs), [ms, frameMs]);
     const checks = [];
-    const names = ['fsp', 'globe', 'heart', 'summit', 'infinity'];
+    const names = await page.evaluate(() => window.logoStudio.names);
     await page.evaluate(() => window.logoStudio.controllers.forEach(controller => controller.resume()));
     const initial = await read();
     await step(15000, 80);
@@ -30,7 +30,7 @@ export async function verifyControls(page) {
     await page.evaluate(() => document.getElementById('figure-0').focus());
     await page.keyboard.press('Enter');
     await step(1);
-    assert.equal((await read())[0].shape, 'globe');
+    assert.equal((await read())[0].shape, names[1]);
     await page.evaluate(() => document.getElementById('pause').click());
     await step(1);
     checks.push('global pause stops drawing; native keyboard selection advances once');
@@ -71,11 +71,11 @@ export async function verifyControls(page) {
     checks.push('compact preview uses 44 px controls and retains the existing canvases');
 
     await page.evaluate(() => document.querySelector('[data-inspect="heart"]').click());
-    await page.waitForFunction(() => window.logoStudio.controllers.every((controller, i) => controller.getDiagnostics().visible === (i === 2)), null, {polling:50});
+    await page.waitForFunction(() => window.logoStudio.controllers.every((controller, i) => controller.getDiagnostics().visible === (i === window.logoStudio.names.indexOf('heart'))), null, {polling:50});
     await step(1);
     const beforeInspect = await read();
     await step(500);
-    assert.ok((await read()).every((state, i) => i === 2 ? state.frame > beforeInspect[i].frame : state.frame === beforeInspect[i].frame));
+    assert.ok((await read()).every((state, i) => i === names.indexOf('heart') ? state.frame > beforeInspect[i].frame : state.frame === beforeInspect[i].frame));
     checks.push('close inspection renders only the visible figure');
     return checks;
 }

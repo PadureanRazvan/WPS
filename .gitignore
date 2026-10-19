@@ -7,3 +7,4 @@ functions/.env.*
 .DS_Store
 Thumbs.db
 server*.log
+output/

@@ -1,7 +1,8 @@
-import { forEachGridTriangle } from './logo-surface-grid.js?v=2026.09.09';
-import { FSP_SHAPE_DATA } from '../assets/branding/fsp-shape-data.js?v=2026.09.09';
-import { prepareLogoMaterial } from './logo-materials.js?v=2026.09.09';
-import { FSP_BEVEL, FSP_GLOBE_PROFILES, getFspRelief } from './logo-surfaces.js?v=2026.09.09';
+import { forEachGridTriangle } from './logo-surface-grid.js?v=2026.10.19';
+import { FSP_SHAPE_DATA } from '../assets/branding/fsp-shape-data.js?v=2026.10.19';
+import { prepareLogoMaterial } from './logo-materials.js?v=2026.10.19';
+import { FSP_BEVEL, FSP_GLOBE_PROFILES, getFspRelief } from './logo-surfaces.js?v=2026.10.19';
+import { getPreparedLogoGeometry } from './logo-geometry-cache.js?v=2026.10.19';
 
 // Templates stay on the CPU. Each instance owns a disposable GPU geometry copy.
 const geometryTemplates = new WeakMap();
@@ -195,7 +196,7 @@ function createVariantGeometry(THREE, data, variant) {
 function createVariant(THREE, data, texture, variant) {
     if (!geometryTemplates.has(THREE)) geometryTemplates.set(THREE, new Map());
     const templates = geometryTemplates.get(THREE);
-    if (!templates.has(variant)) templates.set(variant, createVariantGeometry(THREE, data, variant));
+    if (!templates.has(variant)) templates.set(variant, getPreparedLogoGeometry(THREE, `fsp-${variant}`) || createVariantGeometry(THREE, data, variant));
     const geometry = templates.get(variant).clone();
     const face = createFspFaceMaterial(THREE, texture);
     const edge = prepareLogoMaterial(new THREE.MeshPhysicalMaterial({

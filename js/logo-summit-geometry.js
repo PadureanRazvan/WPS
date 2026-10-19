@@ -1,9 +1,12 @@
-import { SUMMIT_TRIANGLES, getSummitColor, getSummitRoutePoint } from './logo-summit-surface.js?v=2026.09.09';
-import { createCappedTubeGeometry } from './logo-tube-geometry.js?v=2026.09.09';
+import { SUMMIT_TRIANGLES, getSummitColor, getSummitRoutePoint } from './logo-summit-surface.js?v=2026.10.19';
+import { createCappedTubeGeometry } from './logo-tube-geometry.js?v=2026.10.19';
+import { getPreparedLogoGeometry } from './logo-geometry-cache.js?v=2026.10.19';
 
 const templates = new WeakMap();
 
 export function createSummitGeometry(THREE) {
+    const prepared = Object.fromEntries(['rock', 'snow', 'route'].map(name => [name, getPreparedLogoGeometry(THREE, `summit-${name}`)]));
+    if (Object.values(prepared).every(Boolean)) return Object.fromEntries(Object.entries(prepared).map(([name, geometry]) => [name, geometry.clone()]));
     if (!templates.has(THREE)) {
         const parts = { rock: { positions: [], normals: [], colors: [] }, snow: { positions: [], normals: [], colors: [] } };
         const color = new THREE.Color();

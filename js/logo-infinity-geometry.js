@@ -1,11 +1,14 @@
 import {
     INFINITY_PROFILE, getInfinityFrame, getInfinitySurfacePoint,
     getInfinityPathAngle, getInfinityColor, getInfinityOcclusion
-} from './logo-infinity-surface.js?v=2026.09.09';
+} from './logo-infinity-surface.js?v=2026.10.19';
+import { getPreparedLogoGeometry } from './logo-geometry-cache.js?v=2026.10.19';
 
 const templates = new WeakMap();
 
 export function createInfinityGeometry(THREE) {
+    const prepared = getPreparedLogoGeometry(THREE, 'infinity');
+    if (prepared) return prepared.clone();
     if (!templates.has(THREE)) {
         const segments = 256, columns = INFINITY_PROFILE.length;
         const positions = [], normals = [], colors = [], paths = [], occlusion = [];

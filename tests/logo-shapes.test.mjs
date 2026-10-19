@@ -19,7 +19,7 @@ function axisExtent(positions, axis) {
 }
 
 test('modern logo shape set is deterministic and structurally complete', () => {
-  assert.deepEqual(LOGO_SHAPE_NAMES, ['fsp', 'globe', 'heart', 'summit', 'infinity']);
+  assert.deepEqual(LOGO_SHAPE_NAMES, ['fsp', 'heart', 'summit', 'globe', 'infinity']);
 
   for (const name of LOGO_SHAPE_NAMES) {
     const first = createLogoShape(name, 160, 12345);
