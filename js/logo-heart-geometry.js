@@ -1,11 +1,14 @@
-import { getHeartPoint, getHeartColor, getHeartNormal, getHeartPulsePoint } from './logo-heart-surface.js?v=2026.09.09';
+import { getHeartPoint, getHeartColor, getHeartNormal, getHeartPulsePoint } from './logo-heart-surface.js?v=2026.10.19';
 
-import { createCappedTubeGeometry } from './logo-tube-geometry.js?v=2026.09.09';
+import { createCappedTubeGeometry } from './logo-tube-geometry.js?v=2026.10.19';
+import { getPreparedLogoGeometry } from './logo-geometry-cache.js?v=2026.10.19';
 
 const templates = new WeakMap();
 const inlayTemplates = new WeakMap();
 
 export function createHeartGeometry(THREE) {
+    const prepared = getPreparedLogoGeometry(THREE, 'heart');
+    if (prepared) return prepared.clone();
     if (!templates.has(THREE)) {
         const radialSegments = 160, depthSegments = 64;
         const positions = [], normals = [], colors = [], indices = [];
@@ -44,6 +47,8 @@ export function createHeartGeometry(THREE) {
 }
 
 export function createHeartInlayGeometry(THREE) {
+    const prepared = getPreparedLogoGeometry(THREE, 'heart-inlay');
+    if (prepared) return prepared.clone();
     if (!inlayTemplates.has(THREE)) {
         class PulseCurve extends THREE.Curve {
             getPoint(t, target = new THREE.Vector3()) { return target.set(...getHeartPulsePoint(t)); }

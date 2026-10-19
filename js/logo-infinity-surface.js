@@ -33,6 +33,8 @@ function frameAt(t) {
     const c = Math.cos(twist), s = Math.sin(twist);
     return {
         center: getInfinityCenter(t), derivative,
+        widthScale: 0.84 + 0.24 * Math.sin(t) ** 2,
+        widthDerivative: 0.24 * Math.sin(2 * t),
         side: side.map((value, axis) => value * c + front[axis] * s),
         front: front.map((value, axis) => value * c - side[axis] * s)
     };
@@ -88,9 +90,12 @@ export function getInfinityProfile(fraction) {
 }
 
 export function getInfinitySurfacePoint(t, profile, frame = getInfinityFrame(t)) {
-    const point = frame.center.map((value, axis) => value + frame.side[axis]*profile.width + frame.front[axis]*profile.depth);
-    const along = frame.derivative.map((value, axis) => value + frame.sideDerivative[axis]*profile.width + frame.frontDerivative[axis]*profile.depth);
-    const across = frame.side.map((value, axis) => value*profile.dw + frame.front[axis]*profile.dd);
+    // Narrow through the crossing and open gently around each loop, like a
+    // ribbon under light tension. Include the taper in the physical normals.
+    const point = frame.center.map((value, axis) => value + frame.side[axis]*profile.width*frame.widthScale + frame.front[axis]*profile.depth);
+    const along = frame.derivative.map((value, axis) => value + frame.sideDerivative[axis]*profile.width*frame.widthScale
+        + frame.side[axis]*profile.width*frame.widthDerivative + frame.frontDerivative[axis]*profile.depth);
+    const across = frame.side.map((value, axis) => value*profile.dw*frame.widthScale + frame.front[axis]*profile.dd);
     return { point, normal: normalize(cross(across, along)) };
 }
 

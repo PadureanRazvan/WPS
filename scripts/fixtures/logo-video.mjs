@@ -23,7 +23,11 @@ export async function recordLogoVideo(page, path, { selector, seconds, transitio
             recorder.onstop = () => resolve(new Blob(chunks, { type: mimeType }));
         });
         const controllers = window.logoStudio.controllers;
-        controllers.forEach(controller => { controller.setAutoCycle(autoCycle); controller.resume(); });
+        controllers.forEach(controller => {
+            if (autoCycle) controller.setInspectionTime?.(0);
+            controller.setAutoCycle(autoCycle); controller.resume();
+        });
+        window.stepLogo(0);
         const started = Date.now(), frames = Math.round(seconds * 30);
         let transitioned = false;
         recorder.start();

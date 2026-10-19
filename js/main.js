@@ -1,147 +1,68 @@
-// js/main.js
-
-// --- Core Application Imports ---
-import { initializePlanner, cleanupPlanner, clearSelection, undoLastChange } from './planner.js';
-import { initializeUsers, cleanupUsers } from './users.js?v=2026.09.09';
-import { initializeProductivity, cleanupProductivity } from './productivity.js?v=2026.09.09';
-import { initializeSchedule, cleanupSchedule } from './schedule.js?v=2026.09.09';
-import { initializeReports, cleanupReports } from './reports.js?v=2026.09.09';
-import { initializeInfoVersion } from './info-version.js?v=2026.09.09';
-import { initializeInfoInteractive } from './info-interactive.js';
-import { initializeCharts, initializeProductivityChart } from './charts.js?v=2026.09.09';
-import { updateAverageProductivityCard } from './dashboard.js?v=2026.09.09';
-import { setTheme, updateLanguageUI, showSection, openEditModal, selectEditType, saveModalChanges, closeEditModal, toggleSidebar } from './ui.js?v=2026.09.09';
-import { bindPlannerControlInteractions } from './planner-interaction-wiring.js';
-import {
-    bindAppLifecycleEvents,
-    bindAppRefreshEvents,
-    bindAppShellInteractions,
-    showAuthenticatedShell,
-    showLoginScreen
-} from './app-shell-wiring.js?v=2026.09.09';
-import { initLogoAnimation } from './logo-animation.js?v=2026.09.09&fsp=20260906.3';
-import { initializeChat, cleanupChat } from './chat.js?v=2026.09.09';
-import { loginWithGoogle, logout, onAuthChange } from './auth.js?v=2026.09.09';
-import { initializeLogs, setLogUser, logActivity } from './logs.js?v=2026.09.09';
+// Keep sign-in independent of Planner, reports, productivity and chart libraries.
+import { bindAppLifecycleEvents, showAuthenticatedShell, showLoginScreen } from './app-shell-wiring.js?v=2026.10.19';
+import { loginWithGoogle, onAuthChange } from './auth.js?v=2026.10.19';
 import { applyDailyGreeting } from './daily-greeting.js';
+import { applyBootAppearance, createAppStartup, createVisibleLogoStarter } from './app-startup.js';
+import { setSignInPending, showSignInError } from './sign-in-ui.js';
+import { t } from './localization.js';
 
-// --- Daily Greeting (local rotation, no async overwrite) ---
-function setDynamicGreeting() {
-    applyDailyGreeting(document);
-}
+const initLogoAnimation = createVisibleLogoStarter({
+    loadLogo: () => import('./logo-animation.js?v=2026.10.19')
+});
 
-// --- Global State ---
-let currentLanguage = localStorage.getItem('language') || 'ro';
-let appInitialized = false;
+const startup = createAppStartup({
+    loadRuntime: () => import('./app-runtime.js?v=2026.10.19'),
+    onLoading(user) {
+        showAuthenticatedShell(user, document);
+        document.documentElement.dataset.workspaceState = 'loading';
+        document.getElementById('appContainer')?.setAttribute('aria-busy', 'true');
+    },
+    onReady() {
+        document.documentElement.dataset.workspaceState = 'ready';
+        document.getElementById('appContainer')?.setAttribute('aria-busy', 'false');
+    },
+    onLoggedOut() {
+        showLoginScreen(document);
+        initLogoAnimation('loginLogo', 100);
+        delete document.documentElement.dataset.workspaceState;
+        setSignInPending(false);
+    },
+    onError(error) {
+        console.error('Sherpa workspace could not initialize.', error);
+        showLoginScreen(document);
+        initLogoAnimation('loginLogo', 100);
+        document.documentElement.dataset.workspaceState = 'error';
+        showSignInError(t('workspace-load-failed'));
+    }
+});
 
-/**
- * Main application initialization function.
- * This function is the entry point for the application. It sets up the theme,
- * initializes all the main modules (Planner, Users, Dashboard), and sets up
- * the core UI event listeners.
- */
-async function initializeApp() {
-    if (appInitialized) return; // Prevent double initialization
-    appInitialized = true;
+const systemAppearance = window.matchMedia?.('(prefers-color-scheme: dark)');
+const updateSignedOutAppearance = () => {
+    if (document.documentElement.dataset.authState === 'signed-out') {
+        applyBootAppearance(localStorage.getItem('theme') || 'system');
+    }
+};
+systemAppearance?.addEventListener?.('change', updateSignedOutAppearance);
 
-    console.log("🚀 Sherpa App Initializing...");
-
-    // Set dynamic greeting message
-    setDynamicGreeting();
-
-    // Follow the operating-system color scheme until the user chooses a palette.
-    setTheme(localStorage.getItem('theme') || 'system');
-
-    // Initialize modules that depend on Firestore data
-    initializePlanner();
-    initializeUsers();
-    await initializeProductivity();
-    updateAverageProductivityCard(); // Update after productivity data is loaded
-    initializeCharts(); // After productivity so chart has real data
-    bindAppRefreshEvents({
-        eventTarget: document,
-        actions: {
-            updateAverageProductivityCard,
-            initializeProductivityChart
-        }
-    });
-    initializeReports();
-    initializeLogs();
-    initializeSchedule();
-    initializeInfoVersion();
-    initializeInfoInteractive();
-
-    // Initialize core UI elements and event listeners
-    bindAppShellInteractions({
-        root: document,
-        actions: {
-            showSection,
-            setTheme,
-            updateLanguageUI,
-            bindPlannerControls: () => bindPlannerControlInteractions({
-                root: document,
-                documentTarget: document,
-                actions: {
-                    openEditModal,
-                    clearSelection,
-                    selectEditType,
-                    closeEditModal,
-                    saveModalChanges,
-                    undoLastChange
-                }
-            }),
-            toggleSidebar,
-            logout: async () => {
-                await logActivity('auth', 'logout');
-                await logout();
-            },
-            setAppInitialized: value => { appInitialized = value; }
-        },
-        getCurrentLanguage: () => currentLanguage,
-        setCurrentLanguage: value => { currentLanguage = value; }
-    });
-    initLogoAnimation();
-    await initializeChat();
-
-    console.log("✅ Sherpa App Initialized Successfully.");
-}
-
-// --- Lifecycle Event Listeners ---
-
-// Start the authentication flow once the DOM is fully loaded
 bindAppLifecycleEvents({
-    root: document,
-    windowTarget: window,
-    storage: localStorage,
+    root: document, windowTarget: window, storage: localStorage,
     actions: {
-        setTheme,
-        setDynamicGreeting,
+        setTheme: applyBootAppearance,
+        setDynamicGreeting: () => { applyDailyGreeting(document); setSignInPending(false); },
         initLogoAnimation,
-        loginWithGoogle,
+        loginWithGoogle: () => {
+            const attempt = loginWithGoogle();
+            // Preserve the provider call inside the original user activation.
+            // Workspace downloads overlap the account chooser.
+            startup.preload().then(runtime => runtime.preloadWorkspaceLibraries?.()).catch(() => {});
+            return attempt;
+        },
         onAuthChange,
-        onLogin: async (user) => {
-            showAuthenticatedShell(user, document);
-            setLogUser(user);
-            await initializeApp();
-            logActivity('auth', 'login', { email: user.email, name: user.displayName || '' });
-        },
-        onLogout: () => {
-            setLogUser(null);
-            showLoginScreen(document);
-            // Clean up listeners
-            cleanupPlanner();
-            cleanupUsers();
-            cleanupProductivity();
-            cleanupReports();
-            cleanupSchedule();
-            cleanupChat();
-        },
+        onLogin: user => startup.login(user),
+        onLogout: () => startup.logout(),
         cleanupBeforeUnload: () => {
-            cleanupPlanner();
-            cleanupUsers();
-            cleanupProductivity();
-            cleanupReports();
-            cleanupSchedule();
+            systemAppearance?.removeEventListener?.('change', updateSignedOutAppearance);
+            startup.dispose();
         }
     }
 });

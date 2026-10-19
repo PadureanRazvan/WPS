@@ -450,3 +450,7 @@
 .chat-action-confirmation li + li { margin-top: .5rem; }
 .chat-confirmation-controls { display: flex; flex-wrap: wrap; gap: .5rem; }
 .chat-confirmation-controls button { min-height: 44px; }
+html[data-auth-state="signed-out"] :is(.chat-bubble, .chat-panel),
+html[data-workspace-state="loading"] .chat-bubble {
+    display: none;
+}

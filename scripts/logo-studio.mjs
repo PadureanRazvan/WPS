@@ -12,9 +12,10 @@ const params = Object.fromEntries(process.argv.slice(2).map(arg => {
   return [name, value.length ? value.join('=') : true];
 }));
 const flag = name => name in params && params[name] !== 'false';
+const sourceRoot = flag('baseline') ? resolve(root, params.baseline === 'story' ? 'output/sculpture-story-20261017/baseline' : 'output/experience-polish-20261016/baseline') : root;
 const themes = ['dark', 'light', 'fsp', 'aurora', 'coral'];
 const views = ['grid', 'single', 'login', 'small', 'compact'];
-const shapes = ['fsp', 'globe', 'heart', 'summit', 'infinity'];
+const shapes = ['fsp', 'heart', 'summit', 'globe', 'infinity'];
 if (params.theme && !themes.includes(params.theme)) throw new Error('Unknown preview theme');
 if (params.view && !views.includes(params.view)) throw new Error('Unknown preview size');
 if (params.shape && !shapes.includes(params.shape)) throw new Error('Unknown preview figure');
@@ -31,7 +32,7 @@ const extraTime = numberOption('time', 0, 0, 120000);
 const morph = numberOption('morph', 0, 0, 1);
 const port = numberOption('port', 8766, 0, 65535);
 const yaw = numberOption('yaw', 0, -180, 180), pitch = numberOption('pitch', 0, -90, 90);
-const videoSeconds = numberOption('video', 0, 0, 60);
+const videoSeconds = numberOption('video', 0, 0, 120);
 const transitionAt = 'transition-at' in params ? numberOption('transition-at', 0, 0, videoSeconds) : null;
 if (transitionAt !== null && !videoSeconds) throw new Error('--transition-at requires --video');
 if (flag('cycle-video') && !videoSeconds) throw new Error('--cycle-video requires --video');
@@ -45,7 +46,10 @@ const server = createServer(async (req,res) => {
     const relative = path.slice(root.length + 1).replaceAll(sep, '/');
     if (!['index.html', 'favicon.ico'].includes(relative) && !['assets/', 'css/', 'js/', 'scripts/fixtures/'].some(prefix => relative.startsWith(prefix))) throw Error('Not a preview asset');
     if (!['.html', '.js', '.css', '.webp', '.png', '.svg', '.ico'].includes(extname(path))) throw Error('Unsupported preview asset');
-    let body = await readFile(path);
+    let body = await readFile(relative.startsWith('scripts/fixtures/') ? path : resolve(sourceRoot, relative)).catch(error => {
+      if (sourceRoot !== root && (relative.startsWith('assets/') || relative.startsWith('css/'))) return readFile(path);
+      throw error;
+    });
     if (url.pathname === '/app') body = body.toString()
       .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, script => script.includes('type="importmap"') ? script : '')
       .replace(/<link\b[^>]*href="https:[^>]*>/gi, '');
@@ -89,7 +93,8 @@ try {
     document.getElementById('appContainer').style.display = login ? 'none' : '';
     document.querySelector('.sidebar').classList.toggle('collapsed', params.app === 'compact');
     const { initLogoAnimation } = await import('/js/logo-animation.js');
-    window.logoStudio = { controllers: [await initLogoAnimation(login ? 'loginLogo' : 'sherpaLogo', 120, {autoCycle:!params.study})], shapeIndices: [['fsp','globe','heart','summit','infinity'].indexOf(params.shape || 'fsp')], ready: true };
+    const { LOGO_SHAPE_NAMES } = await import('/js/logo-shapes.js');
+    window.logoStudio = { names: LOGO_SHAPE_NAMES, controllers: [await initLogoAnimation(login ? 'loginLogo' : 'sherpaLogo', 120, {autoCycle:!params.study})], shapeIndices: [LOGO_SHAPE_NAMES.indexOf(params.shape || 'fsp')], ready: true };
   }, {...params, study:flag('study')});
   await page.waitForFunction(() => window.logoStudio?.ready, null, { polling: 50 });
   await page.evaluate(() => { window.stepLogo(); window.logoStudio.controllers.forEach(c => c.pause()); });
@@ -104,9 +109,17 @@ try {
   if(extraTime) await page.evaluate(ms => {window.logoStudio.controllers.forEach(c=>c.resume()); window.stepLogo(ms); window.logoStudio.controllers.forEach(c=>c.pause());window.stepLogo();},extraTime);
   if('morph' in params) await page.evaluate(progress => {
     window.logoStudio.controllers.forEach(c => { c.resume(); c.next(); });
-    window.stepLogo(progress * 1900);
-    window.logoStudio.controllers.forEach(c => c.pause());
-    window.stepLogo();
+    window.stepLogo(0);
+    // Each story beat owns its duration. Freeze each figure at the requested
+    // fraction instead of treating every handoff as the former 1.9 seconds.
+    const checkpoints = window.logoStudio.controllers.map(controller => ({ controller,
+      at: progress * (controller.getDiagnostics().transition?.durationMs ?? 1900) })).sort((a,b) => a.at-b.at);
+    let elapsed = 0;
+    for (const checkpoint of checkpoints) {
+      window.stepLogo(checkpoint.at-elapsed);
+      checkpoint.controller.pause(); elapsed = checkpoint.at;
+    }
+    window.stepLogo(0);
   }, morph);
   if ('yaw' in params || 'pitch' in params) await page.evaluate(({yaw, pitch}) => {
     window.logoStudio.controllers.forEach(controller => controller.setInspectionRotation([pitch * Math.PI / 180, yaw * Math.PI / 180, 0]));

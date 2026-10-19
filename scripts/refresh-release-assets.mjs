@@ -30,6 +30,13 @@ for (const name of names) {
 
 const originalHtml = await readFile(new URL('index.html', root), 'utf8');
 let html = originalHtml.replace(/<!-- SHERPA_IMPORT_MAP_START -->[\s\S]*?<!-- SHERPA_IMPORT_MAP_END -->\r?\n\r?\n[ \t]*/, '');
+// Browsers cache tab icons separately; include every fallback in each release.
+html = html.replace(/(<link\b[^>]*\brel="(?:icon|shortcut icon|apple-touch-icon)"[^>]*\bhref=")([^"]+)(")/g, (_match, start, href, end) => {
+    const [path, query = ''] = href.split('?');
+    const params = new URLSearchParams(query.replaceAll('&amp;', '&'));
+    params.set('v', version);
+    return start + path + '?' + params.toString().replaceAll('&', '&amp;') + end;
+});
 html = html.replace(/((?:href|src)=["])((?:js|css)\/[^"?]+\.(?:js|css))(\?[^" ]*)?(["])/g, (_match, start, path, query, end) => {
     const params = new URLSearchParams((query || '').replace(/^\?/, '').replaceAll('&amp;', '&'));
     params.set('v', version);

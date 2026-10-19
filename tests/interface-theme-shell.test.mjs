@@ -79,7 +79,7 @@ test('motion is progressively enhanced and has a reduced-motion path', () => {
   assert.match(uiSource, /document\.startViewTransition/);
   assert.match(uiSource, /::view-transition-new\(root\)/);
   assert.match(baseSource, /@media \(prefers-reduced-motion: reduce\)/);
-  assert.match(baseSource, /view-transition-name: sherpa-section/);
+  assert.match(baseSource, /html\[data-transition-kind="theme"\]::view-transition-new\(root\)/);
 });
 
 test('glass surfaces honor the operating system reduced-transparency preference', () => {

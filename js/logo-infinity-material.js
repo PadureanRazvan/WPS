@@ -1,4 +1,5 @@
-import { prepareLogoMaterial } from './logo-materials.js?v=2026.09.09';
+import { prepareLogoMaterial } from './logo-materials.js?v=2026.10.19';
+import { getInfinityFlowState } from './logo-story.js?v=2026.10.19';
 
 export function createInfinityMaterials(THREE) {
     const flow = { value: 0 }, strength = { value: 1 };
@@ -28,18 +29,19 @@ export function createInfinityMaterials(THREE) {
                     #include <emissivemap_fragment>
                     float flowDistance = abs(vLogoPath - uLogoFlow);
                     flowDistance = min(flowDistance, 1.0 - flowDistance);
-                    float flowGleam = exp(-pow(flowDistance / 0.026, 2.0)) * uLogoFlowStrength;
-                    totalEmissiveRadiance += vec3(0.055, 0.075, 0.09) * flowGleam;
+                    float flowGleam = exp(-pow(flowDistance / 0.036, 2.0)) * uLogoFlowStrength;
+                    totalEmissiveRadiance += vec3(0.15, 0.12, 0.075) * flowGleam;
                 `);
         };
-        material.customProgramCacheKey = () => `${cacheKey()}:infinity-flow-v1`;
+        material.customProgramCacheKey = () => `${cacheKey()}:infinity-flow-v2`;
         return material;
     });
     return {
         materials,
-        animate(now, { reducedMotion = false } = {}) {
-            flow.value = ((now * 0.000065) % 1 + 1) % 1;
-            strength.value = reducedMotion ? 0 : 1;
+        animate(now, { age = now, reducedMotion = false } = {}) {
+            const state = getInfinityFlowState(age, reducedMotion);
+            flow.value = state.progress;
+            strength.value = state.strength;
         }
     };
 }

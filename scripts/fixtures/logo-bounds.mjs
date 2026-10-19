@@ -20,6 +20,7 @@ export async function verifySilhouettes(page) {
                 const controller = window.logoStudio.controllers[0];
                 controller.pause(); controller.next();
                 for (let i = 0; i < 6 && (controller.getDiagnostics().shape !== 'fsp' || controller.getDiagnostics().transitioning); i++) controller.next();
+                controller.setInspectionTime?.(0);
                 controller.setAutoCycle(true); controller.resume();
                 const source = document.querySelector('#sherpaLogo canvas');
                 const control = source.parentElement, bounds = control.getBoundingClientRect();
@@ -31,7 +32,8 @@ export async function verifySilhouettes(page) {
                 const context = sample.getContext('2d', {willReadFrequently:true});
                 const states = new Set();
                 let clipped = null, maximumBorderAlpha = 0;
-                for (let time = 0; time <= 52000; time += 160) {
+                const duration = (controller.getDiagnostics().storyDurationMs || 50000) + 2000;
+                for (let time = 0; time <= duration; time += 160) {
                     window.stepLogo(160);
                     states.add(source.parentElement.dataset.logoShape);
                     context.clearRect(0, 0, sample.width, sample.height);

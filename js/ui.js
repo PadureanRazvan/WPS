@@ -1,31 +1,41 @@
 // js/ui.js
 
 // === THEME AND LANGUAGE FUNCTIONALITY ===
-import { languageConfig, translations, PLANNER_TEAMS, TEAM_DISPLAY_NAMES, extractHoursFromDay, formatPlannerHoursValue, getMonthKey, getAgentNotesForMonth, isValidPlannerHoursValue } from './config.js?v=2026.09.09';
+import { languageConfig, translations, PLANNER_TEAMS, TEAM_DISPLAY_NAMES, extractHoursFromDay, formatPlannerHoursValue, getMonthKey, getAgentNotesForMonth, isValidPlannerHoursValue } from './config.js?v=2026.10.19';
+import { t } from './localization.js';
+export { t } from './localization.js';
 function getLang() { return localStorage.getItem('language') || 'ro'; }
-export function t(key) { const l = getLang(); return (translations[l] && translations[l][key]) || key; }
 // Import the new Firestore functions from planner.js
 import { addAgent, applyChangesToSelectedCells, renderPlannerTable, clearSelection } from './planner.js';
-import { updateDashboard, updateAverageProductivityCard } from './dashboard.js?v=2026.09.09';
-import { initializeCharts } from './charts.js?v=2026.09.09';
+import { updateDashboard, updateAverageProductivityCard } from './dashboard.js?v=2026.10.19';
+import { initializeCharts } from './charts.js?v=2026.10.19';
 import { getPlannerData } from './planner.js';
-import { renderLogsSection } from './logs.js?v=2026.09.09';
-import { renderCurrentView as rerenderProductivity } from './productivity.js?v=2026.09.09';
-import { renderUsersTable } from './users.js?v=2026.09.09';
+import { renderLogsSection } from './logs.js?v=2026.10.19';
+import { renderCurrentView as rerenderProductivity } from './productivity.js?v=2026.10.19';
+import { renderUsersTable } from './users.js?v=2026.10.19';
 import {
     getNextTheme,
     getThemeMeta,
     getThemeRevealRadius,
     normalizeThemePreference,
     resolveThemePreference
-} from './theme-system.js?v=2026.09.09';
-import { showToastNotification } from './toast-notifications.js?v=2026.09.09';
+} from './theme-system.js?v=2026.10.19';
+import { showToastNotification } from './toast-notifications.js?v=2026.10.19';
 
 // Theme and language state
 let currentThemePreference = normalizeThemePreference(localStorage.getItem('theme'));
 let currentTheme = resolveThemePreference(currentThemePreference, prefersDarkScheme());
 let currentLanguage = localStorage.getItem('language') || 'ro';
 let systemThemeListenerBound = false;
+let activeThemeTransition = null;
+let themeChangeRevision = 0;
+let navRailAnimation = null;
+
+function skipThemeAnimation() {
+    activeThemeTransition?.skipTransition?.();
+    activeThemeTransition = null;
+    delete document.documentElement.dataset.transitionKind;
+}
 
 function prefersDarkScheme() {
     return window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false;
@@ -33,6 +43,19 @@ function prefersDarkScheme() {
 
 function prefersReducedMotion() {
     return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+}
+
+function bindSystemThemeListener() {
+    if (systemThemeListenerBound) return;
+    const query = window.matchMedia?.('(prefers-color-scheme: dark)');
+    query?.addEventListener?.('change', () => {
+        if (currentThemePreference === 'system') {
+            themeChangeRevision++;
+            skipThemeAnimation();
+            applyThemeState('system', true);
+        }
+    });
+    systemThemeListenerBound = true;
 }
 
 function notifyInterface(eventName, detail = {}) {
@@ -60,11 +83,14 @@ function applyThemeState(themePreference, shouldRefreshCharts = false) {
 }
 
 export function setTheme(theme, origin = {}) {
+    bindSystemThemeListener();
+    const revision = ++themeChangeRevision;
+    skipThemeAnimation();
     const nextPreference = normalizeThemePreference(theme);
     const nextTheme = resolveThemePreference(nextPreference, prefersDarkScheme());
     const shouldRefreshCharts = nextTheme !== currentTheme;
     const shouldUpdatePreference = nextPreference !== currentThemePreference;
-    const commit = () => applyThemeState(nextPreference, shouldRefreshCharts);
+    const commit = () => { if (revision === themeChangeRevision) applyThemeState(nextPreference, shouldRefreshCharts); };
 
     if ((!shouldRefreshCharts && !shouldUpdatePreference) || prefersReducedMotion() || typeof document.startViewTransition !== 'function') {
         commit();
@@ -73,7 +99,9 @@ export function setTheme(theme, origin = {}) {
 
     document.documentElement.dataset.transitionKind = 'theme';
     const transition = document.startViewTransition(commit);
+    activeThemeTransition = transition;
     transition.ready.then(() => {
+        if (activeThemeTransition !== transition) return;
         const width = window.innerWidth;
         const height = window.innerHeight;
         const x = Number.isFinite(origin.x) ? origin.x : width - 64;
@@ -83,13 +111,17 @@ export function setTheme(theme, origin = {}) {
         document.documentElement.animate(
             { clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${radius}px at ${x}px ${y}px)`] },
             {
-                duration: 560,
+                duration: 420,
                 easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
                 pseudoElement: '::view-transition-new(root)'
             }
         );
     }).catch(() => {});
-    const clearThemeTransition = () => { delete document.documentElement.dataset.transitionKind; };
+    const clearThemeTransition = () => {
+        if (activeThemeTransition !== transition) return;
+        activeThemeTransition = null;
+        delete document.documentElement.dataset.transitionKind;
+    };
     transition.finished.then(clearThemeTransition, clearThemeTransition);
 }
 
@@ -134,7 +166,8 @@ function checkPlannerLandscape() {
     if (!overlay) return;
 
     const isMobilePortrait = window.innerWidth < 768 && window.innerHeight > window.innerWidth;
-    const isPlanner = currentSectionId === 'planner';
+    const isPlanner = currentSectionId === 'planner'
+        && document.documentElement.dataset.authState !== 'signed-out';
 
     if (isPlanner && isMobilePortrait) {
         overlay.classList.add('visible');
@@ -157,12 +190,13 @@ export function showSection(sectionId, clickedElement) {
     const previousSectionId = currentSectionId;
     const sectionChanged = sectionId !== previousSectionId;
     const reducedMotion = prefersReducedMotion();
-    const useNativeSectionTransition = sectionChanged
-        && !reducedMotion
-        && typeof document.startViewTransition === 'function';
-    const useFallbackSectionTransition = sectionChanged
-        && !reducedMotion
-        && !useNativeSectionTransition;
+    // Commit the click immediately. A full-page snapshot used to block later
+    // clicks while its animation ran, including clicks outside the main view.
+    skipThemeAnimation();
+    const rail = document.querySelector('.nav-active-rail');
+    const previousRailBounds = !reducedMotion && sectionChanged ? rail?.getBoundingClientRect() : null;
+    navRailAnimation?.cancel();
+    navRailAnimation = null;
     const applySectionState = () => {
         currentSectionId = sectionId;
         document.querySelectorAll('.nav-item').forEach(item => {
@@ -174,16 +208,16 @@ export function showSection(sectionId, clickedElement) {
         activeNavItem?.setAttribute('aria-current', 'page');
 
         document.querySelectorAll('.section').forEach(section => {
-            section.classList.remove('active', 'section-enter-fallback');
+            section.classList.remove('active', 'section-enter');
         });
         targetSection.classList.add('active');
-        targetSection.classList.toggle('section-enter-fallback', useFallbackSectionTransition);
+        targetSection.classList.toggle('section-enter', sectionChanged && !reducedMotion);
     };
 
     const finishSectionChange = () => {
         checkPlannerLandscape();
         if (sectionId === 'planner') {
-            setTimeout(renderPlannerTable, 10);
+            requestAnimationFrame(() => { if (currentSectionId === 'planner') renderPlannerTable(); });
         }
         if (sectionId === 'logs') {
             renderLogsSection();
@@ -191,15 +225,14 @@ export function showSection(sectionId, clickedElement) {
         notifyInterface('sherpa:navigation', { sectionId, previousSectionId });
     };
 
-    if (useNativeSectionTransition) {
-        document.documentElement.dataset.transitionKind = 'section';
-        const transition = document.startViewTransition(applySectionState);
-        transition.updateCallbackDone.then(finishSectionChange).catch(finishSectionChange);
-        const clearSectionTransition = () => { delete document.documentElement.dataset.transitionKind; };
-        transition.finished.then(clearSectionTransition, clearSectionTransition);
-    } else {
-        applySectionState();
-        finishSectionChange();
+    applySectionState();
+    finishSectionChange();
+    if (previousRailBounds?.height && rail?.animate) {
+        const nextBounds = rail.getBoundingClientRect();
+        if (nextBounds.height) navRailAnimation = rail.animate([
+            { transform: `translateY(${previousRailBounds.top - nextBounds.top}px) scaleY(${previousRailBounds.height / nextBounds.height})`, transformOrigin: 'top' },
+            { transform: 'translateY(0) scaleY(1)', transformOrigin: 'top' }
+        ], { duration: 220, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' });
     }
 }
 
@@ -207,13 +240,7 @@ export function showSection(sectionId, clickedElement) {
 // Initialize theme and language from localStorage
 export function initializeThemeAndLanguage() {
     applyThemeState(currentThemePreference, false);
-    if (!systemThemeListenerBound) {
-        const colorSchemeQuery = window.matchMedia?.('(prefers-color-scheme: dark)');
-        colorSchemeQuery?.addEventListener?.('change', () => {
-            if (currentThemePreference === 'system') applyThemeState('system', true);
-        });
-        systemThemeListenerBound = true;
-    }
+    bindSystemThemeListener();
     
     // Set language
     updateLanguageDisplay(currentLanguage);

@@ -5,6 +5,7 @@ export async function verifyControls(page) {
   const read = () => page.evaluate(() => window.logoStudio.controllers[0].getDiagnostics());
   const step = ms => page.evaluate(ms => window.stepLogo(ms), ms);
   const shape = () => page.locator('#sherpaLogo').getAttribute('data-logo-shape');
+  const names = await page.evaluate(() => window.logoStudio.names);
   const checks = [];
   await page.evaluate(() => {
     const controller = window.logoStudio.controllers[0];
@@ -26,26 +27,27 @@ export async function verifyControls(page) {
   assert.equal((await read()).frame, before.frame);
   checks.push('P pauses/resumes; paused frames stop drawing');
 
-  const stoppedAtEdge = await page.evaluate(() => {
+  const frozenTurn = await page.evaluate(() => {
     const controller = window.logoStudio.controllers[0];
     controller.resume();
-    for (let i = 0; i < 180 && Math.abs(Math.cos(controller.getDiagnostics().rotation[1])) > 0.1; i++) window.stepLogo(80);
+    window.stepLogo(3200);
+    const before = controller.getDiagnostics().rotation;
     controller.pause(); window.stepLogo(1);
-    return controller.getDiagnostics();
+    return { before, after: controller.getDiagnostics() };
   });
-  assert.equal(stoppedAtEdge.shape, 'fsp');
-  assert.ok(Math.abs(Math.cos(stoppedAtEdge.rotation[1])) < 0.1, 'pause must preserve the current viewing angle');
+  assert.equal(frozenTurn.after.shape, 'fsp');
+  assert.deepEqual(frozenTurn.after.rotation, frozenTurn.before, 'pause must preserve the current viewing angle');
 
   await page.keyboard.press('Enter');
   await step(1);
-  assert.equal(await shape(), 'globe', 'native Enter must advance exactly once');
+  assert.equal(await shape(), names[1], 'native Enter must advance exactly once');
   await page.keyboard.press('Space');
   await step(1);
-  assert.equal(await shape(), 'heart', 'native Space must advance exactly once');
-  assert.ok(Math.cos((await read()).rotation[1]) > 0.85, 'new paused figure must have a readable reveal instead of inheriting an edge-on pose');
+  assert.equal(await shape(), names[2], 'native Space must advance exactly once');
+  assert.ok(Math.cos((await read()).rotation[1]) > 0.85, 'a new paused figure must use a readable chapter pose');
   await page.evaluate(() => window.dispatchEvent(new CustomEvent('sherpa:navigation')));
   await step(1);
-  assert.equal(await shape(), 'heart', 'navigation must not override pause');
+  assert.equal(await shape(), names[2], 'navigation must not override pause');
   checks.push('native Enter/Space advance once to readable paused figures; navigation respects pause');
 
   await page.keyboard.press('p');
@@ -54,7 +56,7 @@ export async function verifyControls(page) {
   assert.equal((await read()).transitioning, true);
   await step(1500);
   assert.equal((await read()).transitioning, false);
-  assert.equal(await shape(), 'summit');
+  assert.equal(await shape(), names[3]);
   checks.push('animated morph reaches its target');
 
   await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -68,7 +70,7 @@ export async function verifyControls(page) {
   assert.equal(await page.locator('#sherpaLogo canvas').evaluate(canvas => canvas.toDataURL()), frozen);
   await page.keyboard.press('Enter');
   await step(1);
-  assert.equal(await shape(), 'globe');
+  assert.equal(await shape(), names[1]);
   assert.equal((await read()).transitioning, false);
   checks.push('reduced motion is static; keyboard shape selection still works');
 
@@ -103,7 +105,9 @@ export async function verifyControls(page) {
   await page.waitForFunction(() => !window.logoStudio.controllers[0].getDiagnostics().reducedMotion, null, {polling:50});
   await page.evaluate(() => {
     const controller = window.logoStudio.controllers[0];
-    controller.pause(); controller.next(); controller.next(); window.stepLogo(1);
+    controller.pause();
+    for (let i = 0; i < 6 && controller.getDiagnostics().shape !== 'heart'; i++) controller.next();
+    window.stepLogo(1);
   });
   assert.equal(await shape(), 'heart');
   const beforeRestore = await page.locator('#sherpaLogo canvas').evaluate(canvas => canvas.toDataURL());
@@ -139,8 +143,12 @@ export async function verifyControls(page) {
   await step(1);
   assert.equal(await shape(), 'heart-to-summit');
   assert.equal(await page.locator('#sherpaLogo canvas').evaluate(canvas => canvas.toDataURL()), morphImage);
-  await page.evaluate(() => window.logoStudio.controllers[0].resume());
-  await step(450);
+  const remaining = await page.evaluate(() => {
+    const controller = window.logoStudio.controllers[0], state = controller.getDiagnostics();
+    controller.resume();
+    return state.transition ? state.transition.durationMs * (1 - state.transition.progress) + 100 : 750;
+  });
+  await step(remaining);
   assert.equal(await shape(), 'summit');
   checks.push('graphics recovery preserves a paused morph, then completes the ascent reveal');
 

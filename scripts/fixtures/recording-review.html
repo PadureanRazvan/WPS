@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sherpa sculpture recording review</title>
+<style>
+    body { margin: 2rem; background: #111; color: #eee; font: 15px/1.5 system-ui,sans-serif; }
+    video { display: block; width: 320px; max-width: 100%; background: #111; }
+    canvas { display: block; max-width: 100%; margin-top: 1rem; }
+    button { padding: .75rem 1rem; margin-top: 1rem; }
+    pre { white-space: pre-wrap; }
+</style>
+<h1>Sherpa sculpture recording review</h1>
+<p>Local recording only. Export evenly spaced poses and all five handoffs for visual inspection.</p>
+<video controls preload="auto" src="/sculpture-review.webm"></video>
+<button id="extract" type="button">Extract frame sheet</button>
+<pre id="status" role="status">Loading recording…</pre>
+<canvas id="sheet" hidden></canvas>
+<script>
+    const video = document.querySelector('video');
+    const status = document.getElementById('status');
+    const button = document.getElementById('extract');
+    video.addEventListener('loadedmetadata', () => { status.textContent = `${video.videoWidth} × ${video.videoHeight} · ${video.duration} seconds`; });
+    button.addEventListener('click', async () => {
+        button.disabled = true; video.pause();
+        const times = [1, 4, 6.5, 9, 12, 14.9, 16.5, 20.5, 23, 25.5, 28.5, 31.3, 33.5, 37, 39.5, 42, 46, 50];
+        const canvas = document.getElementById('sheet');
+        canvas.width = 1320; canvas.height = 750; canvas.hidden = false;
+        const context = canvas.getContext('2d');
+        context.fillStyle = '#111'; context.fillRect(0, 0, canvas.width, canvas.height);
+        const margins = [];
+        try {
+            for (const [index, time] of times.entries()) {
+                status.textContent = `Inspecting ${time}s…`;
+                const presented = video.requestVideoFrameCallback ? new Promise((resolve, reject) => {
+                    const timeout = setTimeout(() => reject(Error(`No decoded frame at ${time}s`)), 5000);
+                    video.requestVideoFrameCallback((_now, metadata) => { clearTimeout(timeout); resolve(metadata.mediaTime); });
+                }) : Promise.resolve(null);
+                await new Promise((resolve, reject) => {
+                    const timeout = setTimeout(() => reject(Error(`Could not seek to ${time}s`)), 5000);
+                    video.addEventListener('seeked', () => { clearTimeout(timeout); resolve(); }, { once: true });
+                    video.currentTime = time;
+                });
+                const sourceTime = await presented;
+                const x = index % 6 * 220, y = Math.floor(index / 6) * 250;
+                const scale = Math.min(220 / video.videoWidth, 220 / video.videoHeight);
+                const width = Math.round(video.videoWidth * scale), height = Math.round(video.videoHeight * scale);
+                const insetX = Math.floor((220 - width) / 2), insetY = Math.floor((220 - height) / 2);
+                context.drawImage(video, x + insetX, y + insetY, width, height);
+                context.fillStyle = '#eee'; context.font = '14px system-ui'; context.fillText(`${time}s`, x + 10, y + 240);
+                const pixels = context.getImageData(x + insetX, y + insetY, width, height).data;
+                let left = width, top = height, right = 0, bottom = 0;
+                for (let py = 0; py < height; py++) for (let px = 0; px < width; px++) {
+                    const offset = (py * width + px) * 4;
+                    if (Math.max(pixels[offset], pixels[offset + 1], pixels[offset + 2]) < 55) continue;
+                    left = Math.min(left, px); right = Math.max(right, px); top = Math.min(top, py); bottom = Math.max(bottom, py);
+                }
+                margins.push({ time, sourceTime, left, top, right: width - 1 - right, bottom: height - 1 - bottom });
+            }
+            status.textContent = JSON.stringify({ width: video.videoWidth, height: video.videoHeight, margins }, null, 2);
+            canvas.toBlob(blob => {
+                const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = 'sherpa-sculpture-frames.png'; link.click();
+                setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+            }, 'image/png');
+        } catch (error) { status.textContent = error.message; }
+        finally { button.disabled = false; }
+    });
+</script>
+</html>

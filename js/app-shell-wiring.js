@@ -82,6 +82,7 @@ export function showLoginScreen(root = currentDocument()) {
 
     if (loginScreen) loginScreen.style.display = 'flex';
     if (appContainer) appContainer.style.display = 'none';
+    root?.documentElement?.setAttribute?.('data-auth-state', 'signed-out');
 }
 
 export function showAuthenticatedShell(user = {}, root = currentDocument()) {
@@ -90,6 +91,7 @@ export function showAuthenticatedShell(user = {}, root = currentDocument()) {
 
     if (loginScreen) loginScreen.style.display = 'none';
     if (appContainer) appContainer.style.display = '';
+    root?.documentElement?.setAttribute?.('data-auth-state', 'signed-in');
 
     const avatar = byId(root, 'userAvatar');
     const userName = byId(root, 'userName');
@@ -215,7 +217,11 @@ export function bindAppShellInteractions({
         actions.setAppInitialized?.(false);
     }, bindings);
 
-    return () => teardownBindings(bindings);
+    return () => {
+        closeThemeMenu();
+        closeLanguageMenu();
+        teardownBindings(bindings);
+    };
 }
 
 export function bindAppLifecycleEvents({
@@ -231,7 +237,16 @@ export function bindAppLifecycleEvents({
         actions.setDynamicGreeting?.();
         actions.initLogoAnimation?.('loginLogo', 100);
 
-        bindEvent(byId(root, 'googleLoginBtn'), 'click', actions.loginWithGoogle, bindings);
+        bindEvent(byId(root, 'googleLoginBtn'), 'click', () => {
+            // Authentication already presents its error beside the sign-in button.
+            // A closed popup should not also become an unhandled event rejection.
+            actions.loginWithGoogle?.()?.catch?.(() => {});
+        }, bindings);
+        const signInButton = byId(root, 'googleLoginBtn');
+        if (signInButton) {
+            signInButton.disabled = false;
+            signInButton.setAttribute?.('data-sign-in-ready', 'true');
+        }
 
         actions.onAuthChange?.(
             async user => actions.onLogin?.(user),

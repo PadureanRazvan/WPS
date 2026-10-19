@@ -14,9 +14,13 @@
     border-radius: 8px;
     background: transparent;
     cursor: pointer;
-    touch-action: manipulation;
+    touch-action: pan-y pinch-zoom;
     -webkit-tap-highlight-color: transparent;
+    transition: transform 120ms ease;
 }
+
+.fsp-brand-logo:active { transform: scale(0.985); }
+.fsp-brand-logo[data-logo-dragging="true"] { cursor: grabbing; transform: none; }
 
 .fsp-brand-logo img,
 .fsp-brand-logo .fsp-logo-scene {
@@ -26,6 +30,14 @@
     background: transparent;
     filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.2));
     user-select: none;
+}
+
+.fsp-brand-logo img {
+    pointer-events: none;
+    -webkit-user-drag: none;
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 180ms ease, visibility 0s;
 }
 
 .fsp-brand-logo .fsp-logo-compact {
@@ -44,10 +56,22 @@
 
 .fsp-brand-logo[data-logo-renderer="three"] .fsp-logo-scene {
     display: block;
+    animation: sherpa-sculpture-arrive 180ms ease both;
 }
 
 .fsp-brand-logo[data-logo-renderer="three"] img {
+    opacity: 0;
     visibility: hidden;
+    transition: opacity 180ms ease, visibility 0s 180ms;
+}
+
+@keyframes sherpa-sculpture-arrive { from { opacity: 0; } to { opacity: 1; } }
+
+@media (prefers-reduced-motion: reduce) {
+    .fsp-brand-logo:active { transform: none; }
+    .fsp-brand-logo img,
+    .fsp-brand-logo[data-logo-renderer="three"] img { transition: none; }
+    .fsp-brand-logo[data-logo-renderer="three"] .fsp-logo-scene { animation: none; }
 }
 
 :is([data-theme="light"], [data-theme="fsp"], [data-theme="coral"]) .sidebar .fsp-brand-logo :is(img, canvas) {

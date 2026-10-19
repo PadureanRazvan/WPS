@@ -1,3 +1,5 @@
+import { getChapterAge, easeStory } from './logo-story.js?v=2026.10.19';
+
 const TAU = Math.PI * 2;
 const SECTORS = 12;
 
@@ -114,7 +116,7 @@ function buildSurface() {
         faces.push({ points: [base[i], foot[next], base[next]], kind: 'foot' });
         faces.push({ points: [[0, -0.85, 0], foot[next], foot[i]], kind: 'foot' });
     }
-    const refined = bevelRockFaces(faces, 0.007).flatMap(({ points: [a, b, c], kind }) => {
+    const refined = bevelRockFaces(faces, 0.012).flatMap(({ points: [a, b, c], kind }) => {
         const middle = (from, to) => from.map((value, axis) => (value + to[axis]) / 2);
         const ab = middle(a, b), bc = middle(b, c), ca = middle(c, a);
         return [[a, ab, ca], [ab, b, bc], [ca, bc, c], [ab, bc, ca]].map(points => ({ points, kind }));
@@ -143,7 +145,7 @@ const frontTriangles = SUMMIT_TRIANGLES.filter(triangle => triangle.normal[2] > 
 export function getSummitColor(point, normal, kind = 'rock') {
     if (kind === 'snow') {
         const light = Math.max(0, normal[0] * -0.35 + normal[1] * 0.55 + normal[2] * 0.65);
-        return [0.61 + light * 0.23, 0.78 + light * 0.13, 0.85 + light * 0.09];
+        return [0.73 + light * 0.19, 0.82 + light * 0.13, 0.88 + light * 0.09];
     }
     if (kind === 'foot') return [0.035, 0.17, 0.2];
     const height = Math.max(0, Math.min(1, (point[1] + 0.8) / 1.9));
@@ -168,7 +170,7 @@ export function getSummitFrontPoint(x, y) {
 }
 
 const ROUTE_ANCHORS = [[-0.48, -0.64], [0.12, -0.4], [-0.08, -0.12], [0.28, 0.16], [0.17, 0.42], [0.16, 1.06]];
-let routeSamples;
+let routeSamples, routeLengths, routeLength;
 
 export function getSummitRoutePoint(progress) {
     if (!routeSamples) {
@@ -178,16 +180,28 @@ export function getSummitRoutePoint(progress) {
             const p0 = ROUTE_ANCHORS[Math.max(0, segment - 1)], p1 = ROUTE_ANCHORS[segment];
             const p2 = ROUTE_ANCHORS[segment + 1], p3 = ROUTE_ANCHORS[Math.min(ROUTE_ANCHORS.length - 1, segment + 2)];
             const xy = [0, 1].map(axis => {
-                const v0 = (p2[axis] - p0[axis]) * 0.14, v1 = (p3[axis] - p1[axis]) * 0.14;
+                const v0 = (p2[axis] - p0[axis]) * 0.22, v1 = (p3[axis] - p1[axis]) * 0.22;
                 return (2 * p1[axis] - 2 * p2[axis] + v0 + v1) * t * t * t
                     + (-3 * p1[axis] + 3 * p2[axis] - 2 * v0 - v1) * t * t + v0 * t + p1[axis];
             });
             const { point } = getSummitFrontPoint(...xy);
             return [point[0], point[1], point[2] + 0.004];
         });
+        routeLength = 0;
+        routeLengths = routeSamples.map((point, index) => {
+            if (index) routeLength += Math.hypot(...point.map((value, axis) => value - routeSamples[index - 1][axis]));
+            return routeLength;
+        });
     }
-    const phase = Math.max(0, Math.min(1, progress)) * (routeSamples.length - 1);
-    const index = Math.min(routeSamples.length - 2, Math.floor(phase)), t = phase - index;
+    const distance = Math.max(0, Math.min(1, progress)) * routeLength;
+    let low = 1, high = routeLengths.length - 1;
+    while (low < high) {
+        const middle = (low + high) >>> 1;
+        if (routeLengths[middle] < distance) low = middle + 1;
+        else high = middle;
+    }
+    const index = low - 1;
+    const t = (distance - routeLengths[index]) / (routeLengths[index + 1] - routeLengths[index]);
     return routeSamples[index].map((value, axis) => value + (routeSamples[index + 1][axis] - value) * t);
 }
 
@@ -207,10 +221,9 @@ export function sampleSummitSurface(areaFraction, u, v) {
 
 export function getSummitAscentState(age = 0, reducedMotion = false) {
     if (reducedMotion) return { progress: 1, strength: 1 };
-    const ease = value => { const t = Math.max(0, Math.min(1, value)); return t * t * (3 - 2 * t); };
-    const phase = ((age % 9000) + 9000) % 9000;
+    const phase = getChapterAge('summit', age);
     return {
-        progress: ease((phase - 500) / 6500),
-        strength: ease(phase / 500) * (1 - ease((phase - 8000) / 700))
+        progress: easeStory((phase - 900) / 6500),
+        strength: easeStory(phase / 650) * (1 - easeStory((phase - 9000) / 650))
     };
 }
