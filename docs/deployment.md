@@ -20,7 +20,7 @@ The generated import map keeps versioned and unversioned imports on the same mod
 4. Run the full suite:
 
 ```powershell
-node --test tests/*.test.mjs
+node --test --test-concurrency=2 tests/*.test.mjs
 npm --prefix functions run check
 npm --prefix functions audit --omit=dev
 ```
@@ -81,6 +81,11 @@ Expected evidence:
 - authenticated shell is visible
 - key architecture Modules import with the version query
 - Reports opens and refreshes
+- Planner has a populated date range; previous/next month round-trip updates the
+  range and table; Search & Select opens and filters; Export CSV creates a file
+  for the selected month. Inspect the downloaded month and row counts locally,
+  without committing production data. A successful app-init log alone does not
+  prove these controls were bound.
 - no relevant console, runtime, log, or network errors are reported
 
 If Chrome is logged out, log in once in the existing external Chrome tab and rerun the smoke.

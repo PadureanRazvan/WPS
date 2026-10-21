@@ -79,6 +79,7 @@ let unsubscribeFromAgents;
 const migratedAgentIds = new Set();
 
 export function initializePlanner() {
+    initializePlannerControls();
     console.log("Setting up real-time listener for agents...");
     const agentsCollection = collection(db, 'agents');
 
@@ -338,12 +339,18 @@ function updatePlannerHeader() {
 // Enhanced Planner State
 let plannerState = createPlannerViewState();
 
-document.addEventListener('DOMContentLoaded', () => {
+let plannerControlsInitialized = false;
+
+function initializePlannerControls() {
+    if (plannerControlsInitialized) return;
+    // The authenticated runtime imports Planner after DOMContentLoaded and
+    // calls initializePlanner only once the calendar library is available.
     initializeDatepicker();
     initializeAgentFilter();
     initializeFilterControls();
     initializePlannerExportButton();
-});
+    plannerControlsInitialized = true;
+}
 
 function initializePlannerExportButton() {
     document.getElementById('plannerExportBtn')?.addEventListener('click', exportToCSV);

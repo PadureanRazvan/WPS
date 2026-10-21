@@ -77,6 +77,7 @@ async function report(extra = {}) {
     const resources = performance.getEntriesByType('resource');
     panel.querySelector('#previewDiagnostics').textContent = JSON.stringify({
         elapsedMs: Math.round(performance.now() - metrics.startedAt),
+        calendarEnvironment: { atStart: metrics.calendarEnvironmentAtStart, now: { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone, offsetMinutes: new Date().getTimezoneOffset() } },
         signInReadyMs: Math.round(metrics.signInReadyAt - metrics.startedAt),
         logoStartup: metrics.logoStartup,
         initialSignIn: metrics.initialSignIn,

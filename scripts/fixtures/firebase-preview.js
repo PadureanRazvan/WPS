@@ -35,12 +35,28 @@ export const doc = (_db, path, id) => ({ path, id });
 export const query = target => target;
 export const where = () => ({}), orderBy = () => ({}), limit = () => ({});
 const emptySnapshot = () => ({ docs: [], size: 0, empty: true, forEach() {} });
+// Opt-in synthetic data for month navigation, filtering and real CSV downloads.
+// This adapter never reads production data or permits business-data writes.
+function previewSnapshot(target) {
+    if (target.path !== 'agents' || new URLSearchParams(location.search).get('planner-fixture') !== '1') return emptySnapshot();
+    const now = new Date(), monthlyDays = {};
+    for (const offset of [-1, 0, 1]) {
+        const start = new Date(now.getFullYear(), now.getMonth() + offset, 1);
+        const key = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}`;
+        monthlyDays[key] = Array.from({ length: new Date(start.getFullYear(), start.getMonth() + 1, 0).getDate() }, (_, day) =>
+            [0, 6].includes(new Date(start.getFullYear(), start.getMonth(), day + 1).getDay()) ? '' : '8RO');
+    }
+    const data = { fullName: 'Synthetic Planner Agent', username: 'fixture.agent', primaryTeam: 'RO',
+        contractType: 'Full-time', contractHours: 8, monthlyDays, monthlyNotes: {}, isActive: true };
+    const docs = [{ id: 'synthetic-planner-agent', data: () => structuredClone(data) }];
+    return { docs, size: docs.length, empty: false, forEach: callback => docs.forEach(callback) };
+}
 export const getDocs = async () => emptySnapshot();
 export const getDoc = async () => ({ exists: () => false });
 export function onSnapshot(target, next) {
     let active = true;
     state.activeSubscriptions++;
-    const deliver = () => { if (active) next(emptySnapshot()); };
+    const deliver = () => { if (active) next(previewSnapshot(target)); };
     const timer = target.path === 'productivity' && state.snapshotDelay ? setTimeout(deliver, state.snapshotDelay) : null;
     if (!timer) queueMicrotask(deliver);
     return () => {
