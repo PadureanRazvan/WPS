@@ -1,5 +1,9 @@
 # Quiet Motion - 2026.10.19
 
+**2026-10-21 incident:** the lazy startup introduced a Planner control-binding
+regression. Data still renders, but the date picker, month arrows, filtering and
+CSV export do not initialize. See the [health review and targeted repair](../health/2026-10-21-planner-startup.md).
+
 This frontend release preserves Sherpa's existing interface while improving
 sign-in feedback, navigation response and the daily sculpture animation. It also
 ships the approved FSP Global browser-tab icon and its PNG, ICO and touch-icon

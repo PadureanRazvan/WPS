@@ -1,4 +1,4 @@
-import { getChapterAge, easeStory } from './logo-story.js?v=2026.10.19';
+import { getChapterAge, easeStory } from './logo-story.js?v=2026.10.21';
 
 const TAU = Math.PI * 2;
 const SECTORS = 12;

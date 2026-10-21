@@ -1,11 +1,11 @@
 // js/chat.js — Sherpa AI Chat Module
 import { getPlannerData, commitAgentChanges } from './planner.js';
 import { buildChatActionPlan, findAgentById, getChatCalendarDate } from './chat-actions.js';
-import { getAverageProductivity, getProductivityTrendData } from './productivity.js?v=2026.10.19';
-import { showSection } from './ui.js?v=2026.10.19';
+import { getAverageProductivity, getProductivityTrendData } from './productivity.js?v=2026.10.21';
+import { showSection } from './ui.js?v=2026.10.21';
 import { translations, extractHoursFromDay, getMonthKey, getEffectiveAgentDayValue, isNonWorkingCode, normalizeTeamForDisplay, parseShiftEntry } from './config.js';
 import { functions } from './firebase-config.js';
-import { logActivity } from './logs.js?v=2026.10.19';
+import { logActivity } from './logs.js?v=2026.10.21';
 import { httpsCallable } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-functions.js";
 import { createSherpaChatService, getChatErrorTranslationKey } from './chat-service.js';
 

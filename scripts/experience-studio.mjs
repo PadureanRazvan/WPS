@@ -1,5 +1,6 @@
-// Offline inspection of the actual app. Every Firebase SDK import is replaced
-// by a local fixture and a restrictive CSP blocks all external connections.
+// Isolated inspection of the actual app. Every Firebase SDK import is replaced
+// by a local fixture. External connections are blocked by default; the optional
+// real-calendar mode permits only the production calendar script and CSS CDN.
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { resolve, sep, extname } from 'node:path';
@@ -17,6 +18,7 @@ if (!Number.isFinite(entryDelay) || entryDelay < 0 || entryDelay > 10000) throw 
 const server = createServer(async (request, response) => {
     try {
         const url = new URL(request.url, 'http://localhost');
+        const realCalendar = url.searchParams.get('real-calendar') === '1';
         const relative = decodeURIComponent(url.pathname === '/' ? 'index.html' : url.pathname.slice(1));
         if (relative === 'js/main.js') {
             if (entryDelay) await new Promise(resolve => setTimeout(resolve, entryDelay));
@@ -35,7 +37,7 @@ const server = createServer(async (request, response) => {
             content = content.toString()
                 .replace(/<script\b[^>]*src="https:[^>]*>[\s\S]*?<\/script>/gi, '')
                 .replace(/<link\b[^>]*href="https:[^>]*>/gi, '')
-                .replace('<head>', '<head><link id="sherpaCalendarStyles" rel="stylesheet" href="/css/base.css"><script src="/scripts/fixtures/experience-globals.js"></script>')
+                .replace('<head>', '<head>' + (realCalendar ? '' : '<link id="sherpaCalendarStyles" rel="stylesheet" href="/css/base.css">') + '<script src="/scripts/fixtures/experience-globals.js"></script>')
                 .replace('</body>', '<script type="module" src="/scripts/fixtures/experience-preview.mjs"></script></body>');
         } else if (extname(path) === '.js' && relative.startsWith('js/')) {
             content = content.toString().replace(/https:\/\/www\.gstatic\.com\/firebasejs\/[^'"\s]+/g, '/scripts/fixtures/firebase-preview.js');
@@ -56,7 +58,7 @@ const server = createServer(async (request, response) => {
         response.writeHead(200, {
             'Content-Type': ({ '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.webp': 'image/webp', '.webm': 'video/webm' })[extname(path)] || 'application/octet-stream',
             'Cache-Control': 'no-store',
-            'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'"
+            'Content-Security-Policy': `default-src 'self'; script-src 'self' 'unsafe-inline'${realCalendar ? ' https://cdn.jsdelivr.net' : ''}; style-src 'self' 'unsafe-inline'${realCalendar ? ' https://cdn.jsdelivr.net' : ''}; img-src 'self' data:; connect-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'`
         });
         response.end(content);
     } catch (error) {

@@ -57,6 +57,18 @@ node scripts/experience-studio.mjs --port=0 --entry-delay=2500
 
 Each command prints its own unused loopback port. The original app is displayed with a small developer-only Offline preview control. Choose Success before activating Google sign-in to inspect the actual authenticated shell with local adapters. Add `?snapshot-delay=3000` to exercise cancellation while the initial Productivity response is pending. The sculpture gallery remains available through `node scripts/logo-studio.mjs --serve --port=0`.
 
+For operational Planner checks, open the printed address with
+`?session=ready&language=en&planner-fixture=1&real-calendar=1`. This adds one
+synthetic agent with weekday schedules in the previous, current and next months,
+and loads the real production Litepicker script and stylesheet from
+`cdn.jsdelivr.net`. Firebase remains replaced, `connect-src` remains restricted
+to the local origin, and business writes remain blocked. The default preview is
+still offline with an empty roster and a calendar stub. The real-calendar mode
+is necessary to verify date selection, both month arrows, search and actual CSV
+downloads; the default visual preview does not validate those controls.
+Diagnostics record the browser timezone at startup and at inspection so a
+timezone change during a long session is visible.
+
 Use **Reload signed-in preview** or `?session=ready` for a fresh page with a
 simulated restored session. This tests dashboard startup without warming the
 sign-in renderer first. **Capture export → Save diagnostics** records entry
@@ -68,6 +80,9 @@ The preview's recording and screenshot export controls save local artifacts. `/s
 The observations above describe the original implementation pass. The complete
 approved experience, sculpture story and browser icons are packaged together in
 [Quiet Motion, 2026.10.19](releases/2026-10-19-quiet-motion.md).
+
+The later [Planner startup incident and health review](health/2026-10-21-planner-startup.md)
+records an operational regression missed by the original visual checks.
 
 ## Implementation references
 

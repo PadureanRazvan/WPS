@@ -1,20 +1,20 @@
 // The authenticated workspace loads after the sign-in controls are responsive.
 import { initializePlanner, cleanupPlanner, clearSelection, undoLastChange } from './planner.js';
-import { initializeUsers, cleanupUsers } from './users.js?v=2026.10.19';
-import { initializeProductivity, cleanupProductivity } from './productivity.js?v=2026.10.19';
-import { initializeSchedule, cleanupSchedule } from './schedule.js?v=2026.10.19';
-import { initializeReports, cleanupReports } from './reports.js?v=2026.10.19';
-import { initializeInfoVersion } from './info-version.js?v=2026.10.19';
+import { initializeUsers, cleanupUsers } from './users.js?v=2026.10.21';
+import { initializeProductivity, cleanupProductivity } from './productivity.js?v=2026.10.21';
+import { initializeSchedule, cleanupSchedule } from './schedule.js?v=2026.10.21';
+import { initializeReports, cleanupReports } from './reports.js?v=2026.10.21';
+import { initializeInfoVersion } from './info-version.js?v=2026.10.21';
 import { initializeInfoInteractive } from './info-interactive.js';
-import { initializeCharts, initializeProductivityChart } from './charts.js?v=2026.10.19';
-import { updateAverageProductivityCard } from './dashboard.js?v=2026.10.19';
-import { setTheme, updateLanguageUI, showSection, openEditModal, selectEditType, saveModalChanges, closeEditModal, toggleSidebar } from './ui.js?v=2026.10.19';
+import { initializeCharts, initializeProductivityChart } from './charts.js?v=2026.10.21';
+import { updateAverageProductivityCard } from './dashboard.js?v=2026.10.21';
+import { setTheme, updateLanguageUI, showSection, openEditModal, selectEditType, saveModalChanges, closeEditModal, toggleSidebar } from './ui.js?v=2026.10.21';
 import { bindPlannerControlInteractions } from './planner-interaction-wiring.js';
-import { bindAppRefreshEvents, bindAppShellInteractions } from './app-shell-wiring.js?v=2026.10.19';
-import { initLogoAnimation } from './logo-animation.js?v=2026.10.19';
-import { initializeChat, cleanupChat } from './chat.js?v=2026.10.19';
-import { logout } from './auth.js?v=2026.10.19';
-import { initializeLogs, setLogUser, logActivity } from './logs.js?v=2026.10.19';
+import { bindAppRefreshEvents, bindAppShellInteractions } from './app-shell-wiring.js?v=2026.10.21';
+import { initLogoAnimation } from './logo-animation.js?v=2026.10.21';
+import { initializeChat, cleanupChat } from './chat.js?v=2026.10.21';
+import { logout } from './auth.js?v=2026.10.21';
+import { initializeLogs, setLogUser, logActivity } from './logs.js?v=2026.10.21';
 import { applyDailyGreeting } from './daily-greeting.js';
 import { loadWorkspaceLibraries, yieldToInterface } from './app-dependencies.js';
 

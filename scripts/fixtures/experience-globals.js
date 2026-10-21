@@ -5,6 +5,7 @@
     window.sherpaPreview = { scenario: 'cancel', startedAt: performance.now(), callbacks: 0, longTasks: [], events: [], navigation: [], writes: 0, authListeners: new Set(), logoStartup: {} };
     window.sherpaPreview.snapshotDelay = Math.min(10000, Math.max(0, Number(params.get('snapshot-delay')) || 0));
     window.sherpaPreview.activeSubscriptions = 0;
+    window.sherpaPreview.calendarEnvironmentAtStart = { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone, offsetMinutes: new Date().getTimezoneOffset() };
     document.addEventListener('click', event => {
         const target = event.target.closest?.('.nav-item');
         if (target) window.sherpaPreview.pendingNavigation = { section: target.dataset.tooltip, at: performance.now() };
@@ -39,7 +40,7 @@
         destroy() {} update() {} resize() {}
     };
     window.Chart.defaults = { color: '', borderColor: '' };
-    window.Litepicker = class {
+    if (params.get('real-calendar') !== '1') window.Litepicker = class {
         constructor(options) { this.options = options; this.handlers = new Map(); options.setup?.(this); }
         on(name, callback) { this.handlers.set(name, callback); return this; }
         destroy() {} setOptions() {} setDateRange() {} setDate() {} show() {} hide() {}
@@ -48,6 +49,7 @@
     };
     window.JSZip = class {};
     window.addEventListener('DOMContentLoaded', () => {
+        if (params.get('real-calendar') === '1') return;
         // Date-picker behavior is stubbed here; use an already loaded local
         // stylesheet so the production resource loader stays unmodified.
         const styles = document.querySelector('link[href*="css/base.css"]');

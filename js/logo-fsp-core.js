@@ -1,8 +1,8 @@
-import { forEachGridTriangle } from './logo-surface-grid.js?v=2026.10.19';
-import { FSP_SHAPE_DATA } from '../assets/branding/fsp-shape-data.js?v=2026.10.19';
-import { prepareLogoMaterial } from './logo-materials.js?v=2026.10.19';
-import { FSP_BEVEL, FSP_GLOBE_PROFILES, getFspRelief } from './logo-surfaces.js?v=2026.10.19';
-import { getPreparedLogoGeometry } from './logo-geometry-cache.js?v=2026.10.19';
+import { forEachGridTriangle } from './logo-surface-grid.js?v=2026.10.21';
+import { FSP_SHAPE_DATA } from '../assets/branding/fsp-shape-data.js?v=2026.10.21';
+import { prepareLogoMaterial } from './logo-materials.js?v=2026.10.21';
+import { FSP_BEVEL, FSP_GLOBE_PROFILES, getFspRelief } from './logo-surfaces.js?v=2026.10.21';
+import { getPreparedLogoGeometry } from './logo-geometry-cache.js?v=2026.10.21';
 
 // Templates stay on the CPU. Each instance owns a disposable GPU geometry copy.
 const geometryTemplates = new WeakMap();

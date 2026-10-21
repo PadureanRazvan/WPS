@@ -10,6 +10,12 @@
 
 **App Startup** — the lightweight sign-in entry, single Firebase session, and serialized handoff into the authenticated workspace. Runtime and chart/calendar/archive downloads overlap the account chooser; stale initialization and data responses cannot reopen or modify a newer session. See [the experience verification notes](docs/experience-polish.md).
 
+Feature controls must initialize from their explicit runtime lifecycle after
+their libraries are ready, even when imported after `DOMContentLoaded`. Planner
+binds its page controls once from `initializePlanner`; session cleanup detaches
+data listeners without duplicating the controls on the next sign-in. See the
+[2026-10-21 Planner incident](docs/health/2026-10-21-planner-startup.md).
+
 **Accessible App Navigation** — the semantic button controls, current-page state, keyboard activation, named icon actions, progressively anchored active rail, and responsive operational toolbars that keep every Sherpa Module reachable across pointer, keyboard, mobile, and assistive-technology use.
 
 **Interface Theme System** — the named Sherpa palettes, semantic surface and liquid-scene tokens, System color preference, live chart colors, browser theme color, native disclosure popovers, container-driven reflow, dynamic viewport sizing, safe-area-aware fixed surfaces, progressive view transitions, reduced-transparency handling, and accessibility fallbacks that keep every operational Module visually consistent without changing its domain behavior.
