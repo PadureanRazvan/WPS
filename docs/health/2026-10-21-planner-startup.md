@@ -1,14 +1,15 @@
 # Planner startup regression and health review — 2026-10-21
 
-## Decision and current status
+## Investigation decision
 
 Recommend the targeted Planner initialization repair instead of reverting the
 entire Quiet Motion release. The confirmed fault is in frontend control binding;
 there is no evidence from these checks that a database restore is needed.
-The repair is local on `codex/planner-startup-regression`, based on production
-merge `4b7900c89a0f888bf0adc80d2540845d916779f3`. This review has not deployed or
-rolled back production. The approved interface, motion and browser icons remain
-unchanged. Release cache identity must be refreshed before publishing the fix.
+The initial repair was committed on `codex/planner-startup-regression`, based on
+production merge `4b7900c89a0f888bf0adc80d2540845d916779f3`. The investigation
+itself did not deploy or roll back production. The user subsequently approved
+the targeted release with live month-navigation and CSV-download verification.
+See [Steady Compass, 2026.10.21](../releases/2026-10-21-steady-compass.md).
 
 ## Confirmed failure and cause
 
@@ -43,8 +44,8 @@ rules or backend configuration are changed.
 - Full frontend suite: **540 passed**, zero failures, with
   `node --test --test-concurrency=2 tests/*.test.mjs`.
 - Functions policy checks: **6 passed**. Release-map verification (97 local
-  modules) and whitespace checks passed. The release number is intentionally
-  unchanged until a production release is prepared.
+  modules) and whitespace checks passed. Those investigation checks preceded
+  the release cache-identity refresh.
 - External Chrome with synthetic data and the real Litepicker passed
   October → September → October → November → October navigation, a custom
   October 5–9 range, search filtering, and a fresh sign-out/sign-in round trip.

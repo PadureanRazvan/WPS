@@ -1,26 +1,26 @@
 // js/ui.js
 
 // === THEME AND LANGUAGE FUNCTIONALITY ===
-import { languageConfig, translations, PLANNER_TEAMS, TEAM_DISPLAY_NAMES, extractHoursFromDay, formatPlannerHoursValue, getMonthKey, getAgentNotesForMonth, isValidPlannerHoursValue } from './config.js?v=2026.10.19';
+import { languageConfig, translations, PLANNER_TEAMS, TEAM_DISPLAY_NAMES, extractHoursFromDay, formatPlannerHoursValue, getMonthKey, getAgentNotesForMonth, isValidPlannerHoursValue } from './config.js?v=2026.10.21';
 import { t } from './localization.js';
 export { t } from './localization.js';
 function getLang() { return localStorage.getItem('language') || 'ro'; }
 // Import the new Firestore functions from planner.js
 import { addAgent, applyChangesToSelectedCells, renderPlannerTable, clearSelection } from './planner.js';
-import { updateDashboard, updateAverageProductivityCard } from './dashboard.js?v=2026.10.19';
-import { initializeCharts } from './charts.js?v=2026.10.19';
+import { updateDashboard, updateAverageProductivityCard } from './dashboard.js?v=2026.10.21';
+import { initializeCharts } from './charts.js?v=2026.10.21';
 import { getPlannerData } from './planner.js';
-import { renderLogsSection } from './logs.js?v=2026.10.19';
-import { renderCurrentView as rerenderProductivity } from './productivity.js?v=2026.10.19';
-import { renderUsersTable } from './users.js?v=2026.10.19';
+import { renderLogsSection } from './logs.js?v=2026.10.21';
+import { renderCurrentView as rerenderProductivity } from './productivity.js?v=2026.10.21';
+import { renderUsersTable } from './users.js?v=2026.10.21';
 import {
     getNextTheme,
     getThemeMeta,
     getThemeRevealRadius,
     normalizeThemePreference,
     resolveThemePreference
-} from './theme-system.js?v=2026.10.19';
-import { showToastNotification } from './toast-notifications.js?v=2026.10.19';
+} from './theme-system.js?v=2026.10.21';
+import { showToastNotification } from './toast-notifications.js?v=2026.10.21';
 
 // Theme and language state
 let currentThemePreference = normalizeThemePreference(localStorage.getItem('theme'));

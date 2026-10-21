@@ -1,4 +1,4 @@
-import { getPreparedLogoEnvironment } from './logo-geometry-cache.js?v=2026.10.19';
+import { getPreparedLogoEnvironment } from './logo-geometry-cache.js?v=2026.10.21';
 
 /** Material controls shared by the sculptural logo figures. */
 export function prepareLogoMaterial(material, opacity = 1) {

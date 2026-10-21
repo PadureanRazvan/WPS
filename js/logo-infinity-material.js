@@ -1,5 +1,5 @@
-import { prepareLogoMaterial } from './logo-materials.js?v=2026.10.19';
-import { getInfinityFlowState } from './logo-story.js?v=2026.10.19';
+import { prepareLogoMaterial } from './logo-materials.js?v=2026.10.21';
+import { getInfinityFlowState } from './logo-story.js?v=2026.10.21';
 
 export function createInfinityMaterials(THREE) {
     const flow = { value: 0 }, strength = { value: 1 };
