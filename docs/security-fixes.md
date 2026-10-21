@@ -2,6 +2,9 @@
 
 Implemented after the September 7, 2026 code review. This document describes the code changes and deployment considerations; it does not record a production deployment.
 
+For the later Functions dependency updates, audit results and current backend
+inventory, see [October 21 backend security maintenance](backend-dependency-security-2026-10-21.md).
+
 ## Changes
 
 - Stored Agent names, usernames, team labels, schedule values, and relevant HTML attributes are escaped in Users, Planner filters, Dashboard, and Productivity. Hydrated Agent IDs come from the Firestore document, never a stored `id` field.
