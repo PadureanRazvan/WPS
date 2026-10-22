@@ -11,6 +11,22 @@ panel.innerHTML = `<style>
     #experience-preview pre { white-space: pre-wrap; max-height: 230px; overflow: auto; font-size: 11px; margin-top: 12px; }
 </style><details><summary>Offline preview · Original Sherpa</summary><div class="preview-controls"><label>Next sign-in <select id="previewScenario"><option value="cancel">Popup closed</option><option value="network">Network error</option><option value="success">Success</option></select></label><button type="button" id="previewSignOut">Return to sign-in</button><button type="button" id="previewMetrics">Read diagnostics</button><button type="button" id="previewIdle">Check paused logo</button></div><div class="preview-controls"><label>Inspect figure <select id="previewFigure"><option value="">Choose…</option><option value="fsp">FSP Global</option><option value="heart">Heart</option><option value="summit">Summit</option><option value="globe">Globe</option><option value="infinity">Infinity</option></select></label><button type="button" id="previewPlay">Resume motion</button><button type="button" id="previewRecovery">Test graphics recovery</button><button type="button" id="previewRecord">Record one sculpture cycle</button></div><pre id="previewDiagnostics" aria-live="polite"></pre><details><summary>Capture export</summary><label>Screenshot data<textarea id="previewScreenshot" rows="2" style="display:block;width:100%"></textarea></label><button type="button" id="previewSaveScreenshot">Save screenshot</button></details></details>`;
 document.body.append(panel);
+// A clean, offline companion review uses the real authenticated app shell.
+if (new URLSearchParams(location.search).has('boss')) {
+    panel.hidden = true;
+    panel.style.display = 'none';
+    if (new URLSearchParams(location.search).get('boss') === 'studio') {
+        const companion = document.getElementById('chatBubble');
+        const openStudio = () => {
+            if (!['three', 'fallback'].includes(companion?.dataset.bossRenderer)) return;
+            observer.disconnect();
+            companion.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+        };
+        const observer = new MutationObserver(openStudio);
+        if (companion) observer.observe(companion, { attributes: true, attributeFilter: ['data-boss-renderer'] });
+        openStudio();
+    }
+}
 const lightingExport = document.createElement('button');
 lightingExport.type = 'button';
 lightingExport.textContent = 'Rebuild studio lighting asset';

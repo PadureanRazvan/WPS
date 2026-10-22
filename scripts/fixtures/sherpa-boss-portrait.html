@@ -1,0 +1,28 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><title>Sherpa character asset studio</title>
+<style>html,body{margin:0;background:transparent}canvas{display:block;width:384px;height:576px}a{position:fixed;left:400px;top:20px;font:16px system-ui}</style>
+<canvas id="portrait" width="768" height="1152"></canvas>
+<a id="export" download="sherpa-boss.png">Download character PNG</a>
+<script type="module">
+import * as THREE from '../../assets/vendor/three.module.min.js';
+import { createSherpaBossModel } from '../../js/sherpa-boss-model.js';
+const canvas = document.querySelector('canvas');
+const renderer = new THREE.WebGLRenderer({canvas, alpha:true, antialias:true, preserveDrawingBuffer:true});
+renderer.setClearColor(0x000000,0); renderer.setSize(768,1152,false);
+renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=.97;
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+const scene=new THREE.Scene();
+const closeUp=new URLSearchParams(location.search).has('face');
+const camera=new THREE.OrthographicCamera(closeUp?-.6:-1.567,closeUp?.6:1.567,closeUp?.9:2.35,closeUp?-.9:-2.35,.1,30);
+camera.position.set(0,closeUp?3.12:2.03,8);camera.lookAt(0,closeUp?3.10:2.03,0);
+scene.add(new THREE.HemisphereLight(0xf6ecff,0x776783,.95));
+for(const [color,intensity,position] of [[0xffeadc,2.7,[-2.7,4.2,6]],[0xe8e5ff,.85,[4,2.5,5]],[0xffd5ac,1.8,[1,3,-3]]]){
+ const light=new THREE.DirectionalLight(color,intensity);light.position.set(...position);scene.add(light);
+ if(intensity===2.7){light.target.position.set(0,1.8,0);scene.add(light.target);light.castShadow=true;light.shadow.mapSize.set(1024,1024);Object.assign(light.shadow.camera,{left:-2.1,right:2.1,top:2.2,bottom:-2.2,near:.5,far:15});light.shadow.bias=-.00015;light.shadow.normalBias=.012;light.shadow.radius=2;light.shadow.intensity=.32;}
+}
+const model=createSherpaBossModel(THREE);model.root.rotation.y=.08;scene.add(model.root);
+const mood=new URLSearchParams(location.search).get('mood');
+if(mood==='shaken'){model.setMood({discomfort:1});model.blink(.38);}
+if(mood==='impact'){model.setMood({impact:1});model.blink(.8);}
+renderer.render(scene,camera);document.body.dataset.ready='true';
+document.getElementById('export').href=canvas.toDataURL('image/png');
+</script></html>

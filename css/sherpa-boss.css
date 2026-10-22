@@ -1,0 +1,169 @@
+/* A small sculpted companion, with no enclosing chat circle. */
+.chat-bubble.sherpa-boss {
+    width: 136px; height: 214px; padding: 0; border: 0; border-radius: 28px;
+    background: none; box-shadow: none; display: block; isolation: isolate;
+    touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none;
+    transition: opacity .2s ease; transform: none; overflow: visible;
+}
+.chat-bubble.sherpa-boss:hover { transform: none; box-shadow: none; background: none; }
+.chat-bubble.sherpa-boss::before, .chat-bubble.sherpa-boss::after { content: none; }
+.sherpa-boss:focus-visible, .boss-studio button:focus-visible, .boss-turn:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 5px;
+}
+.sherpa-boss[data-boss-dragging="true"] { cursor: grabbing; z-index: 1600; }
+[data-boss-canvas] { position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
+.boss-fallback { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
+[data-boss-renderer="three"] > .boss-fallback { visibility: hidden; }
+.boss-aura {
+    position: absolute; inset: auto 10% 2% 10%; height: 18%; border-radius: 50%;
+    background: radial-gradient(ellipse, rgba(var(--theme-accent-rgb), .19), transparent 68%);
+    filter: blur(6px); pointer-events: none;
+}
+.boss-name {
+    position: absolute; bottom: -9px; left: 50%; transform: translateX(-50%);
+    display: flex; align-items: center; gap: 7px; padding: 7px 11px;
+    border: 1px solid var(--border); border-radius: 20px; white-space: nowrap;
+    background: var(--surface-elevated); color: var(--text-primary);
+    box-shadow: 0 3px 12px #00000010; font: 600 9px/1.1 system-ui,sans-serif; letter-spacing: 1.65px;
+}
+.boss-status-dot { display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: #64ac88; box-shadow: 0 0 0 3px #64ac8812; flex: 0 0 auto; }
+.boss-name-star { color: var(--accent); font-size: 12px; letter-spacing: 0; }
+.boss-hint {
+    position: absolute; right: 10px; bottom: calc(100% - 12px); padding: 8px 11px;
+    border: 1px solid var(--border); border-radius: 10px; white-space: nowrap;
+    background: var(--surface-elevated); color: var(--text-secondary); box-shadow: var(--card-shadow);
+    font: 11px/1.4 system-ui,sans-serif; opacity: 0; transform: translateY(5px);
+    transition: opacity .2s, transform .2s; pointer-events: none;
+}
+.sherpa-boss:is(:hover, :focus-visible) .boss-hint { opacity: 1; transform: none; }
+.sherpa-boss[data-boss-dragging="true"] .boss-hint { opacity: 0; }
+.boss-greeting {
+    position: fixed; z-index: 4; box-sizing: border-box; width: 224px; max-width: calc(100vw - 16px);
+    padding: 15px 18px; border: 1px solid #e5d9e5; border-radius: 24px 26px 22px 25px;
+    background: linear-gradient(145deg, #fff, #fff7fc); color: #594253;
+    box-shadow: 0 8px 28px #30203520, inset 0 1px 0 #fff;
+    font: 500 13px/1.5 system-ui, sans-serif; letter-spacing: 0; text-align: left; white-space: normal;
+    pointer-events: none; cursor: default; animation: boss-cloud-hello .24s ease-out both;
+}
+.boss-greeting::after {
+    content: ''; position: absolute; bottom: -7px; left: var(--boss-cloud-tail, 75%);
+    width: 12px; height: 12px; background: #fff7fc; border-right: 1px solid #e5d9e5;
+    border-bottom: 1px solid #e5d9e5; transform: translateX(-50%) rotate(45deg); border-radius: 0 0 4px 0;
+}
+.boss-greeting[data-placement="below"]::after { bottom: auto; top: -7px; transform: translateX(-50%) rotate(225deg); background: #fff; }
+.boss-greeting[hidden] { display: none; }
+.sherpa-boss:has(.boss-greeting:not([hidden])) .boss-hint { opacity: 0; }
+.sherpa-boss:has(.boss-greeting:not([hidden])) { z-index: 1520; }
+@keyframes boss-cloud-hello { from { opacity: 0; scale: .94; } to { opacity: 1; scale: 1; } }
+.sherpa-boss[data-boss-reaction] :is(.boss-name, .boss-aura, .boss-hint) { opacity: 0; }
+.sherpa-boss[data-boss-reaction]:focus-visible { outline: none; }
+[data-boss-visible="false"], .sherpa-boss[data-boss-minimized="true"] { visibility: hidden; pointer-events: none; }
+.boss-minimize {
+    position: fixed; z-index: 1602; width: 28px; height: 28px; padding: 0;
+    display: grid; place-items: center; border: 1px solid var(--border); border-radius: 50%;
+    background: var(--surface-elevated); color: var(--text-secondary); cursor: pointer;
+    font: 18px/1 system-ui; box-shadow: 0 3px 12px #00000010;
+}
+.boss-minimize:hover { color: var(--accent); border-color: var(--accent); }
+.boss-minimize:focus-visible, .boss-dock:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+.boss-dock {
+    position: fixed; z-index: 1500; right: calc(24px + var(--safe-area-right)); bottom: calc(16px + var(--safe-area-bottom));
+    display: flex; align-items: center; gap: 10px; min-height: 36px; padding: 3px 12px 3px 8px;
+    border: 1px solid var(--border); border-radius: 16px; background: var(--surface-elevated); color: var(--text-primary);
+    box-shadow: 0 3px 14px #00000012; cursor: pointer; font: 600 9px/1 system-ui; letter-spacing: 1.5px;
+}
+.boss-dock-feet { width: 22px; height: 24px; position: relative; overflow: hidden; display: block; }
+.boss-dock-feet img { position: absolute; width: 62px; max-width: none; height: 93px; left: -20px; bottom: -1px; object-fit: contain; }
+.boss-dock > :last-child { color: var(--accent); font-size: 16px; }
+.boss-minimize[hidden], .boss-dock[hidden] { display: none; }
+.sherpa-boss[data-boss-state="thinking"] .boss-status-dot { background: #c79558; }
+.sherpa-boss[data-boss-state="speaking"] .boss-status-dot { background: var(--accent); }
+.boss-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.chat-avatar.boss-header-portrait { position: absolute; width: 76px; height: 119px; max-width: none; top: -6px; left: -20px; object-fit: contain; transform: none; }
+.chat-avatar-frame.is-speaking .boss-header-portrait { animation: none; }
+.chat-panel { bottom: calc(236px + var(--safe-area-bottom)); max-height: min(580px, calc(100dvh - 262px - var(--safe-area-top) - var(--safe-area-bottom))); z-index: 1510; }
+
+/* The native dialog supplies focus trapping, Escape, and a true modal backdrop. */
+.boss-studio {
+    --boss-plum: #6e4b65;
+    width: min(780px, calc(100vw - 40px)); max-width: none; max-height: calc(100dvh - 40px);
+    margin: auto; padding: 0; overflow: auto; border: 1px solid var(--border);
+    border-radius: 28px; background: var(--surface-elevated); color: var(--text-primary);
+    box-shadow: 0 32px 100px #00000035;
+}
+.boss-studio[open] { display: grid; grid-template-columns: 46% 54%; }
+.boss-studio::backdrop { background: #17142188; backdrop-filter: blur(9px); }
+.boss-studio-close {
+    position: absolute; z-index: 3; top: 16px; right: 16px; width: 34px; height: 34px;
+    display: grid; place-items: center; border: 1px solid var(--border); border-radius: 50%;
+    color: var(--text-secondary); background: var(--surface-elevated); font: 24px/1 system-ui; cursor: pointer;
+}
+.boss-studio-art {
+    min-height: 520px; position: relative; display: flex; justify-content: center; align-items: center;
+    overflow: hidden; background: radial-gradient(ellipse at 48% 38%, #eee6ee, #dcd6df 75%, #cfc8d5);
+    border-radius: 27px 0 0 27px;
+}
+.boss-studio-model {
+    display: block; position: relative; width: 310px; max-width: 100%; height: 450px;
+    margin: -12px 0 0; padding: 0; border: 0; border-radius: 20px; background: none; z-index: 2; cursor: pointer;
+}
+.boss-studio-pedestal { position: absolute; top: calc(50% + 181px); width: 200px; height: 22px; border-radius: 50%; background: #c8bfcd; box-shadow: 0 12px 18px #63566f22, inset 0 2px 2px #fdf9ff; }
+.boss-studio-orbit { position: absolute; width: 310px; height: 310px; border: 1px solid #ffffff65; border-radius: 50%; top: 94px; pointer-events: none; }
+.boss-studio-orbit--two { width: 390px; height: 390px; top: 54px; border-color: #ffffff35; }
+.boss-studio-spark { position: absolute; color: #8c738b; font-family: Georgia,serif; font-size: 27px; }
+.boss-studio-spark--one { top: 113px; left: 29px; }
+.boss-studio-spark--two { top: 235px; right: 22px; font-size: 20px; }
+.boss-studio-edition { position: absolute; bottom: 23px; color: #736779; font: 600 8px/1 system-ui,sans-serif; letter-spacing: 2.2px; }
+.boss-studio-copy { padding: 58px 36px 30px; }
+.boss-eyebrow { display: flex; align-items: center; gap: 9px; font: 600 9px/1.5 system-ui,sans-serif; letter-spacing: 1.6px; color: var(--text-secondary); }
+.boss-studio h2 { margin: 21px 0 16px; font-size: clamp(36px, 4vw, 48px); line-height: 1.05; letter-spacing: -2px; font-weight: 500; }
+.boss-studio h2 em { color: var(--accent); font-family: Georgia,serif; font-weight: 400; }
+.boss-studio-copy > p { font-size: 13px; line-height: 1.8; color: var(--text-secondary); margin: 0; }
+.boss-action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 25px 0 22px; }
+.boss-action-grid button { display: flex; align-items: center; gap: 9px; min-height: 43px; padding: 10px 12px; text-align: left; border: 1px solid var(--border); border-radius: 11px; background: var(--primary-light); color: var(--text-primary); cursor: pointer; font: 500 11px/1.2 system-ui,sans-serif; transition: border-color .2s, background .2s; }
+.boss-action-grid button:hover { border-color: var(--accent); background: var(--surface-elevated); }
+.boss-action-grid button > span { color: var(--accent); font-size: 18px; width: 19px; text-align: center; }
+.boss-turn-label { display: flex; justify-content: space-between; font-size: 10px; color: var(--text-secondary); }
+.boss-turn { width: 100%; height: 24px; margin: 4px 0 11px; accent-color: var(--accent); cursor: ew-resize; }
+.boss-studio-options { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.boss-studio-options button { font: 10px/1.5 system-ui,sans-serif; background: none; color: var(--text-secondary); cursor: pointer; border: 0; padding: 6px 0; }
+.boss-studio-options button:hover { color: var(--accent); }
+.boss-preference { margin-top: 17px; padding: 13px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--primary-light); }
+.boss-preference-toggle { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 30px; font: 500 12px/1.4 system-ui,sans-serif; cursor: pointer; }
+.boss-preference-toggle input { width: 19px; height: 19px; margin: 0; accent-color: var(--accent); cursor: pointer; }
+.boss-preference-toggle input:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+.boss-preference-toggle input:disabled { cursor: wait; }
+.boss-preference p { margin: 6px 0 0; font: 10px/1.6 system-ui,sans-serif; color: var(--text-secondary); }
+.boss-preference [data-boss-preference-status] { min-height: 16px; }
+.boss-preference button { margin-top: 7px; padding: 4px 0; border: 0; background: none; color: var(--accent); font: 500 11px/1.5 system-ui,sans-serif; cursor: pointer; }
+.boss-preference button[hidden] { display: none; }
+.boss-studio-copy > .boss-studio-note { font-size: 10px; margin-top: 21px; line-height: 1.65; opacity: .8; border-top: 1px solid var(--border); padding-top: 14px; }
+@media (max-width: 768px) {
+    .chat-bubble.sherpa-boss { width: 108px; height: 166px; right: calc(12px + var(--safe-area-right)); bottom: calc(21px + var(--safe-area-bottom)); }
+    .chat-panel { bottom: calc(202px + var(--safe-area-bottom)) !important; max-height: min(580px, calc(100dvh - 220px - var(--safe-area-top) - var(--safe-area-bottom))); }
+    .boss-name { font-size: 8px; padding: 6px 9px; }
+    .boss-hint { display: none; }
+}
+@media (max-width: 580px) {
+    .boss-studio { width: calc(100vw - 24px); max-height: calc(100dvh - 24px); border-radius: 23px; }
+    .boss-studio[open] { grid-template-columns: 1fr; }
+    .boss-studio-art { min-height: 285px; border-radius: 22px 22px 0 0; }
+    .boss-studio-model { height: 270px; width: 190px; margin-top: -10px; }
+    .boss-studio-pedestal { top: calc(50% + 103px); width: 140px; height: 18px; }
+    .boss-studio-edition { bottom: 12px; font-size: 7px; }
+    .boss-studio-orbit { top: -30px; }
+    .boss-studio-orbit--two { top: -70px; }
+    .boss-studio-copy { padding: 25px; }
+    .boss-studio h2 { margin: 12px 0; font-size: 36px; }
+    .boss-studio h2 br { display: none; }
+    .boss-action-grid { margin: 18px 0; }
+    .boss-studio-copy > .boss-studio-note { margin-top: 13px; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .boss-hint, .boss-action-grid button { transition: none; }
+    .boss-greeting { animation: none; }
+}
+@media (forced-colors: active) {
+    .boss-name, .boss-studio { border: 1px solid ButtonText; }
+    .boss-status-dot { background: Highlight; }
+}

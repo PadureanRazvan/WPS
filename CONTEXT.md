@@ -58,6 +58,8 @@ The release import map resolves local module imports to one versioned URL per mo
 
 **AI Action Proposal** — a complete, validated set of proposed Agent changes using exact document IDs and the Bucharest calendar. The chat renders the affected Agents, dates, values, and deletion warnings for an explicit Apply changes button; text replies, Clear, and logout cannot approve a proposal. Success is shown only after Agent Persistence acknowledges the transaction.
 
+**Sherpa Boss Companion** — the portrait-inspired articulated 3D chat launcher with upright dragging, optional ragdoll throws, wall/shake reactions, a minimize dock and a character studio. The ragdoll switch is saved under the signed-in account's UID. The birthday hat follows her head in every pose. Rendering remains independent of AI permissions and Agent Persistence. See [the companion review guide](docs/sherpa-boss.md).
+
 **Planner Selection State** — the rules for turning Planner Cell click, drag, stop, and clear actions into selected Planner Cell keys, selection counts, and selection drag state.
 
 **Planner View State** — the rules for turning Planner month, team, Agent, date-range, search, and view-option controls into the current Planner filter and render state.

@@ -1,8 +1,8 @@
 import {
     INFINITY_PROFILE, getInfinityFrame, getInfinitySurfacePoint,
     getInfinityPathAngle, getInfinityColor, getInfinityOcclusion
-} from './logo-infinity-surface.js?v=2026.10.21';
-import { getPreparedLogoGeometry } from './logo-geometry-cache.js?v=2026.10.21';
+} from './logo-infinity-surface.js?v=2026.10.22';
+import { getPreparedLogoGeometry } from './logo-geometry-cache.js?v=2026.10.22';
 
 const templates = new WeakMap();
 

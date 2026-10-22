@@ -31,6 +31,16 @@ service cloud.firestore {
         && request.resource.data.user.uid == request.auth.uid;
     }
 
+    // Each approved account owns only its own companion setting.
+    match /companion_preferences/{userId} {
+      allow get: if isAuthorizedStaff() && request.auth.uid == userId;
+      allow create, update: if isAuthorizedStaff()
+        && request.auth.uid == userId
+        && request.resource.data.keys().hasOnly(['ragdollEnabled'])
+        && request.resource.data.ragdollEnabled is bool;
+      allow list, delete: if false;
+    }
+
     // Gemini credentials are server secrets. Clients must never read or write them.
     match /config/{configId} {
       allow read, write: if false;
