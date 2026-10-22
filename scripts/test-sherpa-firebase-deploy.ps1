@@ -73,6 +73,50 @@ function Test-Case {
 $emptyRepository = '{"name":"projects/wps-sherpa-database/locations/europe-west8/repositories/gcf-artifacts"}'
 $sevenDayPolicy = '{"cleanupPolicies":{"firebase-functions-cleanup":{"action":"DELETE","condition":{"olderThan":"604800s","tagState":"ANY"}}},"cleanupPolicyDryRun":false}'
 
+$runDescribe = @('run', 'services', 'describe', 'sherpa-codex-worker', '--region', $Region, '--project', $ProjectId, '--format=json')
+$runMissing = 'ERROR: (gcloud.run.services.describe) Cannot find service [sherpa-codex-worker]'
+Test-Case 'exact missing Cloud Run service permits first deployment' {
+    Expect-Command 'gcloud' $runDescribe $runMissing 1
+    if ($null -ne (Invoke-Gcloud -Arguments $runDescribe -AllowMissing)) { throw 'Missing service was not returned as null.' }
+}
+Test-Case 'missing Cloud Run service still throws without AllowMissing' {
+    Expect-Command 'gcloud' $runDescribe $runMissing 1
+    Invoke-Gcloud -Arguments $runDescribe
+} $runMissing
+Test-Case 'missing-service message for another service is rejected' {
+    Expect-Command 'gcloud' $runDescribe ($runMissing.Replace('sherpa-codex-worker]', 'another-service]')) 1
+    Invoke-Gcloud -Arguments $runDescribe -AllowMissing
+} 'another-service'
+Test-Case 'missing-service text is accepted only by run services describe' {
+    $otherCommand = @('run', 'services', 'get-iam-policy', 'sherpa-codex-worker')
+    Expect-Command 'gcloud' $otherCommand $runMissing 1
+    Invoke-Gcloud -Arguments $otherCommand -AllowMissing
+} $runMissing
+Test-Case 'explicit NOT_FOUND remains a missing resource' {
+    Expect-Command 'gcloud' @('secrets', 'describe', $secretName) 'ERROR: (gcloud.secrets.describe) NOT_FOUND: Secret does not exist.' 1
+    if ($null -ne (Invoke-Gcloud -Arguments @('secrets', 'describe', $secretName) -AllowMissing)) { throw 'NOT_FOUND was not returned as null.' }
+}
+Test-Case 'storage HTTPError 404 remains a missing resource' {
+    Expect-Command 'gcloud' @('storage', 'buckets', 'describe', 'gs://fixture') 'ERROR: (gcloud.storage.buckets.describe) HTTPError 404: The specified bucket does not exist.' 1
+    if ($null -ne (Invoke-Gcloud -Arguments @('storage', 'buckets', 'describe', 'gs://fixture') -AllowMissing)) { throw 'HTTP 404 was not returned as null.' }
+}
+foreach ($denial in @(
+    'PERMISSION_DENIED: The resource was not found or you do not have permission.',
+    'UNAUTHENTICATED: NOT_FOUND was returned before authentication failed.',
+    'BILLING_DISABLED: NOT_FOUND metadata is unavailable.',
+    'HTTPError 403: NOT_FOUND or access denied.',
+    "$runMissing`nPermission denied on resource."
+)) {
+    Test-Case "permission/auth/billing failure is never treated as missing: $denial" {
+        Expect-Command 'gcloud' $runDescribe $denial 1
+        Invoke-Gcloud -Arguments $runDescribe -AllowMissing
+    } $denial
+}
+Test-Case 'generic not-found wording does not hide unrelated command failure' {
+    Expect-Command 'gcloud' $runDescribe 'ERROR: credentials helper not found.' 1
+    Invoke-Gcloud -Arguments $runDescribe -AllowMissing
+} 'credentials helper not found'
+
 # Exercise both entrypoints' billing guard independently, without importing any
 # top-level deployment/login statements or accessing the operator's credentials.
 foreach ($filename in @('deploy-sherpa-codex-cloud.ps1', 'bootstrap-sherpa-codex-auth.ps1')) {

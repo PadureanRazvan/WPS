@@ -24,8 +24,18 @@ function Invoke-Gcloud {
     $PSNativeCommandUseErrorActionPreference = $false
     $result = & gcloud @Arguments 2>&1
     if ($LASTEXITCODE -ne 0) {
-        if ($AllowMissing -and (($result -join "`n") -match 'NOT_FOUND|not found|does not exist')) { return $null }
-        throw "gcloud failed ($($Arguments[0])): $($result -join "`n")"
+        $detail = $result -join "`n"
+        # Authorization failures sometimes mention a resource that may not
+        # exist. They must never be converted into permission to create it.
+        $denied = $detail -match '\b(PERMISSION_DENIED|UNAUTHENTICATED|ACCESS_DENIED|BILLING_DISABLED|SERVICE_DISABLED)\b|\b(permission|access)[^\r\n]*denied\b|\b(not authorized|not authenticated|does not have permission|do not have permission)\b|\bHTTPError\s+(401|403)\b'
+        $missing = $detail -match '\bNOT_FOUND\b|\bHTTPError\s+404\b'
+        if ($Arguments.Count -ge 4 -and $Arguments[0] -eq 'run' -and $Arguments[1] -eq 'services' -and $Arguments[2] -eq 'describe') {
+            # Cloud Run's describe command emits this text instead of NOT_FOUND.
+            $runMissing = [regex]::Escape("ERROR: (gcloud.run.services.describe) Cannot find service [$($Arguments[3])]")
+            $missing = $missing -or $detail -match "(?m)^\s*$runMissing\.?\s*$"
+        }
+        if ($AllowMissing -and $missing -and -not $denied) { return $null }
+        throw "gcloud failed ($($Arguments[0])): $detail"
     }
     return ($result -join "`n")
 }
