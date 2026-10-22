@@ -17,8 +17,8 @@
 // =============================================================================
 
 export const SHERPA_VERSION = Object.freeze({
-    number: '2026.10.22',
-    codename: 'Birthday Spark',
+    number: '2026.10.22.2',
+    codename: 'Luna Relay',
     released: '2026-10-22'
 });
 

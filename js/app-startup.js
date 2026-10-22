@@ -1,4 +1,4 @@
-import { getThemeMeta, normalizeThemePreference, resolveThemePreference } from './theme-system.js?v=2026.10.22';
+import { getThemeMeta, normalizeThemePreference, resolveThemePreference } from './theme-system.js?v=2026.10.22.2';
 
 export function applyBootAppearance(preference, root = globalThis.document) {
     const normalized = normalizeThemePreference(preference);

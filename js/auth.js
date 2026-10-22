@@ -3,7 +3,7 @@
 import { auth, googleProvider, signInWithPopup, signOut, onAuthStateChanged } from './firebase-session.js';
 import { t } from './localization.js';
 import { setSignInPending, clearSignInError, showSignInError } from './sign-in-ui.js';
-import { isAuthorizedUser } from './auth-policy.js?v=2026.10.22';
+import { isAuthorizedUser } from './auth-policy.js?v=2026.10.22.2';
 
 function createAuthError(code) {
     const error = new Error(code);

@@ -1,7 +1,7 @@
-import { getHeartPoint, getHeartColor, getHeartNormal, getHeartPulsePoint } from './logo-heart-surface.js?v=2026.10.22';
+import { getHeartPoint, getHeartColor, getHeartNormal, getHeartPulsePoint } from './logo-heart-surface.js?v=2026.10.22.2';
 
-import { createCappedTubeGeometry } from './logo-tube-geometry.js?v=2026.10.22';
-import { getPreparedLogoGeometry } from './logo-geometry-cache.js?v=2026.10.22';
+import { createCappedTubeGeometry } from './logo-tube-geometry.js?v=2026.10.22.2';
+import { getPreparedLogoGeometry } from './logo-geometry-cache.js?v=2026.10.22.2';
 
 const templates = new WeakMap();
 const inlayTemplates = new WeakMap();
