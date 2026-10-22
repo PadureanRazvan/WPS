@@ -21,12 +21,106 @@ $stagingRoot = $null
 
 function Invoke-Gcloud {
     param([string[]] $Arguments, [switch] $AllowMissing)
+    $PSNativeCommandUseErrorActionPreference = $false
     $result = & gcloud @Arguments 2>&1
     if ($LASTEXITCODE -ne 0) {
         if ($AllowMissing -and (($result -join "`n") -match 'NOT_FOUND|not found|does not exist')) { return $null }
         throw "gcloud failed ($($Arguments[0])): $($result -join "`n")"
     }
     return ($result -join "`n")
+}
+
+function Assert-ActiveBilling {
+    # Project linkage can say enabled while the linked payment account is closed.
+    # These two metadata reads must precede provisioning or interactive login.
+    $billing = Invoke-Gcloud -Arguments @('billing', 'projects', 'describe', $ProjectId, '--format=json') | ConvertFrom-Json -AsHashtable
+    if ($billing['billingEnabled'] -ne $true) {
+        throw "Billing is disabled. Enable Blaze and link an open billing account at https://console.firebase.google.com/project/$ProjectId/usage/details. No provisioning or login was started."
+    }
+    $accountName = [string] $billing['billingAccountName']
+    if ($accountName -notmatch '^billingAccounts/[A-Za-z0-9-]+$') {
+        throw 'The linked billing account could not be identified (status unknown). No provisioning or login was started.'
+    }
+    try {
+        $account = Invoke-Gcloud -Arguments @('billing', 'accounts', 'describe', $accountName.Substring('billingAccounts/'.Length), '--format=json') | ConvertFrom-Json -AsHashtable
+    } catch {
+        throw "Cannot verify whether $accountName is open (status unknown). An account owner must verify access/status; no permissions were changed and no provisioning or login was started. Original error: $($_.Exception.Message)"
+    }
+    if ($account['open'] -eq $false) {
+        throw "The linked billing account $accountName is closed (open:false), even though project billingEnabled is true. Reopen it or link an active account in Google Cloud Billing. No provisioning or login was started."
+    }
+    if ($account['open'] -ne $true) {
+        throw "The linked billing account $accountName did not return an open status (status unknown). No provisioning or login was started."
+    }
+}
+
+function Invoke-FirebaseCli {
+    param([string[]] $Arguments)
+    # Capture the CLI exit code even when the caller enables native exceptions.
+    $PSNativeCommandUseErrorActionPreference = $false
+    $lines = [Collections.Generic.List[string]]::new()
+    & npx --yes firebase-tools@15.23.0 @Arguments 2>&1 | ForEach-Object {
+        $line = [string] $_
+        $lines.Add($line)
+        Write-Host $line
+    }
+    return @{ ExitCode = $LASTEXITCODE; Output = $lines -join "`n" }
+}
+
+function Complete-FirebaseDeployment {
+    param([int] $ExitCode, [string] $Output, [string] $WorkerUrl, [bool] $ArtifactRepositoryWasAbsent = $false)
+    if ($ExitCode -eq 0) { return }
+
+    # Firebase CLI 15.23.0 prompts for artifact retention after deploying.
+    # Its cleanup error can also mask failed function operations, so require
+    # the exact sole error, the target's success marker, and live configuration.
+    $plain = [regex]::Replace($Output, '\x1B\[[0-?]*[ -/]*[@-~]', '')
+    $cleanupError = "Error: Functions successfully deployed but could not set up cleanup policy in location $Region. Pass the --force option to automatically set up a cleanup policy or run 'firebase functions:artifacts:setpolicy' to manually set up a cleanup policy."
+    $errors = @($plain -split '\r?\n' | Where-Object { $_.TrimStart() -match '^Error:' })
+    $target = [regex]::Escape("functions[generateSherpaChat($Region)]")
+    $success = $plain -match "(?m)^\s*[^\r\n]*$target Successful (create|update) operation\.\s*$"
+    if ($errors.Count -ne 1 -or $errors[0].Trim() -ne $cleanupError -or -not $success -or
+        $plain -match 'Functions deploy had errors|Unable to set the invoker|Deployment canceled|Function deployment failed') {
+        throw "Firebase deployment failed (exit $ExitCode). Private worker may be deployed; the original output follows:`n$Output"
+    }
+
+    try {
+        $deployed = Invoke-Gcloud -Arguments @('functions', 'describe', 'generateSherpaChat', '--gen2', '--region', $Region, '--project', $ProjectId, '--format=json') | ConvertFrom-Json -AsHashtable
+        $serviceConfig = $deployed['serviceConfig']
+        if ($deployed['name'] -ne "projects/$ProjectId/locations/$Region/functions/generateSherpaChat" -or
+            $deployed['state'] -ne 'ACTIVE' -or $deployed['environment'] -ne 'GEN_2' -or
+            -not $deployed['buildConfig'] -or $deployed['buildConfig']['runtime'] -ne 'nodejs22' -or
+            -not $serviceConfig -or $serviceConfig['serviceAccountEmail'] -ne $gatewayAccount -or
+            $serviceConfig['timeoutSeconds'] -ne 300 -or -not $serviceConfig['environmentVariables'] -or
+            $serviceConfig['environmentVariables']['SHERPA_CODEX_WORKER_URL'] -ne $WorkerUrl) {
+            throw 'The deployed callable does not match the expected active Sherpa gateway configuration.'
+        }
+
+        # Inspect only repository metadata. Respect every existing policy and
+        # Firebase's explicit opt-out label; never overwrite either choice.
+        $repository = Invoke-Gcloud -Arguments @('artifacts', 'repositories', 'describe', 'gcf-artifacts', '--location', $Region, '--project', $ProjectId, '--format=json') | ConvertFrom-Json -AsHashtable
+        if (($repository['cleanupPolicies'] -and $repository['cleanupPolicies'].Count -gt 0) -or
+            ($repository['labels'] -and $repository['labels']['firebase-functions-cleanup-opted-out'] -eq 'true')) {
+            Write-Host 'Callable deployment verified. Existing function artifact retention policy or opt-out preserved.'
+            return
+        }
+        if (-not $ArtifactRepositoryWasAbsent) {
+            throw 'The function artifact repository already existed or its prior state is unknown. Its images and retention are unchanged; choose an explicit retention policy before retrying.'
+        }
+
+        $cleanup = Invoke-FirebaseCli -Arguments @('functions:artifacts:setpolicy', '--project', $ProjectId, '--location', $Region, '--days', '7', '--force', '--non-interactive')
+        if ($cleanup.ExitCode -ne 0) { throw "Artifact cleanup configuration failed (exit $($cleanup.ExitCode)):`n$($cleanup.Output)" }
+        $verified = Invoke-Gcloud -Arguments @('artifacts', 'repositories', 'describe', 'gcf-artifacts', '--location', $Region, '--project', $ProjectId, '--format=json') | ConvertFrom-Json -AsHashtable
+        $policy = if ($verified['cleanupPolicies']) { $verified['cleanupPolicies']['firebase-functions-cleanup'] } else { $null }
+        if (-not $policy -or $policy['action'] -ne 'DELETE' -or -not $policy['condition'] -or
+            $policy['condition']['olderThan'] -ne '604800s' -or $policy['condition']['tagState'] -ne 'ANY' -or
+            $verified['cleanupPolicyDryRun'] -eq $true) {
+            throw 'The seven-day function artifact cleanup policy could not be verified.'
+        }
+        Write-Host 'Callable deployment verified; seven-day function artifact cleanup policy configured.'
+    } catch {
+        throw "Firebase cleanup recovery failed: $($_.Exception.Message)`nOriginal Firebase deployment output:`n$Output"
+    }
 }
 
 function Ensure-ServiceAccount {
@@ -59,10 +153,7 @@ Get-Command gcloud, node, npm, npx -ErrorAction Stop | Out-Null
 
 # This is the first cloud operation. No APIs, IAM, secrets, builds or services
 # are changed until the owner has enabled billing in the Firebase console.
-$billing = Invoke-Gcloud -Arguments @('billing', 'projects', 'describe', $ProjectId, '--format=json') | ConvertFrom-Json
-if (-not $billing.billingEnabled) {
-    throw "Billing is disabled. Enable Blaze and link a billing account at https://console.firebase.google.com/project/$ProjectId/usage/details, then rerun. Nothing was changed."
-}
+Assert-ActiveBilling
 
 $project = Invoke-Gcloud -Arguments @('projects', 'describe', $ProjectId, '--format=json') | ConvertFrom-Json
 $sourceBucket = "$ProjectId-sherpa-build-$($project.projectNumber)"
@@ -172,10 +263,14 @@ try {
     $envLines = @($envLines | Where-Object { $_ -notmatch '^SHERPA_(CODEX_WORKER_URL|GATEWAY_SERVICE_ACCOUNT)=' })
     $envLines += "SHERPA_CODEX_WORKER_URL=$workerUrl", "SHERPA_GATEWAY_SERVICE_ACCOUNT=$gatewayAccount"
     $envLines | Set-Content -LiteralPath $envPath -Encoding utf8NoBOM
+    # Automatic seven-day cleanup is allowed only for a repository created by
+    # this first Firebase deployment, never an existing repository's images.
+    $firebaseArtifactRepository = Invoke-Gcloud -Arguments @('artifacts', 'repositories', 'describe', 'gcf-artifacts', '--location', $Region, '--project', $ProjectId, '--format=json') -AllowMissing
+    $firebaseArtifactRepositoryWasAbsent = -not $firebaseArtifactRepository
     Push-Location $repoRoot
     try {
-        & npx --yes firebase-tools@15.23.0 deploy --only functions:generateSherpaChat --project $ProjectId --non-interactive
-        if ($LASTEXITCODE -ne 0) { throw 'Firebase deployment failed. Private worker may be deployed; fix the reported deploy error and rerun.' }
+        $deployment = Invoke-FirebaseCli -Arguments @('deploy', '--only', 'functions:generateSherpaChat', '--project', $ProjectId, '--non-interactive')
+        Complete-FirebaseDeployment -ExitCode $deployment.ExitCode -Output $deployment.Output -WorkerUrl $workerUrl -ArtifactRepositoryWasAbsent $firebaseArtifactRepositoryWasAbsent
     } finally { Pop-Location }
 
     $finalIam = Invoke-Gcloud -Arguments @('run', 'services', 'get-iam-policy', $workerName, '--region', $Region, '--project', $ProjectId, '--format=json') | ConvertFrom-Json -AsHashtable

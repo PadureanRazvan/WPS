@@ -18,9 +18,34 @@ $uploaded = $false
 
 function Invoke-Gcloud {
     param([string[]] $Arguments)
+    $PSNativeCommandUseErrorActionPreference = $false
     $result = & gcloud @Arguments 2>&1
     if ($LASTEXITCODE -ne 0) { throw "gcloud failed ($($Arguments[0])): $($result -join "`n")" }
     return ($result -join "`n")
+}
+
+function Assert-ActiveBilling {
+    # Project linkage can say enabled while the linked payment account is closed.
+    # These two metadata reads must precede provisioning or interactive login.
+    $billing = Invoke-Gcloud -Arguments @('billing', 'projects', 'describe', $ProjectId, '--format=json') | ConvertFrom-Json -AsHashtable
+    if ($billing['billingEnabled'] -ne $true) {
+        throw "Billing is disabled. Enable Blaze and link an open billing account at https://console.firebase.google.com/project/$ProjectId/usage/details. No provisioning or login was started."
+    }
+    $accountName = [string] $billing['billingAccountName']
+    if ($accountName -notmatch '^billingAccounts/[A-Za-z0-9-]+$') {
+        throw 'The linked billing account could not be identified (status unknown). No provisioning or login was started.'
+    }
+    try {
+        $account = Invoke-Gcloud -Arguments @('billing', 'accounts', 'describe', $accountName.Substring('billingAccounts/'.Length), '--format=json') | ConvertFrom-Json -AsHashtable
+    } catch {
+        throw "Cannot verify whether $accountName is open (status unknown). An account owner must verify access/status; no permissions were changed and no provisioning or login was started. Original error: $($_.Exception.Message)"
+    }
+    if ($account['open'] -eq $false) {
+        throw "The linked billing account $accountName is closed (open:false), even though project billingEnabled is true. Reopen it or link an active account in Google Cloud Billing. No provisioning or login was started."
+    }
+    if ($account['open'] -ne $true) {
+        throw "The linked billing account $accountName did not return an open status (status unknown). No provisioning or login was started."
+    }
 }
 
 function Remove-OwnedLoginDirectory {
@@ -35,10 +60,7 @@ function Remove-OwnedLoginDirectory {
 }
 
 Get-Command gcloud, node, npm -ErrorAction Stop | Out-Null
-$billing = Invoke-Gcloud -Arguments @('billing', 'projects', 'describe', $ProjectId, '--format=json') | ConvertFrom-Json
-if (-not $billing.billingEnabled) {
-    throw "Enable Firebase Blaze for $ProjectId before creating the cloud sign-in. No login or cloud changes were started."
-}
+Assert-ActiveBilling
 
 # Verify that the provisioning step created the intended secret. Never read
 # existing cloud credentials or copy the desktop's active Codex auth cache.

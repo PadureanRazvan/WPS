@@ -46,6 +46,10 @@ jobs:
       - name: Check Firebase callable
         run: npm --prefix functions run check
 
+      - name: Check deployment preflight and cleanup recovery without cloud access
+        shell: pwsh
+        run: ./scripts/test-sherpa-firebase-deploy.ps1
+
       - name: Check browser regressions
         run: node --test --test-concurrency=2 tests/*.test.mjs
 
