@@ -40,4 +40,7 @@ test('maps secure backend reasons to accurate user-facing states', () => {
     );
     assert.equal(getChatErrorTranslationKey({ code: 'functions/resource-exhausted' }), 'chat-rate-limit');
     assert.equal(getChatErrorTranslationKey({ code: 'functions/permission-denied' }), 'chat-access-denied');
+    assert.equal(getChatErrorTranslationKey({ details: { reason: 'AI_BUSY' } }), 'chat-rate-limit');
+    assert.equal(getChatErrorTranslationKey({ details: { reason: 'AI_AUTH_RECOVERY_REQUIRED' } }), 'chat-service-configuration-error');
+    assert.equal(getChatErrorTranslationKey({ details: { reason: 'AI_TIMEOUT' } }), 'chat-service-unavailable');
 });

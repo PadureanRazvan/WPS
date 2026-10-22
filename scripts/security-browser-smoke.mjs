@@ -35,7 +35,7 @@ try {
         const url = new URL(route.request().url());
         const fulfillModule = body => route.fulfill({ contentType: 'text/javascript', body });
         if (url.origin === origin && url.pathname === '/js/firebase-config.js') {
-            return fulfillModule('export const db = {}, functions = {};');
+            return fulfillModule('export const db = {}, functions = {}, auth = { currentUser: null };');
         }
         if (url.origin === 'https://www.gstatic.com' && url.pathname.endsWith('/firebase-firestore.js')) {
             return fulfillModule('export const collection = () => ({}), doc = () => ({}), onSnapshot = () => () => {}, getDocs = async () => ({ forEach() {} }), query = () => ({}), orderBy = () => ({}), limit = () => ({}), where = () => ({}), serverTimestamp = () => ({}); export const addDoc = async () => { throw Error("Unexpected write"); }, setDoc = addDoc, updateDoc = addDoc, deleteDoc = addDoc, runTransaction = addDoc; export class Timestamp { static fromDate(date) { return date; } }');
@@ -61,14 +61,23 @@ try {
         localStorage.setItem('language', 'en');
         document.getElementById('loginScreen').style.display = 'none';
         document.getElementById('appContainer').style.display = '';
+        document.documentElement.dataset.authState = 'signed-in';
+        document.documentElement.dataset.workspaceState = 'ready';
         window.auditChat = loadShell(await (await fetch('/js/chat.js')).text(), {
             ...config, ...policy,
             getPlannerData: () => roster,
-            functions: {}, httpsCallable: () => () => {},
+            functions: {}, httpsCallable: () => () => {}, auth: { currentUser: null },
+            createSherpaBoss: ({ element, onActivate }) => {
+                element.addEventListener('click', onActivate);
+                return { setVisible: visible => { element.dataset.bossVisible = String(visible); },
+                    setState() {}, dispose() {} };
+            },
+            createBossStudio: () => ({ open() {}, dispose() {} }),
             createSherpaChatService: () => ({ generate: async () => ({ candidates: [{ content: { parts: [{ text: window.auditResponse }] } }] }) }),
             commitAgentChanges: async plan => window.auditCommits.push(plan),
             logActivity() {}, showSection() {}, getChatErrorTranslationKey: () => 'chat-error'
-        }, 'initializeChat(); return { clearChat, resetCooldown: () => { lastSendTime = 0; } };');
+        }, 'return { ready: initializeChat(), clearChat, resetCooldown: () => { lastSendTime = 0; } };');
+        await window.auditChat.ready;
 
         // Run the actual renderers in a browser; event-handler injection must remain inert text.
         window.sherpaAuditMarker = 0;

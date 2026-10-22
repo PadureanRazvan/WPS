@@ -1,12 +1,12 @@
 // js/chat.js — Sherpa AI Chat Module
 import { getPlannerData, commitAgentChanges } from './planner.js';
 import { buildChatActionPlan, findAgentById, getChatCalendarDate } from './chat-actions.js';
-import { getAverageProductivity, getProductivityTrendData } from './productivity.js?v=2026.10.22';
-import { showSection } from './ui.js?v=2026.10.22';
+import { getAverageProductivity, getProductivityTrendData } from './productivity.js?v=2026.10.23';
+import { showSection } from './ui.js?v=2026.10.23';
 import { translations, extractHoursFromDay, getMonthKey, getEffectiveAgentDayValue, isNonWorkingCode, normalizeTeamForDisplay, parseShiftEntry } from './config.js';
 import { auth, db, functions } from './firebase-config.js';
 import { doc, onSnapshot, setDoc } from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js';
-import { logActivity } from './logs.js?v=2026.10.22';
+import { logActivity } from './logs.js?v=2026.10.23';
 import { httpsCallable } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-functions.js";
 import { createSherpaChatService, getChatErrorTranslationKey } from './chat-service.js';
 import { createSherpaBoss } from './sherpa-boss.js';
@@ -30,7 +30,7 @@ let bossStudio = null;
 let bossPreferences = null;
 let avatarSpeaking = false;
 let avatarThinking = false;
-const chatService = createSherpaChatService(httpsCallable(functions, 'generateSherpaChat'));
+const chatService = createSherpaChatService(httpsCallable(functions, 'generateSherpaChat', { timeout: 330_000 }));
 
 // --- Initialization ---
 export async function initializeChat() {

@@ -21,8 +21,8 @@
 // toasts from ui.js.
 
 import { translations } from './config.js';
-import { showTemporaryMessage } from './ui.js?v=2026.10.22';
-import { getUsersData } from './users.js?v=2026.10.22';
+import { showTemporaryMessage } from './ui.js?v=2026.10.23';
+import { getUsersData } from './users.js?v=2026.10.23';
 import { getPlannerData } from './planner.js';
 import { db } from './firebase-config.js';
 import { collection, doc, setDoc, deleteDoc, getDocs, onSnapshot } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";

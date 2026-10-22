@@ -17,9 +17,9 @@
 // =============================================================================
 
 export const SHERPA_VERSION = Object.freeze({
-    number: '2026.10.22',
-    codename: 'Birthday Spark',
-    released: '2026-10-22'
+    number: '2026.10.23',
+    codename: 'Luna Relay',
+    released: '2026-10-23'
 });
 
 // FNV-1a (32-bit) over the identifying fields -> short, stable hex fingerprint.

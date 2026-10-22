@@ -8,3 +8,5 @@ functions/.env.*
 Thumbs.db
 server*.log
 output/
+# Firebase deployment diagnostics stay local at every directory level.
+firebase-debug*.log

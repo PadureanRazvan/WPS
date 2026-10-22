@@ -32,7 +32,7 @@ git diff --check HEAD
 git diff --cached --check
 ```
 
-6. For AI or authorization changes, review `docs/ai-security.md`. Never place the Gemini key in Firestore, a local environment file, Git, or a browser prompt.
+6. For AI or authorization changes, review `docs/ai-security.md` and `docs/sherpa-codex-cloud.md`. Never place model credentials or ChatGPT sign-in state in Firestore, a local environment file, Git, a container image, or browser responses.
 
 7. For the September 2026 security and concurrency changes, follow [the coordinated frontend/function rollout and rollback notes](security-fixes.md). Run `node scripts/security-browser-smoke.mjs` locally before deployment; its fixtures never write production data.
 
@@ -44,7 +44,7 @@ Deploy Firestore Rules independently when their tests pass:
 npx firebase-tools@15.23.0 deploy --only firestore:rules --project wps-sherpa-database
 ```
 
-The AI function requires the client-owned billing profile and the `GEMINI_API_KEY` Secret Manager secret. Set and deploy it using the hidden CLI prompt documented in `docs/ai-security.md`.
+The AI function requires the client-owned Blaze billing profile and private Codex worker. Follow [the Codex cloud runbook](sherpa-codex-cloud.md) to provision the dedicated service identities, build/deploy the worker, and seed its separate ChatGPT sign-in. This deployment uses `gpt-6-luna` with `max` reasoning and does not require a Gemini or OpenAI Platform API key. Run `npm --prefix cloud/codex-worker test` in addition to the backend and browser suites.
 
 ## Production Merge
 
