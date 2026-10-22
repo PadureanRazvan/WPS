@@ -264,4 +264,31 @@ Test-Case 'ANSI update success is recognized' {
     $colored = "$([char]27)[32m$($success.Replace('create', 'update'))$([char]27)[0m`n$cleanupError"
     Complete-FirebaseDeployment 1 $colored $workerUrl
 }
+foreach ($filename in @('deploy-sherpa-codex-cloud.ps1', 'bootstrap-sherpa-codex-auth.ps1')) {
+    $streamAst = [Management.Automation.Language.Parser]::ParseFile((Join-Path $PSScriptRoot $filename), [ref] $null, [ref] $parseErrors)
+    if ($parseErrors) { throw ($parseErrors -join "`n") }
+    $definition = $streamAst.Find({ param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Invoke-Gcloud' }, $true)
+    . ([scriptblock]::Create($definition.Extent.Text))
+    Test-Case "$filename returns success JSON without stderr diagnostics" {
+        $pwshPath = (Get-Process -Id $PID).Path
+        function gcloud {
+            & $pwshPath -NoProfile -NonInteractive -Command '[Console]::Error.WriteLine("Encryption: Google-managed key"); [Console]::Error.WriteLine("Repository Size: 104.344MB"); [Console]::Out.WriteLine(''{"fixture":true}''); exit 0'
+        }
+        $json = Invoke-Gcloud -Arguments @('fixture-only')
+        $value = $json | ConvertFrom-Json
+        if ($value.fixture -ne $true -or $json.Contains('Encryption:') -or $json.Contains('Repository Size:')) {
+            throw 'Successful native stderr contaminated JSON stdout.'
+        }
+    }
+    Test-Case "$filename preserves both native streams on permission failure" {
+        $pwshPath = (Get-Process -Id $PID).Path
+        function gcloud {
+            & $pwshPath -NoProfile -NonInteractive -Command '[Console]::Out.WriteLine("partial fixture stdout"); [Console]::Error.WriteLine("PERMISSION_DENIED: fixture denied"); exit 1'
+        }
+        try { Invoke-Gcloud -Arguments @('fixture-only') } catch {
+            if (-not $_.Exception.Message.Contains('partial fixture stdout')) { throw 'Failure stdout was discarded.' }
+            throw
+        }
+    } 'PERMISSION_DENIED: fixture denied'
+}
 Write-Host "$script:passed deployment preflight and cleanup regression cases passed; all cloud and Firebase commands were mocked."

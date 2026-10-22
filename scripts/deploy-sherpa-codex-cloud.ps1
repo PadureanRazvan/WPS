@@ -22,7 +22,7 @@ $stagingRoot = $null
 function Invoke-Gcloud {
     param([string[]] $Arguments, [switch] $AllowMissing)
     $PSNativeCommandUseErrorActionPreference = $false
-    $result = & gcloud @Arguments 2>&1
+    $result = @(& gcloud @Arguments 2>&1)
     if ($LASTEXITCODE -ne 0) {
         $detail = $result -join "`n"
         # Authorization failures sometimes mention a resource that may not
@@ -37,7 +37,11 @@ function Invoke-Gcloud {
         if ($AllowMissing -and $missing -and -not $denied) { return $null }
         throw "gcloud failed ($($Arguments[0])): $detail"
     }
-    return ($result -join "`n")
+    # Native stderr remains an ErrorRecord after redirection. Successful gcloud
+    # commands can print diagnostics there even with --format=json; return only
+    # stdout while retaining both streams above for every nonzero failure.
+    $stdout = @($result | Where-Object { $_ -isnot [Management.Automation.ErrorRecord] })
+    return ($stdout -join "`n")
 }
 
 function Assert-ActiveBilling {

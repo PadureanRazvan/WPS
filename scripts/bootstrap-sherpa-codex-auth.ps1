@@ -19,9 +19,12 @@ $uploaded = $false
 function Invoke-Gcloud {
     param([string[]] $Arguments)
     $PSNativeCommandUseErrorActionPreference = $false
-    $result = & gcloud @Arguments 2>&1
+    $result = @(& gcloud @Arguments 2>&1)
     if ($LASTEXITCODE -ne 0) { throw "gcloud failed ($($Arguments[0])): $($result -join "`n")" }
-    return ($result -join "`n")
+    # Keep success JSON separate from native stderr diagnostics. Nonzero errors
+    # above preserve both streams, including authentication/permission failures.
+    $stdout = @($result | Where-Object { $_ -isnot [Management.Automation.ErrorRecord] })
+    return ($stdout -join "`n")
 }
 
 function Assert-ActiveBilling {
