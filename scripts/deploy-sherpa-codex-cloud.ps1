@@ -256,7 +256,7 @@ try {
     $existingService = Invoke-Gcloud -Arguments @('run', 'services', 'describe', $workerName, '--region', $Region, '--project', $ProjectId, '--format=json') -AllowMissing
     $initialAudience = if ($existingService) { ($existingService | ConvertFrom-Json).status.url } else { 'https://sherpa-initialization.invalid' }
     $workerEnvironment = "SHERPA_CODEX_AUTH_SECRET=projects/$ProjectId/secrets/$secretName,SHERPA_CALLER_SERVICE_ACCOUNT=$gatewayAccount,SHERPA_WORKER_AUDIENCE=$initialAudience,GOOGLE_CLOUD_PROJECT=$ProjectId"
-    Invoke-Gcloud -Arguments @('run', 'deploy', $workerName, '--image', $image, '--region', $Region, '--project', $ProjectId, '--service-account', $workerAccount, '--no-allow-unauthenticated', '--invoker-iam-check', '--ingress=all', '--timeout=300s', '--concurrency=1', '--max-instances=1', '--min-instances=0', '--memory=1Gi', '--cpu=1', '--cpu-throttling', '--set-env-vars', $workerEnvironment, '--quiet') | Out-Null
+    Invoke-Gcloud -Arguments @('run', 'deploy', $workerName, '--image', $image, '--region', $Region, '--project', $ProjectId, '--service-account', $workerAccount, '--no-allow-unauthenticated', '--invoker-iam-check', '--ingress=all', '--timeout=300s', '--concurrency=1', '--max=1', '--min=0', '--max-instances=1', '--min-instances=0', '--memory=1Gi', '--cpu=1', '--cpu-throttling', '--set-env-vars', $workerEnvironment, '--quiet') | Out-Null
     $service = Invoke-Gcloud -Arguments @('run', 'services', 'describe', $workerName, '--region', $Region, '--project', $ProjectId, '--format=json') | ConvertFrom-Json
     $workerUrl = [string] $service.status.url
     if ($workerUrl -notmatch '^https://[a-z0-9.-]+\.run\.app$') { throw 'Cloud Run returned an unexpected service URL.' }
