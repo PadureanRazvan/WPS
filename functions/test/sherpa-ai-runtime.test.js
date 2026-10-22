@@ -8,8 +8,8 @@ const { createRequire } = require('node:module');
 process.env.GCLOUD_PROJECT = 'demo-sherpa-backend-test';
 process.env.FIREBASE_CONFIG = JSON.stringify({ projectId: process.env.GCLOUD_PROJECT });
 process.env.FIRESTORE_EMULATOR_HOST = '127.0.0.1:9';
-process.env.GEMINI_API_KEY = 'test-only-not-a-real-key';
-process.env.SHERPA_GEMINI_MODEL = 'gemini-test-model';
+process.env.SHERPA_CODEX_WORKER_URL = 'https://sherpa-fixture-test.a.run.app';
+const { GoogleAuth } = require('google-auth-library');
 const { generateSherpaChat } = require('../index');
 const { getFirestore } = require('firebase-admin/firestore');
 const db = getFirestore();
@@ -21,7 +21,7 @@ const validRequest = () => ({
   data: { language: 'en', contents: [{ role: 'user', parts: [{ text: 'Hello' }] }] }
 });
 
-function isolateServices(t, { status = 200, body = { candidates: [{ content: { parts: [{ text: 'Ready' }] } }] }, networkError } = {}) {
+function isolateServices(t, { status = 200, body = { response: { candidates: [{ content: { parts: [{ text: 'Ready' }] } }] } }, networkError } = {}) {
   const records = new Map();
   const requests = [];
   const transactions = t.mock.method(db, 'runTransaction', async work => work({
@@ -31,8 +31,12 @@ function isolateServices(t, { status = 200, body = { candidates: [{ content: { p
     },
     set(ref, value) { records.set(ref.path, value); }
   }));
+  t.mock.method(GoogleAuth.prototype, 'getIdTokenClient', async audience => {
+    assert.equal(audience, process.env.SHERPA_CODEX_WORKER_URL);
+    return { getRequestHeaders: async () => new Headers({ authorization: 'Bearer fixture-identity-token' }) };
+  });
   t.mock.method(globalThis, 'fetch', async (url, options) => {
-    assert.equal(new URL(url).hostname, 'generativelanguage.googleapis.com');
+    assert.equal(new URL(url).hostname, 'sherpa-fixture-test.a.run.app');
     requests.push({ url, options });
     if (networkError) throw networkError;
     return new Response(JSON.stringify(body), { status });
@@ -104,12 +108,16 @@ test('callable preserves the model request and response contract with installed 
   assert.equal(fixtures.records.get('_server_ai_rate_limits/fixture-user').count, 1);
   assert.equal(fixtures.requests.length, 1);
   const { url, options } = fixtures.requests[0];
-  assert.equal(new URL(url).pathname, '/v1beta/models/gemini-test-model:generateContent');
+  assert.equal(new URL(url).pathname, '/generate');
   assert.equal(options.method, 'POST');
   const request = JSON.parse(options.body);
   assert.deepEqual(request.contents, validRequest().data.contents);
-  assert.equal(request.tools[0].functionDeclarations.length, 7);
-  assert.match(request.system_instruction.parts[0].text, /requires an Apply changes button click before any write/);
+  assert.equal(request.uid, validRequest().auth.uid);
+  assert.match(request.requestId, /^[0-9a-f-]{36}$/);
+  assert.equal(options.headers.Authorization, 'Bearer fixture-identity-token');
+  assert.equal(options.headers['X-Serverless-Authorization'], options.headers.Authorization);
+  assert.equal(options.redirect, 'error');
+  assert.equal(request.system_instruction, undefined);
 });
 
 test('callable enforces per-user rate limits and opens the next window', async t => {
@@ -134,9 +142,9 @@ test('callable enforces per-user rate limits and opens the next window', async t
 });
 
 test('callable preserves upstream error mapping without making external requests', async t => {
-  for (const [status, reason] of [[401, 'AI_CREDENTIAL_INVALID'], [429, 'AI_RATE_LIMITED'], [503, 'AI_UNAVAILABLE']]) {
+  for (const [status, reason] of [[412, 'AI_AUTH_INVALID'], [429, 'AI_BUSY'], [503, 'AI_UNAVAILABLE']]) {
     await t.test(`HTTP ${status}`, async child => {
-      isolateServices(child, { status, body: { error: { message: 'Fixture rejection' } } });
+      isolateServices(child, { status, body: { error: { reason, message: 'Fixture rejection' } } });
       await assert.rejects(generateSherpaChat.run(validRequest()), error => error.details.reason === reason);
     });
   }

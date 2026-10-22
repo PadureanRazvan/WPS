@@ -1,6 +1,6 @@
 # Sherpa AI Security
 
-Sherpa AI uses a callable Firebase Function named `generateSherpaChat`. The browser sends an authenticated conversation request to the function; only the function can read `GEMINI_API_KEY` from Google Cloud Secret Manager and call Gemini.
+Sherpa AI uses a callable Firebase Function named `generateSherpaChat`. The browser sends an authenticated conversation request to the function, which calls a private Cloud Run worker using a dedicated service identity. The worker runs pinned Codex with ChatGPT-managed authentication, model `gpt-6-luna`, and reasoning effort `max`. See [cloud setup and operations](sherpa-codex-cloud.md) for deployment gates and verified status.
 
 The function runs in `europe-west8` alongside the existing Milan Firestore database.
 
@@ -8,10 +8,12 @@ The function runs in `europe-west8` alongside the existing Milan Firestore datab
 
 - Firebase Authentication identifies the caller.
 - Both Firestore Rules and the callable function require a verified account from `fspglobal.com`, `fsp-global.com`, or `sharpmindsglobal.com`. The approved Gmail identities `rahela231091@gmail.com`, `rahela.vlasa@gmail.com`, and `reizvanmail@gmail.com` are explicitly allowlisted.
-- The callable function owns the system prompt, tool declarations, Gemini model, payload limits, and upstream error mapping.
+- The gateway validates payloads and caller identity. The worker owns the system prompt, seven allowed browser data-query declarations, model selection, structured response validation, and safe upstream error mapping. The legacy browser response shape is retained so existing proposal confirmations continue to work.
 - Each user is limited to 30 model rounds per minute. A normal chat request may use several rounds when Sherpa queries live planner data.
 - CORS accepts the production GitHub Pages origin and local development origins.
-- Gemini credentials are never stored in Firestore, committed to Git, or returned to the browser.
+- The gateway has no model credentials. Only the dedicated worker identity can read and append versions of its dedicated Secret Manager authentication secret. Refreshed ChatGPT credentials are persisted before releasing the account lease; they never enter Firestore, Git, logs, images, or browser responses.
+- A distributed account lease serializes runs across cold starts and overlapping deployments. Credential write-back failures quarantine the worker until the operator repairs its dedicated sign-in state. Each invocation uses an isolated temporary Codex home; the model has no shell, file, plugin, browser, or other host-tool access.
+- Cloud Run requires IAM authentication, and the worker independently verifies the gateway's signed identity token. Public GitHub Actions never receive the ChatGPT session. Worker credentials are established through a separate sign-in, not copied from a concurrently active desktop session.
 - The retired `config/gemini` document is denied by Firestore Rules and should remain deleted.
 
 ## Confirmed Agent Changes
@@ -26,16 +28,15 @@ Confirmed edits, additions, and deletions commit together in one Firestore trans
 
 Deploy the frontend and `generateSherpaChat` together when changing this protocol. Old name-based responses are rejected by the new client. See [the security-fix rollout notes](security-fixes.md).
 
-## Activate A New Gemini Key
+## Activate Subscription-Authenticated Codex
 
-Do not paste the key into source code, Firestore, GitHub, or chat. After the client-owned billing profile and Gemini project are ready, run this from the repository root and paste the key only into the CLI's hidden prompt:
+The Firebase project must have an active billing account (Blaze). Deployment and initial dedicated ChatGPT sign-in are separate steps; follow the [cloud runbook](sherpa-codex-cloud.md). Model usage consumes the signed-in account's Codex allowance; Google hosting is billed separately. A renewed interactive sign-in may occasionally be required if the dedicated session is revoked or expires.
 
 ```powershell
-npx firebase-tools@15.23.0 functions:secrets:set GEMINI_API_KEY --project wps-sherpa-database
-npx firebase-tools@15.23.0 deploy --only functions:generateSherpaChat --project wps-sherpa-database
+./scripts/deploy-sherpa-codex-cloud.ps1
 ```
 
-The function defaults to `gemini-2.5-flash`. To change it, configure `SHERPA_GEMINI_MODEL` through Firebase's parameter prompt during deployment or a project-specific Functions environment file. Do not place credentials in that file.
+The callable configuration contains only `SHERPA_CODEX_WORKER_URL` and `SHERPA_GATEWAY_SERVICE_ACCOUNT`. Neither is a credential. The former Gemini key is not needed or mounted by this deployment. The shared policy retains compatibility helpers for old request fixtures; they are not called by the live Codex gateway.
 
 ## Enable App Check
 
@@ -51,4 +52,4 @@ Do not enforce App Check before the browser is producing valid tokens; doing so 
 
 ## Ownership Cleanup
 
-The new Gemini project, billing account, Secret Manager secret, and callable function must all belong to the client-controlled Google Cloud organization. After the support period, review the explicit Gmail exceptions in `js/auth-policy.js`, `functions/sherpa-ai-policy.js`, and `firestore.rules`, then redeploy the frontend, function, and rules together if the allowlist changes.
+The billing account, Cloud Run service, Secret Manager secret, and callable function must belong to the client-controlled Google Cloud project. ChatGPT account ownership and permitted users must also be reviewed before widening service access. After the support period, review the explicit Gmail exceptions in `js/auth-policy.js`, `functions/sherpa-ai-policy.js`, and `firestore.rules`, then redeploy the frontend, function, and rules together if the allowlist changes.

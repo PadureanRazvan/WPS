@@ -1,0 +1,70 @@
+name: Sherpa cloud checks
+
+on:
+  push:
+    branches:
+      - 'codex/**'
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+# Public repository CI contains code and offline fixtures only. It must never
+# authenticate a ChatGPT subscription or receive Google Cloud credentials.
+permissions:
+  contents: read
+
+concurrency:
+  group: sherpa-cloud-${{ github.event.pull_request.head.repo.full_name || github.repository }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  linux-and-container:
+    if: github.event_name == 'push' || startsWith(github.head_ref, 'codex/')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      CI: 'true'
+    steps:
+      - name: Check out code without persisted credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: '22'
+          package-manager-cache: false
+
+      - name: Install locked dependencies
+        run: |
+          npm --prefix cloud/codex-worker ci --no-audit --no-fund
+          npm --prefix functions ci --no-audit --no-fund
+
+      - name: Check worker and pinned Codex against local mock Responses
+        run: npm --prefix cloud/codex-worker run check
+
+      - name: Check Firebase callable
+        run: npm --prefix functions run check
+
+      - name: Check browser regressions
+        run: node --test --test-concurrency=2 tests/*.test.mjs
+
+      - name: Check release asset identity
+        run: node scripts/refresh-release-assets.mjs --check
+
+      - name: Build production worker image
+        run: docker build --pull --file cloud/codex-worker/Dockerfile --tag sherpa-codex-ci .
+
+      - name: Verify container trust roots and non-root identity
+        run: >-
+          docker run --rm --network none --entrypoint node sherpa-codex-ci
+          -e "require('node:fs').accessSync('/etc/ssl/certs/ca-certificates.crt'); if (process.getuid() === 0) throw new Error('Worker must run as non-root');"
+
+      # Node's built-in test discovery includes the mounted test directory and
+      # excludes node_modules. No shell wildcard expansion is required here.
+      # The real CLI fixture can reach only its own 127.0.0.1 mock endpoint.
+      - name: Run offline suite inside the production image
+        run: >-
+          docker run --rm --network none
+          --mount "type=bind,source=${GITHUB_WORKSPACE}/cloud/codex-worker/test,target=/app/cloud/codex-worker/test,readonly"
+          --entrypoint node sherpa-codex-ci --test

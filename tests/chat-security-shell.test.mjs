@@ -12,14 +12,15 @@ test('chat shell has no browser API-key controls or Firestore credential path', 
 
   assert.doesNotMatch(html, /chatApiKey|chatSettingsBtn|Gemini API Key/i);
   assert.doesNotMatch(chat, /config['"],\s*['"]gemini|generativelanguage[.]googleapis[.]com|apiKey/i);
-  assert.match(chat, /httpsCallable\(functions, 'generateSherpaChat'\)/);
+  assert.match(chat, /httpsCallable\(functions, 'generateSherpaChat', \{ timeout: 330_000 \}\)/);
 });
 
-test('Gemini secret access exists only in the Firebase function', async () => {
+test('Firebase gateway keeps authentication and rate limits without model credentials', async () => {
   const backend = await readWorkspaceFile('functions/index.js');
 
-  assert.match(backend, /defineSecret\('GEMINI_API_KEY'\)/);
-  assert.match(backend, /secrets: \[GEMINI_API_KEY\]/);
+  assert.doesNotMatch(backend, /GEMINI_API_KEY|auth[.]json|OPENAI_API_KEY/);
+  assert.match(backend, /SHERPA_CODEX_WORKER_URL/);
+  assert.match(backend, /serviceAccount: SHERPA_GATEWAY_SERVICE_ACCOUNT/);
   assert.match(backend, /isAuthorizedEmail/);
   assert.match(backend, /enforceRateLimit/);
 });

@@ -1,0 +1,21 @@
+# The worker Dockerfile uses the repository root as its build context.
+# Re-include parent directories explicitly; everything else stays excluded.
+**
+!cloud/
+!cloud/codex-worker/
+!cloud/codex-worker/Dockerfile
+!cloud/codex-worker/package.json
+!cloud/codex-worker/package-lock.json
+!cloud/codex-worker/src/
+!cloud/codex-worker/src/**
+!functions/
+!functions/sherpa-ai-policy.js
+
+# Never allow an accidentally placed credential or dependency tree under src.
+**/auth.json
+**/.env
+**/.env.*
+**/*.pem
+**/*.key
+**/node_modules/**
+**/.git/**

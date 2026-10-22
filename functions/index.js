@@ -1,24 +1,27 @@
 const { getApps, initializeApp } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
 const { logger } = require('firebase-functions');
-const { defineSecret, defineString } = require('firebase-functions/params');
+const { defineString } = require('firebase-functions/params');
 const { HttpsError, onCall } = require('firebase-functions/v2/https');
 const {
   PolicyError,
-  buildGeminiRequest,
   isAuthorizedEmail,
-  mapGeminiError,
   sanitizeConversationRequest
 } = require('./sherpa-ai-policy');
+const { CodexGatewayError, createCodexGateway } = require('./sherpa-codex-gateway');
 
 if (getApps().length === 0) initializeApp();
 
 const db = getFirestore();
-const GEMINI_API_KEY = defineSecret('GEMINI_API_KEY');
-const SHERPA_GEMINI_MODEL = defineString('SHERPA_GEMINI_MODEL', {
-  default: 'gemini-2.5-flash',
-  description: 'Gemini model used by the Sherpa AI callable function.'
+const SHERPA_CODEX_WORKER_URL = defineString('SHERPA_CODEX_WORKER_URL', {
+  default: '',
+  description: 'Private Cloud Run URL for the subscription-authenticated Sherpa Codex worker.'
 });
+const SHERPA_GATEWAY_SERVICE_ACCOUNT = defineString('SHERPA_GATEWAY_SERVICE_ACCOUNT', {
+  default: 'sherpa-ai-gateway@wps-sherpa-database.iam.gserviceaccount.com',
+  description: 'Dedicated callable identity allowed to invoke the private Codex worker.'
+});
+const invokeCodexWorker = createCodexGateway();
 
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_REQUESTS = 30;
@@ -45,22 +48,15 @@ async function enforceRateLimit(uid, now = Date.now()) {
   });
 }
 
-function toHttpsError(mappedError) {
-  return new HttpsError(mappedError.code, 'Sherpa AI service error.', {
-    reason: mappedError.reason,
-    upstreamMessage: mappedError.message
-  });
-}
-
 exports.generateSherpaChat = onCall({
   region: 'europe-west8',
   cors: [
     'https://padureanrazvan.github.io',
     /^http:\/\/(localhost|127[.]0[.]0[.]1)(:[0-9]+)?$/
   ],
-  secrets: [GEMINI_API_KEY],
+  serviceAccount: SHERPA_GATEWAY_SERVICE_ACCOUNT,
   enforceAppCheck: false,
-  timeoutSeconds: 60,
+  timeoutSeconds: 300,
   memory: '256MiB',
   maxInstances: 10,
   concurrency: 40
@@ -90,53 +86,21 @@ exports.generateSherpaChat = onCall({
 
   await enforceRateLimit(request.auth.uid);
 
-  const model = SHERPA_GEMINI_MODEL.value();
-  const key = GEMINI_API_KEY.value();
-  if (!key) {
-    throw new HttpsError('failed-precondition', 'Sherpa AI has not been configured yet.', {
-      reason: 'AI_NOT_CONFIGURED'
-    });
-  }
-
-  let response;
   try {
-    response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(buildGeminiRequest(chatRequest))
-      }
-    );
+    return await invokeCodexWorker({
+      workerUrl: SHERPA_CODEX_WORKER_URL.value(),
+      uid: request.auth.uid,
+      chatRequest
+    });
   } catch (error) {
-    logger.error('Sherpa AI upstream network request failed.', {
+    const safeError = error instanceof CodexGatewayError ? error
+      : new CodexGatewayError('unavailable', 'AI_UNAVAILABLE');
+    logger.warn('Sherpa AI cloud worker request failed.', {
       uid: request.auth.uid,
-      model,
-      error: error instanceof Error ? error.message : String(error)
+      reason: safeError.reason
     });
-    throw new HttpsError('unavailable', 'Sherpa AI is temporarily unavailable.', {
-      reason: 'AI_UNAVAILABLE'
+    throw new HttpsError(safeError.code, 'Sherpa AI service error.', {
+      reason: safeError.reason
     });
   }
-
-  const responseText = await response.text();
-  let responseBody;
-  try {
-    responseBody = responseText ? JSON.parse(responseText) : {};
-  } catch {
-    responseBody = {};
-  }
-
-  if (!response.ok) {
-    const mappedError = mapGeminiError(response.status, responseBody);
-    logger.warn('Sherpa AI upstream request failed.', {
-      uid: request.auth.uid,
-      model,
-      status: response.status,
-      reason: mappedError.reason
-    });
-    throw toHttpsError(mappedError);
-  }
-
-  return { response: responseBody };
 });

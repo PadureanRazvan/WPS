@@ -30,7 +30,7 @@ let bossStudio = null;
 let bossPreferences = null;
 let avatarSpeaking = false;
 let avatarThinking = false;
-const chatService = createSherpaChatService(httpsCallable(functions, 'generateSherpaChat'));
+const chatService = createSherpaChatService(httpsCallable(functions, 'generateSherpaChat', { timeout: 330_000 }));
 
 // --- Initialization ---
 export async function initializeChat() {
