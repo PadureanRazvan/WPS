@@ -7,13 +7,14 @@ $source = Join-Path $PSScriptRoot 'deploy-sherpa-codex-cloud.ps1'
 $parseErrors = $null
 $ast = [Management.Automation.Language.Parser]::ParseFile($source, [ref] $null, [ref] $parseErrors)
 if ($parseErrors) { throw ($parseErrors -join "`n") }
-foreach ($name in @('Invoke-Gcloud', 'Invoke-FirebaseCli', 'Complete-FirebaseDeployment', 'Assert-ActiveBilling')) {
+foreach ($name in @('Invoke-Gcloud', 'Invoke-FirebaseCli', 'Complete-FirebaseDeployment', 'Assert-ActiveBilling', 'Get-LatestCodexAuthVersion')) {
     $definition = $ast.Find({ param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq $name }, $true)
     if (-not $definition) { throw "Missing helper: $name" }
     . ([scriptblock]::Create($definition.Extent.Text))
 }
 
 $ProjectId = 'wps-sherpa-database'
+$secretName = 'sherpa-codex-auth'
 $Region = 'europe-west8'
 $gatewayAccount = "sherpa-ai-gateway@$ProjectId.iam.gserviceaccount.com"
 $workerUrl = 'https://sherpa-fixture.a.run.app'
@@ -111,6 +112,14 @@ foreach ($filename in @('deploy-sherpa-codex-cloud.ps1', 'bootstrap-sherpa-codex
 
 Test-Case 'normal success makes no recovery calls' {
     Complete-FirebaseDeployment 0 'Deploy complete!' $workerUrl
+}
+Test-Case 'auth version lookup requires positional secret and metadata-only output' {
+    Expect-Command 'gcloud' @('secrets', 'versions', 'list', $secretName, '--filter=state=ENABLED', '--sort-by=~createTime', '--limit=1', '--format=value(name)', '--project', $ProjectId) '1'
+    if ((Get-LatestCodexAuthVersion) -ne '1') { throw 'Latest enabled version metadata was not returned.' }
+}
+Test-Case 'missing auth version stays empty without accessing payload' {
+    Expect-Command 'gcloud' @('secrets', 'versions', 'list', $secretName, '--filter=state=ENABLED', '--sort-by=~createTime', '--limit=1', '--format=value(name)', '--project', $ProjectId) ''
+    if (-not [string]::IsNullOrEmpty([string] (Get-LatestCodexAuthVersion))) { throw 'Missing auth version did not remain empty.' }
 }
 Test-Case 'native exit is captured when native error preference is enabled' {
     $PSNativeCommandUseErrorActionPreference = $true

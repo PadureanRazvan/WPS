@@ -54,6 +54,12 @@ function Assert-ActiveBilling {
     }
 }
 
+function Get-LatestCodexAuthVersion {
+    # `versions list` takes the secret as a positional argument, not --secret.
+    # Only version metadata is returned; this never accesses credential bytes.
+    return Invoke-Gcloud -Arguments @('secrets', 'versions', 'list', $secretName, '--filter=state=ENABLED', '--sort-by=~createTime', '--limit=1', '--format=value(name)', '--project', $ProjectId)
+}
+
 function Invoke-FirebaseCli {
     param([string[]] $Arguments)
     # Capture the CLI exit code even when the caller enables native exceptions.
@@ -197,7 +203,7 @@ try {
     }
 
     # Read secret metadata only. No credential bytes enter this deploy process.
-    $version = [string] (Invoke-Gcloud -Arguments @('secrets', 'versions', 'list', '--secret', $secretName, '--filter=state=ENABLED', '--sort-by=~createTime', '--limit=1', '--format=value(name)', '--project', $ProjectId))
+    $version = [string] (Get-LatestCodexAuthVersion)
     if (-not $version.Trim()) {
         throw 'ChatGPT cloud login is missing. Run scripts/bootstrap-sherpa-codex-auth.ps1, then rerun deployment.'
     }
