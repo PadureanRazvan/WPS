@@ -1,6 +1,6 @@
-import { SUMMIT_TRIANGLES, getSummitColor, getSummitRoutePoint } from './logo-summit-surface.js?v=2026.10.21';
-import { createCappedTubeGeometry } from './logo-tube-geometry.js?v=2026.10.21';
-import { getPreparedLogoGeometry } from './logo-geometry-cache.js?v=2026.10.21';
+import { SUMMIT_TRIANGLES, getSummitColor, getSummitRoutePoint } from './logo-summit-surface.js?v=2026.10.22';
+import { createCappedTubeGeometry } from './logo-tube-geometry.js?v=2026.10.22';
+import { getPreparedLogoGeometry } from './logo-geometry-cache.js?v=2026.10.22';
 
 const templates = new WeakMap();
 

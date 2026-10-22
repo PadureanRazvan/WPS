@@ -1,49 +1,57 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { loadBrowserModule } from './helpers/browser-module.mjs';
 
 const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
-const [indexSource, chatSource, chatStyles, avatarSource] = await Promise.all([
-  read('index.html'),
-  read('js/chat.js'),
-  read('css/chat.css'),
-  read('assets/sherpa-ai-avatar.svg')
+const [html, chat, styles, controller] = await Promise.all([
+    read('index.html'), read('js/chat.js'), read('css/sherpa-boss.css'), read('js/sherpa-boss.js')
 ]);
 
-test('Sherpa AI uses the vector headset avatar in the bubble and chat header', () => {
-  assert.match(indexSource, /id="chatBubble"[^>]*aria-label="Open Sherpa AI"/);
-  assert.equal(
-    (indexSource.match(/assets\/sherpa-ai-avatar\.svg\?v=2026\.09\.06\.2/g) || []).length,
-    2
-  );
-  assert.doesNotMatch(indexSource, /chatBubbleCanvas|chatHeaderCanvas/);
-  assert.doesNotMatch(chatSource, /initChatParticles|createMiniSphere|requestAnimationFrame/);
+test('the chat launcher is an accessible 3D companion with a local image fallback', () => {
+    const button = html.match(/<button[^>]+id="chatBubble"[\s\S]*?<\/button>/)?.[0];
+    assert.match(button, /aria-label="Open Sherpa AI"/);
+    assert.match(button, /aria-controls="chatPanel"/);
+    assert.match(button, /aria-describedby="bossHelp"/);
+    assert.match(button, /<canvas data-boss-canvas aria-hidden="true"/);
+    assert.match(button, /assets\/sherpa-boss\.png/);
+    assert.doesNotMatch(button, /sherpa-ai-avatar\.svg/);
+    assert.match(html, /<dialog[^>]+id="bossStudio"/);
+    assert.match(html, /data-boss-action="wave"/);
+    assert.match(html, /data-boss-action="dance"/);
+    assert.match(styles, /touch-action: none/);
+    assert.match(styles, /prefers-reduced-motion: reduce/);
 });
 
-test('avatar is a true animated SVG without an embedded portrait', () => {
-  assert.match(avatarSource, /viewBox="0 0 128 128"/);
-  assert.match(avatarSource, /class="avatar-eyes"/);
-  assert.match(avatarSource, /class="avatar-mic-light"/);
-  assert.match(avatarSource, /@keyframes avatar-blink/);
-  assert.match(avatarSource, /@media \(prefers-reduced-motion: reduce\)/);
-  assert.doesNotMatch(avatarSource, /<image\b|data:image\//);
+test('chat delegates rendering and input to the companion and disposes it on logout', () => {
+    assert.match(chat, /bossController \?\?= createSherpaBoss/);
+    assert.match(chat, /onActivate: toggleChat/);
+    assert.doesNotMatch(chat, /bubble\.addEventListener\('click', toggleChat\)/);
+    assert.match(chat, /bossController\?\.dispose\(\)/);
+    assert.match(chat, /bossStudio\?\.dispose\(\)/);
+    assert.match(controller, /import\('\.\.\/assets\/vendor\/three\.module\.min\.js'\)/);
+    assert.doesNotMatch(chat, /requestAnimationFrame/);
 });
 
-test('avatar treatment includes a theme-aware listening halo and compact mobile size', () => {
-  assert.match(chatStyles, /\.chat-bubble::before\s*\{[^}]*conic-gradient/s);
-  assert.match(chatStyles, /@keyframes chat-avatar-listening-wave/);
-  assert.match(chatStyles, /\.chat-bubble:hover \.chat-avatar/);
-  assert.match(chatStyles, /@media \(max-width: 768px\)[\s\S]*\.chat-avatar-frame--bubble\s*\{[^}]*width:\s*42px/s);
+test('ending the typing indicator cannot overwrite a speaking reaction', () => {
+    const states = [];
+    const shell = loadBrowserModule('../../js/chat.js', {
+        document: { querySelectorAll: () => [] }, functions: {}, httpsCallable: () => () => {},
+        createSherpaChatService: () => ({}), capture: value => states.push(value)
+    }, 'bossController = { setState: capture };');
+    shell.setAvatarThinking(true);
+    shell.setAvatarSpeaking(true);
+    shell.setAvatarThinking(false);
+    shell.setAvatarSpeaking(false);
+    assert.deepEqual(states, ['thinking', 'speaking', 'speaking', 'idle']);
 });
 
-test('avatar switches into a speaking state for AI replies', () => {
-  assert.match(avatarSource, /id="talking"/);
-  assert.match(avatarSource, /class="avatar-mouth"/);
-  assert.match(avatarSource, /#talking:target ~ \.avatar-portrait \.avatar-mouth/);
-  assert.match(avatarSource, /@keyframes avatar-talk-mouth/);
-  assert.match(chatSource, /function playAvatarSpeech\(text\)/);
-  assert.match(chatSource, /baseSrc \+ '#talking'/);
-  assert.match(chatSource, /setAvatarThinking\(show\)/);
-  assert.match(chatStyles, /\.chat-avatar-frame\.is-speaking \.chat-avatar/);
-  assert.match(chatStyles, /@keyframes chat-avatar-speaking-glow/);
+test('the photograph-inspired PNG does not receive the legacy SVG talking fragment', () => {
+    const image = { dataset: {}, src: 'assets/sherpa-boss.png', getAttribute() { return this.src; }, setAttribute(_key, value) { this.src = value; } };
+    const shell = loadBrowserModule('../../js/chat.js', {
+        document: { querySelectorAll: selector => selector === '.chat-avatar' ? [image] : [] },
+        functions: {}, httpsCallable: () => () => {}, createSherpaChatService: () => ({})
+    });
+    shell.setAvatarSpeaking(true);
+    assert.equal(image.src, 'assets/sherpa-boss.png');
 });

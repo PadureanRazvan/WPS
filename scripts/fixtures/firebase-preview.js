@@ -1,6 +1,8 @@
 // Fixture SDK: authentication is simulated; no API call can leave this server.
 const state = window.sherpaPreview;
-const previewUser = { uid: 'offline-preview', displayName: 'Sherpa Preview', email: 'preview@fspglobal.com', emailVerified: true };
+const previewAccount = new URLSearchParams(location.search).get('preview-account');
+const previewUid = /^[a-zA-Z0-9_-]{1,64}$/.test(previewAccount || '') ? `offline-preview-${previewAccount}` : 'offline-preview';
+const previewUser = { uid: previewUid, displayName: 'Sherpa Preview', email: 'preview@fspglobal.com', emailVerified: true };
 const fixtureAuth = { currentUser: new URLSearchParams(location.search).get('session') === 'ready' ? previewUser : null };
 export const initializeApp = config => ({ options: config });
 export const getFirestore = () => ({});
@@ -35,28 +37,40 @@ export const doc = (_db, path, id) => ({ path, id });
 export const query = target => target;
 export const where = () => ({}), orderBy = () => ({}), limit = () => ({});
 const emptySnapshot = () => ({ docs: [], size: 0, empty: true, forEach() {} });
-// Opt-in synthetic data for month navigation, filtering and real CSV downloads.
-// This adapter never reads production data or permits business-data writes.
-function previewSnapshot(target) {
-    if (target.path !== 'agents' || new URLSearchParams(location.search).get('planner-fixture') !== '1') return emptySnapshot();
-    const now = new Date(), monthlyDays = {};
-    for (const offset of [-1, 0, 1]) {
-        const start = new Date(now.getFullYear(), now.getMonth() + offset, 1);
-        const key = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}`;
-        monthlyDays[key] = Array.from({ length: new Date(start.getFullYear(), start.getMonth() + 1, 0).getDate() }, (_, day) =>
-            [0, 6].includes(new Date(start.getFullYear(), start.getMonth(), day + 1).getDay()) ? '' : '8RO');
-    }
-    const data = { fullName: 'Synthetic Planner Agent', username: 'fixture.agent', primaryTeam: 'RO',
-        contractType: 'Full-time', contractHours: 8, monthlyDays, monthlyNotes: {}, isActive: true };
-    const docs = [{ id: 'synthetic-planner-agent', data: () => structuredClone(data) }];
-    return { docs, size: docs.length, empty: false, forEach: callback => docs.forEach(callback) };
-}
 export const getDocs = async () => emptySnapshot();
 export const getDoc = async () => ({ exists: () => false });
-export function onSnapshot(target, next) {
+const preferenceListeners = new Map();
+const preferenceKey = uid => `sherpa:offline:companion:${uid}`;
+function preferenceSnapshot(uid) {
+    let value = null;
+    try { value = JSON.parse(localStorage.getItem(preferenceKey(uid))); } catch {}
+    return { exists: () => value !== null, data: () => value, metadata: { fromCache: false, hasPendingWrites: false } };
+}
+window.addEventListener('storage', event => {
+    for (const [uid, listeners] of preferenceListeners) if (event.key === preferenceKey(uid)) listeners.forEach(deliver => deliver());
+});
+export function onSnapshot(target, optionsOrNext, nextOrError, optionalError) {
+    const next = typeof optionsOrNext === 'function' ? optionsOrNext : nextOrError;
+    const onError = typeof optionsOrNext === 'function' ? nextOrError : optionalError;
     let active = true;
     state.activeSubscriptions++;
-    const deliver = () => { if (active) next(previewSnapshot(target)); };
+    if (target.path === 'companion_preferences') {
+        const deliver = () => {
+            if (!active) return;
+            if (target.id !== fixtureAuth.currentUser?.uid || new URLSearchParams(location.search).get('preference-error') === 'read') {
+                onError?.(new Error('Offline preference read rejected')); return;
+            }
+            next(preferenceSnapshot(target.id));
+        };
+        if (!preferenceListeners.has(target.id)) preferenceListeners.set(target.id, new Set());
+        preferenceListeners.get(target.id).add(deliver);
+        queueMicrotask(deliver);
+        return () => {
+            if (active) state.activeSubscriptions--;
+            active = false; preferenceListeners.get(target.id)?.delete(deliver);
+        };
+    }
+    const deliver = () => { if (active) next(emptySnapshot()); };
     const timer = target.path === 'productivity' && state.snapshotDelay ? setTimeout(deliver, state.snapshotDelay) : null;
     if (!timer) queueMicrotask(deliver);
     return () => {
@@ -77,6 +91,19 @@ export const addDoc = async target => {
     state.writes++;
     throw new Error('Offline preview does not save data');
 };
-export const setDoc = async () => { state.writes++; throw new Error('Offline preview does not save data'); };
+export const setDoc = async (target, data) => {
+    // Only this disposable, UID-scoped preference is saved locally in preview.
+    // Workforce writes and all production connections remain blocked.
+    if (target.path === 'companion_preferences') {
+        if (target.id !== fixtureAuth.currentUser?.uid || typeof data?.ragdollEnabled !== 'boolean'
+            || Object.keys(data).some(key => key !== 'ragdollEnabled')
+            || new URLSearchParams(location.search).get('preference-error') === 'write') throw new Error('Offline preference write rejected');
+        localStorage.setItem(preferenceKey(target.id), JSON.stringify(data));
+        state.preferenceWrites = (state.preferenceWrites || 0) + 1;
+        preferenceListeners.get(target.id)?.forEach(deliver => deliver());
+        return;
+    }
+    state.writes++; throw new Error('Offline preview does not save data');
+};
 export const deleteDoc = setDoc, updateDoc = setDoc, runTransaction = setDoc;
 export const httpsCallable = () => async () => { throw new Error('Offline preview does not call AI'); };

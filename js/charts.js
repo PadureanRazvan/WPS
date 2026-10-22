@@ -1,6 +1,6 @@
 // Charts Configuration and Management
 import { chartColors, translations } from './config.js';
-import { getProductivityTrendData } from './productivity.js?v=2026.10.21';
+import { getProductivityTrendData } from './productivity.js?v=2026.10.22';
 
 let productivityChartInstance = null;
 let hoursChartInstance = null;

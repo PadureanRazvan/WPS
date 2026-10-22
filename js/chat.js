@@ -1,13 +1,17 @@
 // js/chat.js — Sherpa AI Chat Module
 import { getPlannerData, commitAgentChanges } from './planner.js';
 import { buildChatActionPlan, findAgentById, getChatCalendarDate } from './chat-actions.js';
-import { getAverageProductivity, getProductivityTrendData } from './productivity.js?v=2026.10.21';
-import { showSection } from './ui.js?v=2026.10.21';
+import { getAverageProductivity, getProductivityTrendData } from './productivity.js?v=2026.10.22';
+import { showSection } from './ui.js?v=2026.10.22';
 import { translations, extractHoursFromDay, getMonthKey, getEffectiveAgentDayValue, isNonWorkingCode, normalizeTeamForDisplay, parseShiftEntry } from './config.js';
-import { functions } from './firebase-config.js';
-import { logActivity } from './logs.js?v=2026.10.21';
+import { auth, db, functions } from './firebase-config.js';
+import { doc, onSnapshot, setDoc } from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js';
+import { logActivity } from './logs.js?v=2026.10.22';
 import { httpsCallable } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-functions.js";
 import { createSherpaChatService, getChatErrorTranslationKey } from './chat-service.js';
+import { createSherpaBoss } from './sherpa-boss.js';
+import { createBossStudio } from './sherpa-boss-studio.js';
+import { createBossPreferences } from './sherpa-boss-preferences.js';
 
 function getLang() { return localStorage.getItem('language') || 'ro'; }
 function t(key) { const l = getLang(); return (translations[l] && translations[l][key]) || key; }
@@ -21,6 +25,11 @@ let pendingActionPlan = null;
 let chatSession = 0;
 let chatBound = false;
 let speechTimer = null;
+let bossController = null;
+let bossStudio = null;
+let bossPreferences = null;
+let avatarSpeaking = false;
+let avatarThinking = false;
 const chatService = createSherpaChatService(httpsCallable(functions, 'generateSherpaChat'));
 
 // --- Initialization ---
@@ -37,7 +46,17 @@ export async function initializeChat() {
     // Initialize panel dragging.
     if (!chatBound) {
         initDraggable();
-        bubble.addEventListener('click', toggleChat);
+        bubble.addEventListener('contextmenu', event => {
+            event.preventDefault();
+            bossStudio?.open();
+        });
+        document.getElementById('bossStudioBtn')?.addEventListener('click', () => bossStudio?.open());
+        bubble.addEventListener('keydown', event => {
+            if (event.key.toLowerCase() === 'm' && !event.ctrlKey && !event.metaKey && !event.altKey) {
+                event.preventDefault();
+                bossStudio?.open();
+            }
+        });
         closeBtn?.addEventListener('click', toggleChat);
         sendBtn?.addEventListener('click', () => sendMessage());
         input?.addEventListener('keydown', (e) => {
@@ -50,10 +69,28 @@ export async function initializeChat() {
         chatBound = true;
     }
     clearChat();
+    bossController ??= createSherpaBoss({ element: bubble, onActivate: toggleChat, ragdollEnabled: false,
+        minimizeButton: document.getElementById('bossMinimize'), dockButton: document.getElementById('bossDock') });
+    bossStudio ??= createBossStudio({ companion: bossController, canShowCompanion: () => !isOpen,
+        onRagdollChange: enabled => bossPreferences?.setEnabled(enabled),
+        onPreferenceRetry: () => bossPreferences?.retry() });
+    const uid = auth.currentUser?.uid;
+    if (bossPreferences?.uid !== uid) { bossPreferences?.dispose(); bossPreferences = null; }
+    if (uid && !bossPreferences) bossPreferences = createBossPreferences({
+        uid, db, firestore: { doc, onSnapshot, setDoc }, isCurrent: () => auth.currentUser?.uid === uid,
+        onChange(preference) {
+            bossController?.setRagdollEnabled(preference.enabled);
+            bossStudio?.setRagdollPreference(preference);
+        }
+    });
+    bossController.setVisible(!isOpen);
+    bubble.classList.remove('hidden');
+    bubble.setAttribute('aria-expanded', String(isOpen));
 }
 
 export function cleanupChat() {
     chatSession++;
+    bossPreferences?.dispose(); bossPreferences = null;
     pendingActionPlan = null;
     isLoading = false;
     lastSendTime = 0;
@@ -61,6 +98,11 @@ export function cleanupChat() {
     isOpen = false;
     const panel = document.getElementById('chatPanel');
     if (panel) panel.classList.remove('open');
+    document.getElementById('chatBubble')?.setAttribute('aria-expanded', 'false');
+    bossStudio?.dispose();
+    bossStudio = null;
+    bossController?.dispose();
+    bossController = null;
     stopAvatarSpeech();
     setAvatarThinking(false);
     renderMessages();
@@ -78,10 +120,12 @@ function toggleChat() {
             panel.style.left = '';
             panel.style.top = '';
             panel.style.right = '24px';
-            panel.style.bottom = '90px';
+            panel.style.bottom = '236px';
         }
     }
-    if (bubble) bubble.classList.toggle('hidden', isOpen);
+    if (bubble) bubble.setAttribute('aria-expanded', String(isOpen));
+    bossController?.setVisible(!isOpen);
+    if (!isOpen) bubble?.focus();
     if (isOpen) {
         setTimeout(() => document.getElementById('chatInput')?.focus(), 300);
     }
@@ -95,19 +139,23 @@ function getAvatarBaseSrc(image) {
 }
 
 function setAvatarThinking(isThinking) {
+    avatarThinking = isThinking;
+    bossController?.setState(avatarSpeaking ? 'speaking' : avatarThinking ? 'thinking' : 'idle');
     document.querySelectorAll('.chat-avatar-frame').forEach(frame => {
         frame.classList.toggle('is-thinking', isThinking);
     });
 }
 
 function setAvatarSpeaking(isSpeaking) {
+    avatarSpeaking = isSpeaking;
+    bossController?.setState(avatarSpeaking ? 'speaking' : avatarThinking ? 'thinking' : 'idle');
     document.querySelectorAll('.chat-avatar-frame').forEach(frame => {
         frame.classList.toggle('is-speaking', isSpeaking);
     });
 
     document.querySelectorAll('.chat-avatar').forEach(image => {
         const baseSrc = getAvatarBaseSrc(image);
-        const nextSrc = isSpeaking ? baseSrc + '#talking' : baseSrc;
+        const nextSrc = /\.svg(?:\?|$)/.test(baseSrc) && isSpeaking ? baseSrc + '#talking' : baseSrc;
         if (image.getAttribute('src') !== nextSrc) image.setAttribute('src', nextSrc);
     });
 }
