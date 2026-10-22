@@ -292,3 +292,6 @@ foreach ($filename in @('deploy-sherpa-codex-cloud.ps1', 'bootstrap-sherpa-codex
     } 'PERMISSION_DENIED: fixture denied'
 }
 Write-Host "$script:passed deployment preflight and cleanup regression cases passed; all cloud and Firebase commands were mocked."
+# Expected native failures leave LASTEXITCODE nonzero. GitHub's PowerShell
+# wrapper propagates it unless this successfully completed suite exits explicitly.
+exit 0
