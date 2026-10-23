@@ -51,7 +51,9 @@ test('responsive navigation keeps the rail and content clear of the left safe ar
 test('fixed interaction surfaces respect safe areas and dynamic viewport height', () => {
   assert.match(chatSource, /\.chat-bubble\s*\{[^}]*--safe-area-bottom[^}]*--safe-area-right/s);
   assert.match(chatSource, /\.chat-panel\s*\{[^}]*100dvh[^}]*--safe-area-top[^}]*--safe-area-bottom/s);
-  assert.match(chatSource, /max-height:\s*min\(70dvh,/);
+  // Floating geometry must remain adjustable after moving between screen sizes.
+  // Pointer/resize behavior is exercised in chat-window.test.mjs and the browser smoke.
+  assert.doesNotMatch(chatSource, /(?:left|right|top|bottom):[^;{}]*!important/);
   assert.match(chatSource, /\.chat-messages\s*\{[^}]*overscroll-behavior:\s*contain/s);
   assert.match(componentsSource, /\.edit-modal-content\s*\{[^}]*max-height:[^}]*80dvh/s);
   assert.match(componentsSource, /\.selection-counter\s*\{[^}]*--safe-area-bottom[^}]*--safe-area-right/s);

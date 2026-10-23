@@ -57,7 +57,9 @@
         "./js/auth.js": "./js/auth.js?v=2026.10.23",
         "./js/charts.js": "./js/charts.js?v=2026.10.23",
         "./js/chat-actions.js": "./js/chat-actions.js?v=2026.10.23",
+        "./js/chat-activity.js": "./js/chat-activity.js?v=2026.10.23",
         "./js/chat-service.js": "./js/chat-service.js?v=2026.10.23",
+        "./js/chat-window.js": "./js/chat-window.js?v=2026.10.23",
         "./js/chat.js": "./js/chat.js?v=2026.10.23",
         "./js/config.js": "./js/config.js?v=2026.10.23",
         "./js/daily-greeting.js": "./js/daily-greeting.js?v=2026.10.23",
@@ -992,17 +994,21 @@
         <span>SHERPA</span><span aria-hidden="true">⌃</span>
     </button>
     <span id="bossHelp" class="boss-sr-only">Hover to wave. Grab an arm, leg or head and drag to play. Click to chat. Press H to minimize, M or right-click to meet her. Shift and arrow keys move her; Home returns her to the corner.</span>
-    <div id="chatPanel" class="chat-panel">
-        <div class="chat-header" id="chatDragHandle">
+    <div id="chatPanel" class="chat-panel" role="region" aria-labelledby="chatTitle" inert>
+        <div class="chat-header" id="chatDragHandle" tabindex="0" role="group" aria-label="Move chat: drag, use arrow keys, or Home to reset">
+            <span class="chat-grip" aria-hidden="true">⠿</span>
             <span class="chat-header-title">
                 <span class="chat-avatar-frame chat-avatar-frame--header" aria-hidden="true">
                     <img class="chat-avatar boss-header-portrait" src="assets/sherpa-boss.png" alt="">
                 </span>
-                Sherpa AI
+                <span><strong id="chatTitle">Sherpa AI</strong><small data-translate="chat-subtitle">Your planning assistant</small></span>
             </span>
             <div class="chat-header-actions">
                 <button type="button" id="bossStudioBtn" aria-label="Meet Sherpa" title="Meet Sherpa">✦</button>
-                <button id="chatClearBtn" title="Clear chat">
+                <button type="button" id="chatResetBtn" aria-label="Reset chat position" title="Reset chat position">
+                    <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9 3H3v6m12-6h6v6M3 15v6h6m12-6v6h-6"/><rect x="8" y="8" width="8" height="8" rx="2"/></svg>
+                </button>
+                <button type="button" id="chatClearBtn" aria-label="Clear chat" title="Clear chat">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
                 </button>
                 <button type="button" id="chatCloseBtn" aria-label="Close Sherpa AI" title="Close Sherpa AI">
@@ -1010,13 +1016,22 @@
                 </button>
             </div>
         </div>
-        <div id="chatMessages" class="chat-messages"></div>
+        <div id="chatMessages" class="chat-messages" role="log" aria-label="Conversation" aria-live="polite" aria-relevant="additions" tabindex="0"></div>
+        <button type="button" id="chatJumpBtn" class="chat-jump" data-translate="chat-latest" hidden>↓ Latest message</button>
+        <div id="chatSuggestions" class="chat-suggestions">
+            <button type="button" data-chat-prompt="chat-prompt-today" data-translate="chat-suggest-today">Who's working?</button>
+            <button type="button" data-chat-prompt="chat-prompt-team" data-translate="chat-suggest-team">Team overview</button>
+            <button type="button" data-chat-prompt="chat-prompt-productivity" data-translate="chat-suggest-productivity">Productivity</button>
+        </div>
+        <div id="chatActivity" class="chat-activity" hidden></div>
         <div class="chat-input-area">
-            <input type="text" id="chatInput" placeholder="Ask Sherpa AI..." autocomplete="off">
-            <button type="button" id="chatSendBtn" aria-label="Send message" title="Send message">
+            <textarea id="chatInput" rows="1" aria-label="Message Sherpa AI" aria-describedby="chatInputHelp" placeholder="Ask Sherpa AI..." autocomplete="off"></textarea>
+            <button type="button" id="chatStopBtn" aria-label="Stop waiting" title="Stop waiting" hidden><svg aria-hidden="true" width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><rect x="2" y="2" width="12" height="12" rx="2"/></svg></button>
+            <button type="button" id="chatSendBtn" aria-label="Send message" title="Send message" disabled>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
             </button>
         </div>
+        <div id="chatInputHelp" class="chat-input-help" data-translate="chat-input-help">Enter to send · Shift + Enter for a new line</div>
     </div>
 
     <dialog id="bossStudio" class="boss-studio" aria-labelledby="bossStudioTitle" aria-describedby="bossStudioDescription">
