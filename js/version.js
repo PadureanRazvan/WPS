@@ -17,8 +17,8 @@
 // =============================================================================
 
 export const SHERPA_VERSION = Object.freeze({
-    number: '2026.10.23',
-    codename: 'Luna Relay',
+    number: '2026.10.23.2',
+    codename: 'Open Dialogue',
     released: '2026-10-23'
 });
 

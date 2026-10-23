@@ -1,17 +1,19 @@
 // js/chat.js — Sherpa AI Chat Module
 import { getPlannerData, commitAgentChanges } from './planner.js';
 import { buildChatActionPlan, findAgentById, getChatCalendarDate } from './chat-actions.js';
-import { getAverageProductivity, getProductivityTrendData } from './productivity.js?v=2026.10.23';
-import { showSection } from './ui.js?v=2026.10.23';
+import { getAverageProductivity, getProductivityTrendData } from './productivity.js?v=2026.10.23.2';
+import { showSection } from './ui.js?v=2026.10.23.2';
 import { translations, extractHoursFromDay, getMonthKey, getEffectiveAgentDayValue, isNonWorkingCode, normalizeTeamForDisplay, parseShiftEntry } from './config.js';
 import { auth, db, functions } from './firebase-config.js';
 import { doc, onSnapshot, setDoc } from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js';
-import { logActivity } from './logs.js?v=2026.10.23';
+import { logActivity } from './logs.js?v=2026.10.23.2';
 import { httpsCallable } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-functions.js";
 import { createSherpaChatService, getChatErrorTranslationKey } from './chat-service.js';
 import { createSherpaBoss } from './sherpa-boss.js';
 import { createBossStudio } from './sherpa-boss-studio.js';
 import { createBossPreferences } from './sherpa-boss-preferences.js';
+import { createChatWindow } from './chat-window.js';
+import { createChatActivity } from './chat-activity.js';
 
 function getLang() { return localStorage.getItem('language') || 'ro'; }
 function t(key) { const l = getLang(); return (translations[l] && translations[l][key]) || key; }
@@ -30,6 +32,11 @@ let bossStudio = null;
 let bossPreferences = null;
 let avatarSpeaking = false;
 let avatarThinking = false;
+let chatWindow = null;
+let chatActivity = null;
+let isCommitting = false;
+let followLatest = true;
+let renderedMessages = 0;
 const chatService = createSherpaChatService(httpsCallable(functions, 'generateSherpaChat', { timeout: 330_000 }));
 
 // --- Initialization ---
@@ -43,9 +50,9 @@ export async function initializeChat() {
 
     if (!bubble || !panel) return;
 
-    // Initialize panel dragging.
+    chatWindow ??= createChatWindow({ panel, handle: document.getElementById('chatDragHandle') });
+    chatActivity ??= createChatActivity({ element: document.getElementById('chatActivity'), getLanguage: getLang });
     if (!chatBound) {
-        initDraggable();
         bubble.addEventListener('contextmenu', event => {
             event.preventDefault();
             bossStudio?.open();
@@ -60,9 +67,31 @@ export async function initializeChat() {
         closeBtn?.addEventListener('click', toggleChat);
         sendBtn?.addEventListener('click', () => sendMessage());
         input?.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
+            if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
                 e.preventDefault();
                 sendMessage();
+            }
+        });
+        input?.addEventListener('input', updateComposer);
+        document.getElementById('chatResetBtn')?.addEventListener('click', () => chatWindow?.reset());
+        document.getElementById('chatStopBtn')?.addEventListener('click', stopChatRequest);
+        document.getElementById('chatJumpBtn')?.addEventListener('click', scrollToLatest);
+        document.getElementById('chatMessages')?.addEventListener('scroll', () => {
+            const messages = document.getElementById('chatMessages');
+            followLatest = messages.scrollHeight - messages.scrollTop - messages.clientHeight < 40;
+            if (followLatest) document.getElementById('chatJumpBtn').hidden = true;
+        }, { passive: true });
+        document.getElementById('chatSuggestions')?.addEventListener('click', event => {
+            const suggestion = event.target.closest('button[data-chat-prompt]');
+            if (!suggestion || isLoading || !input) return;
+            input.value = t(suggestion.dataset.chatPrompt);
+            updateComposer();
+            input.focus();
+        });
+        panel.addEventListener('keydown', event => {
+            if (event.key === 'Escape' && isOpen && !event.isComposing) {
+                event.preventDefault();
+                toggleChat();
             }
         });
         clearBtn?.addEventListener('click', clearChat);
@@ -90,14 +119,19 @@ export async function initializeChat() {
 
 export function cleanupChat() {
     chatSession++;
+    chatWindow?.dispose(); chatWindow = null;
+    chatActivity?.clear(); chatActivity = null;
+    isCommitting = false;
     bossPreferences?.dispose(); bossPreferences = null;
     pendingActionPlan = null;
     isLoading = false;
     lastSendTime = 0;
     chatHistory = [];
+    renderedMessages = 0;
+    followLatest = true;
     isOpen = false;
     const panel = document.getElementById('chatPanel');
-    if (panel) panel.classList.remove('open');
+    if (panel) { panel.classList.remove('open'); panel.setAttribute('inert', ''); }
     document.getElementById('chatBubble')?.setAttribute('aria-expanded', 'false');
     bossStudio?.dispose();
     bossStudio = null;
@@ -110,24 +144,20 @@ export function cleanupChat() {
 
 // --- Toggle Chat ---
 function toggleChat() {
+    updateComposer();
     isOpen = !isOpen;
     const panel = document.getElementById('chatPanel');
     const bubble = document.getElementById('chatBubble');
     if (panel) {
         panel.classList.toggle('open', isOpen);
-        // Reset position when opening
-        if (isOpen) {
-            panel.style.left = '';
-            panel.style.top = '';
-            panel.style.right = '24px';
-            panel.style.bottom = '236px';
-        }
+        if (isOpen) { panel.removeAttribute('inert'); chatWindow?.open(); }
+        else { panel.setAttribute('inert', ''); chatWindow?.close(); }
     }
     if (bubble) bubble.setAttribute('aria-expanded', String(isOpen));
     bossController?.setVisible(!isOpen);
     if (!isOpen) bubble?.focus();
     if (isOpen) {
-        setTimeout(() => document.getElementById('chatInput')?.focus(), 300);
+        document.getElementById('chatInput')?.focus({ preventScroll: true });
     }
 }
 
@@ -191,9 +221,11 @@ async function sendMessage() {
     // Text never confirms a write. A new request cancels the previous proposal.
     if (pendingActionPlan) cancelChatActions(pendingActionPlan);
     const session = chatSession;
+    followLatest = true;
     chatHistory.push({ role: 'user', text: userText });
     renderMessages();
     isLoading = true;
+    chatActivity?.begin('request');
     showTyping(true);
     try {
         const responseText = await callGeminiAPI(chatHistory);
@@ -204,9 +236,11 @@ async function sendMessage() {
         else plan.navigations.forEach(section => showSection(section));
         chatHistory.push({ role: 'model', text: cleanText || t(plan.requiresConfirmation ? 'chat-review-changes' : 'chat-done') });
         playAvatarSpeech(cleanText);
+        chatActivity?.finish(plan.requiresConfirmation ? 'review' : 'done');
     } catch (error) {
         if (session !== chatSession) return;
         console.error('[Chat]', error);
+        chatActivity?.finish('error');
         chatHistory.push({ role: 'error', text: t(error.code === 'invalid-action' ? 'chat-invalid-actions' : getChatErrorTranslationKey(error)) });
     } finally {
         if (session === chatSession) {
@@ -376,7 +410,9 @@ async function callGeminiAPI(messages) {
     // Function calling loop (max 5 rounds to allow multiple queries)
     for (let round = 0; round < 5; round++) {
         if (session !== chatSession) throw new Error('Chat cancelled.');
-        const data = await chatService.generate({ language: getLang(), contents });
+        const response = chatService.generate({ language: getLang(), contents });
+        chatActivity?.step('working');
+        const data = await response;
         if (session !== chatSession) throw new Error('Chat cancelled.');
         const candidate = data?.candidates?.[0]?.content;
         if (!candidate || !candidate.parts) throw new Error('Empty response from Gemini');
@@ -389,7 +425,9 @@ async function callGeminiAPI(messages) {
 
             // Execute each function call and build responses
             const responseParts = functionCalls.map(fc => {
+                chatActivity?.step('tool', fc.functionCall.name);
                 const result = executeToolCall(fc.functionCall.name, fc.functionCall.args || {});
+                if (result?.error) chatActivity?.step('tool-error', fc.functionCall.name);
                 return {
                     functionResponse: {
                         name: fc.functionCall.name,
@@ -398,6 +436,7 @@ async function callGeminiAPI(messages) {
                 };
             });
             contents.push({ role: 'user', parts: responseParts });
+            chatActivity?.step('working');
             continue; // Next round — AI will now process the data
         }
 
@@ -434,6 +473,8 @@ async function approveChatActions(expectedPlan = pendingActionPlan) {
     const plan = pendingActionPlan;
     pendingActionPlan = null; // Consume before awaiting, so double clicks cannot repeat writes.
     isLoading = true;
+    isCommitting = true;
+    chatActivity?.begin('apply');
     renderMessages();
     showTyping(true);
     try {
@@ -443,13 +484,16 @@ async function approveChatActions(expectedPlan = pendingActionPlan) {
         plan.navigations.forEach(section => showSection(section));
         logActivity('ai', 'apply_changes', { cells: plan.actions.filter(action => action.command === 'SET_CELL').length, created: plan.creates.length, deleted: plan.deletes.length });
         chatHistory.push({ role: 'model', text: t('chat-changes-applied') });
+        chatActivity?.finish('done');
     } catch (error) {
         if (session !== chatSession) return;
         console.error('[Chat] Write failed:', error);
+        chatActivity?.finish('error');
         chatHistory.push({ role: 'error', text: t(error.code === 'data-conflict' ? 'write-conflict' : 'write-failed') });
     } finally {
         if (session === chatSession) {
             isLoading = false;
+            isCommitting = false;
             showTyping(false);
             renderMessages();
         }
@@ -459,6 +503,7 @@ async function approveChatActions(expectedPlan = pendingActionPlan) {
 function cancelChatActions(expectedPlan = pendingActionPlan) {
     if (!expectedPlan || expectedPlan !== pendingActionPlan) return;
     pendingActionPlan = null;
+    chatActivity?.clear();
     chatHistory.push({ role: 'model', text: t('chat-changes-cancelled') });
     renderMessages();
 }
@@ -516,8 +561,11 @@ function renderMessages() {
     const container = document.getElementById('chatMessages');
     if (!container) return;
 
-    container.innerHTML = '';
-    chatHistory.forEach(msg => {
+    const scrollTop = container.scrollTop;
+    const hasNewMessages = chatHistory.length > renderedMessages;
+    if (renderedMessages === 0) container.innerHTML = '';
+    container.querySelector('.chat-action-confirmation')?.remove();
+    chatHistory.slice(renderedMessages).forEach(msg => {
         const div = document.createElement('div');
         if (msg.role === 'error') {
             div.className = 'chat-msg error';
@@ -541,9 +589,17 @@ function renderMessages() {
         div.innerHTML = html;
         container.appendChild(div);
     });
-
+    renderedMessages = chatHistory.length;
     renderActionConfirmation(container);
-    container.scrollTop = container.scrollHeight;
+    if (followLatest) scrollToLatest();
+    else {
+        container.scrollTop = scrollTop;
+        const jump = document.getElementById('chatJumpBtn');
+        if (jump && hasNewMessages) jump.hidden = false;
+    }
+    const suggestions = document.getElementById('chatSuggestions');
+    if (suggestions) suggestions.hidden = chatHistory.some(msg => msg.role === 'user');
+    updateComposer();
 }
 
 function escapeHtml(text) {
@@ -555,17 +611,7 @@ function escapeHtml(text) {
 function showTyping(show) {
     if (show) stopAvatarSpeech();
     setAvatarThinking(show);
-    const container = document.getElementById('chatMessages');
-    if (!container) return;
-    const existing = container.querySelector('.chat-typing');
-    if (existing) existing.remove();
-    if (show) {
-        const typing = document.createElement('div');
-        typing.className = 'chat-typing';
-        typing.innerHTML = '<span></span><span></span><span></span>';
-        container.appendChild(typing);
-        container.scrollTop = container.scrollHeight;
-    }
+    updateComposer();
 }
 
 function addSystemMessage(text) {
@@ -574,63 +620,57 @@ function addSystemMessage(text) {
 }
 
 function clearChat() {
+    if (isCommitting) return;
     chatSession++;
     pendingActionPlan = null;
     isLoading = false;
     lastSendTime = 0;
     stopAvatarSpeech();
     setAvatarThinking(false);
+    chatActivity?.clear();
     chatHistory = [];
+    renderedMessages = 0;
+    followLatest = true;
     addSystemMessage(t('chat-welcome'));
 }
 
-// --- Draggable Chat Panel ---
-function initDraggable() {
-    const panel = document.getElementById('chatPanel');
-    const handle = document.getElementById('chatDragHandle');
-    if (!panel || !handle) return;
+function scrollToLatest() {
+    followLatest = true;
+    const messages = document.getElementById('chatMessages');
+    if (messages) messages.scrollTop = messages.scrollHeight;
+    const jump = document.getElementById('chatJumpBtn');
+    if (jump) jump.hidden = true;
+}
 
-    let isDragging = false;
-    let startX, startY, startLeft, startTop;
+function stopChatRequest() {
+    if (!isLoading || isCommitting) return;
+    // Firebase callable requests cannot be aborted. Ignore the pending response
+    // and prevent any subsequent tool round or proposed action from this turn.
+    chatSession++;
+    isLoading = false;
+    lastSendTime = 0;
+    chatActivity?.finish('stopped');
+    chatHistory.push({ role: 'system', text: t('chat-stopped') });
+    showTyping(false);
+    renderMessages();
+}
 
-    handle.addEventListener('mousedown', (e) => {
-        // Don't drag if clicking buttons
-        if (e.target.closest('.chat-header-actions') || e.target.closest('button')) return;
-        // Disable on mobile
-        if (window.innerWidth <= 768) return;
-
-        isDragging = true;
-        panel.classList.add('dragging');
-
-        const rect = panel.getBoundingClientRect();
-        startX = e.clientX;
-        startY = e.clientY;
-        startLeft = rect.left;
-        startTop = rect.top;
-
-        // Switch from right/bottom positioning to left/top
-        panel.style.left = rect.left + 'px';
-        panel.style.top = rect.top + 'px';
-        panel.style.right = 'auto';
-        panel.style.bottom = 'auto';
-
-        e.preventDefault();
-    });
-
-    document.addEventListener('mousemove', (e) => {
-        if (!isDragging) return;
-        const dx = e.clientX - startX;
-        const dy = e.clientY - startY;
-        const newLeft = Math.max(0, Math.min(window.innerWidth - 200, startLeft + dx));
-        const newTop = Math.max(0, Math.min(window.innerHeight - 100, startTop + dy));
-        panel.style.left = newLeft + 'px';
-        panel.style.top = newTop + 'px';
-    });
-
-    document.addEventListener('mouseup', () => {
-        if (isDragging) {
-            isDragging = false;
-            panel.classList.remove('dragging');
-        }
-    });
+function updateComposer() {
+    const input = document.getElementById('chatInput');
+    if (input) {
+        input.style.height = 'auto';
+        if (input.scrollHeight) input.style.height = Math.min(input.scrollHeight, 100) + 'px';
+        input.placeholder = t('chat-placeholder');
+        input.setAttribute('aria-label', t('chat-placeholder'));
+    }
+    const send = document.getElementById('chatSendBtn');
+    if (send) { send.disabled = isLoading || !input?.value.trim(); send.hidden = isLoading && !isCommitting; }
+    const stop = document.getElementById('chatStopBtn');
+    if (stop) stop.hidden = !isLoading || isCommitting;
+    const clear = document.getElementById('chatClearBtn');
+    if (clear) clear.disabled = isCommitting;
+    for (const [id, key] of Object.entries({ chatDragHandle: 'chat-move', chatResetBtn: 'chat-reset', chatClearBtn: 'chat-clear', chatCloseBtn: 'chat-close', chatSendBtn: 'chat-send', chatStopBtn: 'chat-stop' })) {
+        const element = document.getElementById(id);
+        if (element) { element.title = t(key); element.setAttribute('aria-label', t(key)); }
+    }
 }

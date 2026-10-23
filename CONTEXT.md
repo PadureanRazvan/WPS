@@ -60,6 +60,8 @@ The release import map resolves local module imports to one versioned URL per mo
 
 **AI Model Gateway** — the authenticated Firebase callable and private Cloud Run worker that run subscription-authenticated Codex with Luna Max. Browser data-query rounds preserve the existing proposal protocol; model execution has no host tools. A distributed account lease and durable Secret Manager refresh protect the dedicated ChatGPT session across instance replacement. See [cloud operations and verification status](docs/sherpa-codex-cloud.md).
 
+**Chat Experience** — the movable, viewport-aware Sherpa conversation panel, multiline composer, preserved reading position and expandable activity trail of observed request/data-check/save events. Window geometry and bounded activity rendering have independent controllers; Stop ignores stale AI responses while confirmed writes await acknowledgement. See [the chat behavior and verification notes](docs/chat-experience.md).
+
 **Sherpa Boss Companion** — the portrait-inspired articulated 3D chat launcher with upright dragging, optional ragdoll throws, wall/shake reactions, a minimize dock and a character studio. The ragdoll switch is saved under the signed-in account's UID. The birthday hat follows her head in every pose. Rendering remains independent of AI permissions and Agent Persistence. See [the companion review guide](docs/sherpa-boss.md).
 
 **Planner Selection State** — the rules for turning Planner Cell click, drag, stop, and clear actions into selected Planner Cell keys, selection counts, and selection drag state.
