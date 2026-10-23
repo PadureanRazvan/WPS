@@ -1,5 +1,5 @@
 // js/dashboard.js
-import { getAverageProductivity } from './productivity.js?v=2026.10.23';
+import { getAverageProductivity } from './productivity.js?v=2026.10.23.2';
 import { translations, formatPlannerHoursValue, isNonWorkingCode, normalizeTeamForDisplay, parseShiftEntry, getEffectiveAgentDayValue } from './config.js';
 
 let cachedPlannerData = null;

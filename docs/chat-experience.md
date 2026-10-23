@@ -1,6 +1,6 @@
 # Sherpa chat experience
 
-Implemented locally on 23 October 2026. No deployment or live AI/Firestore operation was performed for this review.
+Implemented and validated on 23 October 2026. Release identity and rollout details are in [Open Dialogue](releases/2026-10-23-open-dialogue.md). The review uses offline AI/Firestore fixtures; production verification is read-only.
 
 ## Floating window
 
@@ -46,4 +46,4 @@ Physical monitor hotplug/DPI transitions and a live production AI round were not
 
 The 14-file chat update was applied on top of `origin/main` at `c2cafc5` in an isolated checkout. This preserves the current Codex gateway, callable timeout of 330,000 ms, error mappings, existing companion, calendar preview support and release identity. Unrelated changes in the original workspace are excluded.
 
-The current-base run passed 608 frontend tests, 25 Firebase callable tests, all nine browser smoke groups, release asset verification and whitespace checks. The locked Functions dependency install reported zero vulnerabilities. Local checks used Node 24.14.1; the repository CI checks Node 22. Evidence remains in ignored `output/chat-experience/` files. This is a source branch update; merging, cutting a new release identity and production deployment are separate steps.
+The current-base run passed 608 frontend tests, 25 Firebase callable tests, all nine browser smoke groups, release asset verification and whitespace checks. The locked Functions dependency install reported zero vulnerabilities. Local checks used Node 24.14.1; the repository CI checks Node 22. Evidence remains in ignored `output/chat-experience/` files. The subsequent authorized rollout uses release `2026.10.23.2` with refreshed browser cache identities.

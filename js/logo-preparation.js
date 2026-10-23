@@ -1,4 +1,4 @@
-import { installPreparedLogoGeometries } from './logo-geometry-cache.js?v=2026.10.23';
+import { installPreparedLogoGeometries } from './logo-geometry-cache.js?v=2026.10.23.2';
 
 let preparation = null;
 

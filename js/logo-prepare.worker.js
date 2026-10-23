@@ -1,12 +1,12 @@
 // Build the sculpture meshes away from input, layout and painting.
 import * as THREE from '../assets/vendor/three.module.min.js';
-import { createFspCore } from './logo-fsp-core.js?v=2026.10.23';
-import { createGlobeGeometry } from './logo-globe-geometry.js?v=2026.10.23';
-import { createHeartGeometry, createHeartInlayGeometry } from './logo-heart-geometry.js?v=2026.10.23';
-import { createSummitGeometry } from './logo-summit-geometry.js?v=2026.10.23';
-import { createInfinityGeometry } from './logo-infinity-geometry.js?v=2026.10.23';
-import { serializeLogoGeometry } from './logo-geometry-cache.js?v=2026.10.23';
-import { createLogoStudioLighting } from './logo-materials.js?v=2026.10.23';
+import { createFspCore } from './logo-fsp-core.js?v=2026.10.23.2';
+import { createGlobeGeometry } from './logo-globe-geometry.js?v=2026.10.23.2';
+import { createHeartGeometry, createHeartInlayGeometry } from './logo-heart-geometry.js?v=2026.10.23.2';
+import { createSummitGeometry } from './logo-summit-geometry.js?v=2026.10.23.2';
+import { createInfinityGeometry } from './logo-infinity-geometry.js?v=2026.10.23.2';
+import { serializeLogoGeometry } from './logo-geometry-cache.js?v=2026.10.23.2';
+import { createLogoStudioLighting } from './logo-materials.js?v=2026.10.23.2';
 
 function prepareEnvironment() {
     if (typeof OffscreenCanvas !== 'function') return null;

@@ -1,4 +1,4 @@
-import { EARTH_LAND_POLYGONS } from '../assets/branding/earth-land-data.js?v=2026.10.23';
+import { EARTH_LAND_POLYGONS } from '../assets/branding/earth-land-data.js?v=2026.10.23.2';
 
 export { EARTH_LAND_POLYGONS };
 export const GLOBE_RADII = Object.freeze({ ocean: 1.008, land: 1.034, orbit: 1.245 });
