@@ -1,16 +1,16 @@
-import { FSP_SHAPE_DATA } from '../assets/branding/fsp-shape-data.js?v=2026.10.23.2';
-import { FSP_BEVEL, getFspRelief } from './logo-surfaces.js?v=2026.10.23.2';
-import { GLOBE_RADII, getGlobeColor, getGlobeOrbitPoint, getGlobePoint, isGlobeLand } from './logo-globe-surface.js?v=2026.10.23.2';
-import { getHeartPoint, getHeartColor, getHeartPulsePoint } from './logo-heart-surface.js?v=2026.10.23.2';
+import { FSP_SHAPE_DATA } from '../assets/branding/fsp-shape-data.js?v=2026.10.25';
+import { FSP_BEVEL, getFspRelief } from './logo-surfaces.js?v=2026.10.25';
+import { GLOBE_RADII, getGlobeColor, getGlobeOrbitPoint, getGlobePoint, isGlobeLand } from './logo-globe-surface.js?v=2026.10.25';
+import { getHeartPoint, getHeartColor, getHeartPulsePoint } from './logo-heart-surface.js?v=2026.10.25';
 
-import { sampleSummitSurface, SUMMIT_PEAK, getSummitRoutePoint } from './logo-summit-surface.js?v=2026.10.23.2';
+import { sampleSummitSurface, SUMMIT_PEAK, getSummitRoutePoint } from './logo-summit-surface.js?v=2026.10.25';
 
-import { getInfinityPathAngle, getInfinityProfile, getInfinitySurfacePoint, getInfinityColor } from './logo-infinity-surface.js?v=2026.10.23.2';
+import { getInfinityPathAngle, getInfinityProfile, getInfinitySurfacePoint, getInfinityColor } from './logo-infinity-surface.js?v=2026.10.25';
 
 const TAU = Math.PI * 2;
 
 export const LOGO_PARTICLE_COUNT = 768;
-import { LOGO_SHAPE_NAMES, getGlobeSpinState } from './logo-story.js?v=2026.10.23.2';
+import { LOGO_SHAPE_NAMES, getGlobeSpinState } from './logo-story.js?v=2026.10.25';
 export { LOGO_SHAPE_NAMES };
 
 const SHAPE_META = Object.freeze({

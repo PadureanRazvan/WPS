@@ -1,12 +1,11 @@
 /**
  * Sherpa's photo-inspired, articulated desk companion. All visible surfaces are
  * local 3D geometry; the optional canvas texture is only the scarf's paisley.
- * Facing +Z, feet at Y=0, birthday hat at Y=4.27. Limb pivots point down their local Y.
+ * Facing +Z, feet at Y=0. Limb pivots point down their local Y.
  */
 export function createSherpaBossModel(THREE) {
     const root = new THREE.Group();
     root.name = 'SherpaBoss';
-    root.userData.height = 4.27;
     const joints = {};
     const ownedGeometry = new Set();
     const ownedMaterial = new Set();
@@ -432,41 +431,6 @@ export function createSherpaBossModel(THREE) {
     const curtainGeometry=new THREE.BufferGeometry();curtainGeometry.setAttribute('position',new THREE.Float32BufferAttribute(curtainPositions,3));curtainGeometry.setIndex(curtainIndices);curtainGeometry.computeVertexNormals();
     const curtain=mesh(head,curtainGeometry,hair,'Continuous shoulder length waves');curtain.receiveShadow=false;
 
-    // The birthday hat belongs to the head, so it follows every wave, tilt and
-    // ragdoll pose without a separate overlay or animation loop.
-    const birthdayHat = new THREE.Group();
-    birthdayHat.name = 'Birthday party hat';
-    birthdayHat.position.set(.045, .865, -.025);
-    birthdayHat.rotation.set(-.055, .12, -.16);
-    head.add(birthdayHat);
-    const partyPlum = material('#71416f', { roughness: .48, sheen: .25, sheenColor: '#d1a4d4' });
-    const partyGold = material('#efc76b', { metalness: .55, roughness: .3 });
-    const partyCream = material('#fff0d6', { roughness: .65 });
-    const hatHeight = .64, hatRadius = .265;
-    mesh(birthdayHat, new THREE.ConeGeometry(hatRadius, hatHeight, 48), partyPlum, 'Plum birthday cone', [0, hatHeight / 2, 0]);
-    const hatBand = mesh(birthdayHat, new THREE.TorusGeometry(hatRadius, .025, 8, 48), partyGold, 'Gold birthday brim');
-    hatBand.rotation.x = Math.PI / 2;
-    for (const y of [.17, .36, .52]) {
-        const radius = hatRadius * (1 - y / hatHeight) + .003;
-        const stripe = mesh(birthdayHat, new THREE.TorusGeometry(radius, .013, 6, 40), partyGold, 'Gold party stripe', [0, y, 0]);
-        stripe.rotation.x = Math.PI / 2;
-    }
-    ellipsoid(birthdayHat, 'Birthday pompom', [0, hatHeight + .017, 0], [.064, .064, .064], partyCream, 20);
-    for (let i = 0; i < 8; i++) {
-        const angle = i * Math.PI / 4;
-        ellipsoid(birthdayHat, 'Pompom tuft', [.043 * Math.cos(angle), hatHeight + .017 + .043 * Math.sin(angle), .016], [.024, .024, .024], partyCream, 12);
-    }
-    // A small raised star on the front keeps the birthday detail readable even
-    // in the miniature, without adding text or changing the portrait's face.
-    const star = [];
-    for (let i = 0; i < 10; i++) {
-        const angle = Math.PI / 2 + i * Math.PI / 5, radius = i % 2 ? .028 : .063;
-        star.push([Math.cos(angle) * radius, Math.sin(angle) * radius]);
-    }
-    const birthdayStar = patch(birthdayHat, 'Birthday gold star', star, partyGold, .009);
-    birthdayStar.position.set(0, .265, hatRadius * (1 - .265 / hatHeight) + .01);
-    birthdayStar.rotation.x = -Math.atan(hatRadius / hatHeight);
-
     // Explicit APIs keep controller animation independent from mesh construction.
     let disposed=false,lastBlink=0;
     function blink(amount=0) {
@@ -516,7 +480,7 @@ export function createSherpaBossModel(THREE) {
         if(disposed)return;disposed=true;
         ownedGeometry.forEach(value=>value.dispose());ownedMaterial.forEach(value=>value.dispose());ownedTexture.forEach(value=>value.dispose());
     }
-    root.userData.appearance='Photo-inspired chestnut hair, lilac blouse, plum paisley scarf, gold accessories and a plum-and-gold birthday hat';
+    root.userData.appearance='Photo-inspired chestnut hair, lilac blouse, plum paisley scarf and gold accessories';
     root.userData.modelKind='articulated-procedural-mesh';
     return {root,joints,eyes,blink,setMood,dispose};
 }

@@ -17,9 +17,9 @@
 // =============================================================================
 
 export const SHERPA_VERSION = Object.freeze({
-    number: '2026.10.23.2',
-    codename: 'Open Dialogue',
-    released: '2026-10-23'
+    number: '2026.10.25',
+    codename: 'Everyday Sherpa',
+    released: '2026-10-25'
 });
 
 // FNV-1a (32-bit) over the identifying fields -> short, stable hex fingerprint.

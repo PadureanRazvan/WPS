@@ -72,7 +72,6 @@ try {
                 return { setVisible: visible => { element.dataset.bossVisible = String(visible); },
                     setState() {}, dispose() {} };
             },
-            createBossStudio: () => ({ open() {}, dispose() {} }),
             createSherpaChatService: () => ({ generate: async () => ({ candidates: [{ content: { parts: [{ text: window.auditResponse }] } }] }) }),
             commitAgentChanges: async plan => window.auditCommits.push(plan),
             logActivity() {}, showSection() {}, getChatErrorTranslationKey: () => 'chat-error'

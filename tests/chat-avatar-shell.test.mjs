@@ -16,9 +16,6 @@ test('the chat launcher is an accessible 3D companion with a local image fallbac
     assert.match(button, /<canvas data-boss-canvas aria-hidden="true"/);
     assert.match(button, /assets\/sherpa-boss\.png/);
     assert.doesNotMatch(button, /sherpa-ai-avatar\.svg/);
-    assert.match(html, /<dialog[^>]+id="bossStudio"/);
-    assert.match(html, /data-boss-action="wave"/);
-    assert.match(html, /data-boss-action="dance"/);
     assert.match(styles, /touch-action: none/);
     assert.match(styles, /prefers-reduced-motion: reduce/);
 });
@@ -28,7 +25,6 @@ test('chat delegates rendering and input to the companion and disposes it on log
     assert.match(chat, /onActivate: toggleChat/);
     assert.doesNotMatch(chat, /bubble\.addEventListener\('click', toggleChat\)/);
     assert.match(chat, /bossController\?\.dispose\(\)/);
-    assert.match(chat, /bossStudio\?\.dispose\(\)/);
     assert.match(controller, /import\('\.\.\/assets\/vendor\/three\.module\.min\.js'\)/);
     assert.doesNotMatch(chat, /requestAnimationFrame/);
 });
