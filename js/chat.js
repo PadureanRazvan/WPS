@@ -1,16 +1,15 @@
 // js/chat.js — Sherpa AI Chat Module
 import { getPlannerData, commitAgentChanges } from './planner.js';
 import { buildChatActionPlan, findAgentById, getChatCalendarDate } from './chat-actions.js';
-import { getAverageProductivity, getProductivityTrendData } from './productivity.js?v=2026.10.23.2';
-import { showSection } from './ui.js?v=2026.10.23.2';
+import { getAverageProductivity, getProductivityTrendData } from './productivity.js?v=2026.10.25';
+import { showSection } from './ui.js?v=2026.10.25';
 import { translations, extractHoursFromDay, getMonthKey, getEffectiveAgentDayValue, isNonWorkingCode, normalizeTeamForDisplay, parseShiftEntry } from './config.js';
 import { auth, db, functions } from './firebase-config.js';
 import { doc, onSnapshot, setDoc } from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js';
-import { logActivity } from './logs.js?v=2026.10.23.2';
+import { logActivity } from './logs.js?v=2026.10.25';
 import { httpsCallable } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-functions.js";
 import { createSherpaChatService, getChatErrorTranslationKey } from './chat-service.js';
 import { createSherpaBoss } from './sherpa-boss.js';
-import { createBossStudio } from './sherpa-boss-studio.js';
 import { createBossPreferences } from './sherpa-boss-preferences.js';
 import { createChatWindow } from './chat-window.js';
 import { createChatActivity } from './chat-activity.js';
@@ -28,7 +27,6 @@ let chatSession = 0;
 let chatBound = false;
 let speechTimer = null;
 let bossController = null;
-let bossStudio = null;
 let bossPreferences = null;
 let avatarSpeaking = false;
 let avatarThinking = false;
@@ -53,17 +51,6 @@ export async function initializeChat() {
     chatWindow ??= createChatWindow({ panel, handle: document.getElementById('chatDragHandle') });
     chatActivity ??= createChatActivity({ element: document.getElementById('chatActivity'), getLanguage: getLang });
     if (!chatBound) {
-        bubble.addEventListener('contextmenu', event => {
-            event.preventDefault();
-            bossStudio?.open();
-        });
-        document.getElementById('bossStudioBtn')?.addEventListener('click', () => bossStudio?.open());
-        bubble.addEventListener('keydown', event => {
-            if (event.key.toLowerCase() === 'm' && !event.ctrlKey && !event.metaKey && !event.altKey) {
-                event.preventDefault();
-                bossStudio?.open();
-            }
-        });
         closeBtn?.addEventListener('click', toggleChat);
         sendBtn?.addEventListener('click', () => sendMessage());
         input?.addEventListener('keydown', (e) => {
@@ -100,16 +87,12 @@ export async function initializeChat() {
     clearChat();
     bossController ??= createSherpaBoss({ element: bubble, onActivate: toggleChat, ragdollEnabled: false,
         minimizeButton: document.getElementById('bossMinimize'), dockButton: document.getElementById('bossDock') });
-    bossStudio ??= createBossStudio({ companion: bossController, canShowCompanion: () => !isOpen,
-        onRagdollChange: enabled => bossPreferences?.setEnabled(enabled),
-        onPreferenceRetry: () => bossPreferences?.retry() });
     const uid = auth.currentUser?.uid;
     if (bossPreferences?.uid !== uid) { bossPreferences?.dispose(); bossPreferences = null; }
     if (uid && !bossPreferences) bossPreferences = createBossPreferences({
         uid, db, firestore: { doc, onSnapshot, setDoc }, isCurrent: () => auth.currentUser?.uid === uid,
         onChange(preference) {
             bossController?.setRagdollEnabled(preference.enabled);
-            bossStudio?.setRagdollPreference(preference);
         }
     });
     bossController.setVisible(!isOpen);
@@ -133,8 +116,6 @@ export function cleanupChat() {
     const panel = document.getElementById('chatPanel');
     if (panel) { panel.classList.remove('open'); panel.setAttribute('inert', ''); }
     document.getElementById('chatBubble')?.setAttribute('aria-expanded', 'false');
-    bossStudio?.dispose();
-    bossStudio = null;
     bossController?.dispose();
     bossController = null;
     stopAvatarSpeech();

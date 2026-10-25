@@ -37,7 +37,7 @@ html = html.replace(/(<link\b[^>]*\brel="(?:icon|shortcut icon|apple-touch-icon)
     params.set('v', version);
     return start + path + '?' + params.toString().replaceAll('&', '&amp;') + end;
 });
-html = html.replace(/((?:href|src)=["])((?:js|css)\/[^"?]+\.(?:js|css))(\?[^" ]*)?(["])/g, (_match, start, path, query, end) => {
+html = html.replace(/((?:href|src)=["])((?:js|css)\/[^"?]+\.(?:js|css)|assets\/sherpa-boss\.png)(\?[^" ]*)?(["])/g, (_match, start, path, query, end) => {
     const params = new URLSearchParams((query || '').replace(/^\?/, '').replaceAll('&amp;', '&'));
     params.set('v', version);
     if (path === 'js/main.js') params.delete('fsp');

@@ -15,17 +15,6 @@ document.body.append(panel);
 if (new URLSearchParams(location.search).has('boss')) {
     panel.hidden = true;
     panel.style.display = 'none';
-    if (new URLSearchParams(location.search).get('boss') === 'studio') {
-        const companion = document.getElementById('chatBubble');
-        const openStudio = () => {
-            if (!['three', 'fallback'].includes(companion?.dataset.bossRenderer)) return;
-            observer.disconnect();
-            companion.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
-        };
-        const observer = new MutationObserver(openStudio);
-        if (companion) observer.observe(companion, { attributes: true, attributeFilter: ['data-boss-renderer'] });
-        openStudio();
-    }
 }
 const lightingExport = document.createElement('button');
 lightingExport.type = 'button';

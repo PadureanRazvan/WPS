@@ -42,37 +42,12 @@ try {
     await page.waitForFunction(() => !document.querySelector('#chatPanel').classList.contains('open'));
     assert.equal(await boss.isVisible(), true);
     results.push('Keyboard activation, close and focus return');
-    await boss.click({ button: 'right' });
-    await page.waitForSelector('[data-boss-preview][data-boss-renderer="three"]');
-    for (const action of ['wave', 'dance', 'spin', 'celebrate']) {
-        await page.locator(`[data-boss-action="${action}"]`).filter({ hasNot: page.locator('canvas') }).click();
-        assert.equal(await page.locator('[data-boss-preview]').getAttribute('data-boss-action'), action);
-        await page.waitForTimeout(750);
-        await page.screenshot({ path: resolve(output, `${action}.png`) });
-    }
-    await page.locator('#bossTurn').fill('65');
-    await page.waitForTimeout(2800);
-    await page.screenshot({ path: resolve(output, 'studio-angle.png') });
-    await page.locator('#bossTurn').fill('0');
-    await page.locator('[data-boss-pause]').click();
-    assert.equal(await page.locator('[data-boss-pause]').getAttribute('aria-pressed'), 'true');
-    await page.screenshot({ path: resolve(output, 'studio-desktop.png') });
-    await page.keyboard.press('Escape');
-    assert.equal(await page.locator('#bossStudio').evaluate(el => el.open), false);
-    await boss.click({ button: 'right' });
-    await page.waitForSelector('[data-boss-preview][data-boss-renderer="three"]');
-    assert.equal(await page.locator('[data-boss-pause]').getAttribute('aria-pressed'), 'true');
-    await page.locator('#bossTurn').fill('-45');
-    await page.screenshot({ path: resolve(output, 'studio-reopened-paused.png') });
-    await page.keyboard.press('Escape');
-    results.push('All four animations, turntable, pause, native dialog Escape');
     await page.screenshot({ path: resolve(output, 'dashboard-desktop.png') });
-    // A signed-out shell must not retain the WebGL launcher or an open studio.
+    // A signed-out shell must not retain the WebGL launcher.
     await page.locator('#logoutBtn').click();
     await page.waitForSelector('html[data-auth-state="signed-out"]');
     assert.equal(await boss.isVisible(), false);
-    assert.equal(await page.locator('#bossStudio').evaluate(el => el.open), false);
-    results.push('Logout hides companion and closes studio');
+    results.push('Logout hides companion');
     await page.close();
 
     const mobile = await browser.newPage({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, deviceScaleFactor: 1 });
@@ -99,11 +74,7 @@ try {
     assert.equal(await mobile.locator('#chatInput').isVisible(), true);
     await mobile.waitForTimeout(350);
     await mobile.screenshot({ path: resolve(output, 'chat-mobile.png') });
-    await mobile.locator('#bossStudioBtn').tap();
-    await mobile.waitForSelector('[data-boss-preview][data-boss-renderer="three"]');
-    assert.ok(await mobile.locator('#bossStudio').evaluate(el => el.scrollWidth <= el.clientWidth));
-    await mobile.screenshot({ path: resolve(output, 'studio-mobile.png') });
-    results.push('390px touch drag/tap, minimize/restore, bounded chat input, scrollable studio');
+    results.push('390px touch drag/tap, minimize/restore and bounded chat input');
     await mobile.close();
 
     const reduced = await browser.newPage({ viewport: { width: 360, height: 640 }, reducedMotion: 'reduce' });

@@ -62,7 +62,7 @@ The release import map resolves local module imports to one versioned URL per mo
 
 **Chat Experience** — the movable, viewport-aware Sherpa conversation panel, multiline composer, preserved reading position and expandable activity trail of observed request/data-check/save events. Window geometry and bounded activity rendering have independent controllers; Stop ignores stale AI responses while confirmed writes await acknowledgement. See [the chat behavior and verification notes](docs/chat-experience.md).
 
-**Sherpa Boss Companion** — the portrait-inspired articulated 3D chat launcher with upright dragging, optional ragdoll throws, wall/shake reactions, a minimize dock and a character studio. The ragdoll switch is saved under the signed-in account's UID. The birthday hat follows her head in every pose. Rendering remains independent of AI permissions and Agent Persistence. See [the companion review guide](docs/sherpa-boss.md).
+**Sherpa Boss Companion** — the portrait-inspired articulated 3D chat launcher with upright dragging, optional ragdoll throws, wall/shake reactions, and a minimize dock. Existing ragdoll preferences are read from the signed-in account's UID. The birthday hat and Meet Sherpa studio were retired in Everyday Sherpa (2026.10.25). Rendering remains independent of AI permissions and Agent Persistence. See [the companion review guide](docs/sherpa-boss.md).
 
 **Planner Selection State** — the rules for turning Planner Cell click, drag, stop, and clear actions into selected Planner Cell keys, selection counts, and selection drag state.
 
