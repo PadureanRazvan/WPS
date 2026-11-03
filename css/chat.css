@@ -149,6 +149,23 @@
     pointer-events: none;
 }
 
+/* Compact launcher while the preserved 3D companion is globally disabled. */
+.chat-bubble.chat-launcher {
+    width: 44px;
+    height: 44px;
+    color: var(--accent);
+    background: var(--surface-elevated);
+    border: 1px solid var(--border);
+    box-shadow: var(--card-shadow);
+}
+
+.chat-bubble.chat-launcher::before,
+.chat-bubble.chat-launcher::after { content: none; }
+.chat-bubble.chat-launcher:hover { transform: translateY(-2px); }
+.chat-bubble.chat-launcher.hidden { visibility: hidden; }
+.chat-launcher:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+.chat-header-symbol { flex: 0 0 auto; color: var(--accent); }
+
 /* Chat Panel */
 .chat-panel {
     position: fixed;
@@ -180,6 +197,8 @@
     transform: translateY(0) scale(1);
     opacity: 1;
     visibility: visible;
+    /* Make the composer focusable immediately; only opacity fades on opening. */
+    transition: opacity 0.18s ease;
 }
 
 .chat-panel.dragging {

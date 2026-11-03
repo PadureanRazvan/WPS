@@ -1,18 +1,20 @@
 // js/chat.js — Sherpa AI Chat Module
 import { getPlannerData, commitAgentChanges } from './planner.js';
 import { buildChatActionPlan, findAgentById, getChatCalendarDate } from './chat-actions.js';
-import { getAverageProductivity, getProductivityTrendData } from './productivity.js?v=2026.10.25';
-import { showSection } from './ui.js?v=2026.10.25';
+import { getAverageProductivity, getProductivityTrendData } from './productivity.js?v=2026.11.03';
+import { showSection } from './ui.js?v=2026.11.03';
 import { translations, extractHoursFromDay, getMonthKey, getEffectiveAgentDayValue, isNonWorkingCode, normalizeTeamForDisplay, parseShiftEntry } from './config.js';
 import { auth, db, functions } from './firebase-config.js';
 import { doc, onSnapshot, setDoc } from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js';
-import { logActivity } from './logs.js?v=2026.10.25';
+import { logActivity } from './logs.js?v=2026.11.03';
 import { httpsCallable } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-functions.js";
 import { createSherpaChatService, getChatErrorTranslationKey } from './chat-service.js';
-import { createSherpaBoss } from './sherpa-boss.js';
-import { createBossPreferences } from './sherpa-boss-preferences.js';
 import { createChatWindow } from './chat-window.js';
 import { createChatActivity } from './chat-activity.js';
+
+// Global release switch: account preferences cannot enable the parked character.
+// Keep the companion modules, assets and inert HTML template for later restoration.
+const SHERPA_COMPANION_ENABLED = false;
 
 function getLang() { return localStorage.getItem('language') || 'ro'; }
 function t(key) { const l = getLang(); return (translations[l] && translations[l][key]) || key; }
@@ -39,7 +41,7 @@ const chatService = createSherpaChatService(httpsCallable(functions, 'generateSh
 
 // --- Initialization ---
 export async function initializeChat() {
-    const bubble = document.getElementById('chatBubble');
+    let bubble = document.getElementById('chatBubble');
     const panel = document.getElementById('chatPanel');
     const closeBtn = document.getElementById('chatCloseBtn');
     const sendBtn = document.getElementById('chatSendBtn');
@@ -48,9 +50,17 @@ export async function initializeChat() {
 
     if (!bubble || !panel) return;
 
+    if (SHERPA_COMPANION_ENABLED && !bubble.classList.contains('sherpa-boss')) {
+        const companion = document.getElementById('chatCompanionTemplate').content.cloneNode(true);
+        const companionBubble = companion.querySelector('#chatBubble');
+        bubble.replaceWith(companion);
+        bubble = companionBubble;
+    }
+
     chatWindow ??= createChatWindow({ panel, handle: document.getElementById('chatDragHandle') });
     chatActivity ??= createChatActivity({ element: document.getElementById('chatActivity'), getLanguage: getLang });
     if (!chatBound) {
+        if (!SHERPA_COMPANION_ENABLED) bubble.addEventListener('click', toggleChat);
         closeBtn?.addEventListener('click', toggleChat);
         sendBtn?.addEventListener('click', () => sendMessage());
         input?.addEventListener('keydown', (e) => {
@@ -85,18 +95,26 @@ export async function initializeChat() {
         chatBound = true;
     }
     clearChat();
-    bossController ??= createSherpaBoss({ element: bubble, onActivate: toggleChat, ragdollEnabled: false,
-        minimizeButton: document.getElementById('bossMinimize'), dockButton: document.getElementById('bossDock') });
-    const uid = auth.currentUser?.uid;
-    if (bossPreferences?.uid !== uid) { bossPreferences?.dispose(); bossPreferences = null; }
-    if (uid && !bossPreferences) bossPreferences = createBossPreferences({
-        uid, db, firestore: { doc, onSnapshot, setDoc }, isCurrent: () => auth.currentUser?.uid === uid,
-        onChange(preference) {
-            bossController?.setRagdollEnabled(preference.enabled);
-        }
-    });
-    bossController.setVisible(!isOpen);
-    bubble.classList.remove('hidden');
+    if (SHERPA_COMPANION_ENABLED) {
+        const session = chatSession;
+        const [{ createSherpaBoss }, { createBossPreferences }] = await Promise.all([
+            import('./sherpa-boss.js'), import('./sherpa-boss-preferences.js')
+        ]);
+        if (session !== chatSession) return;
+        bossController ??= createSherpaBoss({ element: bubble, onActivate: toggleChat, ragdollEnabled: false,
+            minimizeButton: document.getElementById('bossMinimize'), dockButton: document.getElementById('bossDock') });
+        const uid = auth.currentUser?.uid;
+        if (bossPreferences?.uid !== uid) { bossPreferences?.dispose(); bossPreferences = null; }
+        if (uid && !bossPreferences) bossPreferences = createBossPreferences({
+            uid, db, firestore: { doc, onSnapshot, setDoc }, isCurrent: () => auth.currentUser?.uid === uid,
+            onChange(preference) {
+                bossController?.setRagdollEnabled(preference.enabled);
+            }
+        });
+        bossController.setVisible(!isOpen);
+    }
+    bubble.classList.toggle('hidden', isOpen);
+    bubble.inert = isOpen;
     bubble.setAttribute('aria-expanded', String(isOpen));
 }
 
@@ -116,6 +134,7 @@ export function cleanupChat() {
     const panel = document.getElementById('chatPanel');
     if (panel) { panel.classList.remove('open'); panel.setAttribute('inert', ''); }
     document.getElementById('chatBubble')?.setAttribute('aria-expanded', 'false');
+    document.getElementById('chatBubble')?.classList.add('hidden');
     bossController?.dispose();
     bossController = null;
     stopAvatarSpeech();
@@ -134,7 +153,11 @@ function toggleChat() {
         if (isOpen) { panel.removeAttribute('inert'); chatWindow?.open(); }
         else { panel.setAttribute('inert', ''); chatWindow?.close(); }
     }
-    if (bubble) bubble.setAttribute('aria-expanded', String(isOpen));
+    if (bubble) {
+        bubble.setAttribute('aria-expanded', String(isOpen));
+        bubble.classList.toggle('hidden', isOpen);
+        bubble.inert = isOpen;
+    }
     bossController?.setVisible(!isOpen);
     if (!isOpen) bubble?.focus();
     if (isOpen) {
