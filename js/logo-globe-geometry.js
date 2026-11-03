@@ -1,6 +1,6 @@
-import { EARTH_LAND_POLYGONS, GLOBE_RADII, getGlobeColor, getGlobePoint } from './logo-globe-surface.js?v=2026.11.03';
-import { forEachGridTriangle, getGridEdgeParameters } from './logo-surface-grid.js?v=2026.11.03';
-import { getPreparedLogoGeometry } from './logo-geometry-cache.js?v=2026.11.03';
+import { EARTH_LAND_POLYGONS, GLOBE_RADII, getGlobeColor, getGlobePoint } from './logo-globe-surface.js?v=2026.11.04';
+import { forEachGridTriangle, getGridEdgeParameters } from './logo-surface-grid.js?v=2026.11.04';
+import { getPreparedLogoGeometry } from './logo-geometry-cache.js?v=2026.11.04';
 
 const templates = new WeakMap();
 const SURFACE_GRID = 5;

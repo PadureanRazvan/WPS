@@ -1,17 +1,17 @@
 // Keep sign-in independent of Planner, reports, productivity and chart libraries.
-import { bindAppLifecycleEvents, showAuthenticatedShell, showLoginScreen } from './app-shell-wiring.js?v=2026.11.03';
-import { loginWithGoogle, onAuthChange } from './auth.js?v=2026.11.03';
+import { bindAppLifecycleEvents, showAuthenticatedShell, showLoginScreen } from './app-shell-wiring.js?v=2026.11.04';
+import { loginWithGoogle, onAuthChange } from './auth.js?v=2026.11.04';
 import { applyDailyGreeting } from './daily-greeting.js';
 import { applyBootAppearance, createAppStartup, createVisibleLogoStarter } from './app-startup.js';
 import { setSignInPending, showSignInError } from './sign-in-ui.js';
 import { t } from './localization.js';
 
 const initLogoAnimation = createVisibleLogoStarter({
-    loadLogo: () => import('./logo-animation.js?v=2026.11.03')
+    loadLogo: () => import('./logo-animation.js?v=2026.11.04')
 });
 
 const startup = createAppStartup({
-    loadRuntime: () => import('./app-runtime.js?v=2026.11.03'),
+    loadRuntime: () => import('./app-runtime.js?v=2026.11.04'),
     onLoading(user) {
         showAuthenticatedShell(user, document);
         document.documentElement.dataset.workspaceState = 'loading';

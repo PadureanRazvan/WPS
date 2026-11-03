@@ -1,8 +1,8 @@
 const REASON_TRANSLATIONS = Object.freeze({
     AI_NOT_CONFIGURED: 'chat-service-setup-pending',
-    AI_AUTH_INVALID: 'chat-service-configuration-error',
-    AI_AUTH_PERSIST_FAILED: 'chat-service-configuration-error',
-    AI_AUTH_RECOVERY_REQUIRED: 'chat-service-configuration-error',
+    AI_AUTH_INVALID: 'chat-service-account-recovery',
+    AI_AUTH_PERSIST_FAILED: 'chat-service-account-recovery',
+    AI_AUTH_RECOVERY_REQUIRED: 'chat-service-account-recovery',
     AI_BUSY: 'chat-rate-limit',
     AI_TIMEOUT: 'chat-service-unavailable',
     AI_LEASE_LOST: 'chat-service-unavailable',

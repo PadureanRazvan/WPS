@@ -9,7 +9,8 @@ const SECRET = 'projects/test-project/secrets/sherpa-codex-auth';
 const credentials = suffix => ({ auth_mode: 'chatgpt', OPENAI_API_KEY: null,
   tokens: { access_token: `test-access-${suffix}`, refresh_token: `test-refresh-${suffix}`, id_token: `test-id-${suffix}`, account_id: 'test-account' } });
 
-async function fixture(t, { initial = credentials('before'), saveFails = false } = {}) {
+async function fixture(t, { initial = credentials('before'), saveFails = false,
+  readVersionName = `${SECRET}/versions/1`, savedVersionName = `${SECRET}/versions/2` } = {}) {
   const root = await mkdtemp(join(tmpdir(), 'sherpa-auth-test-'));
   t.after(() => rm(root, { recursive: true, force: true }));
   const calls = [];
@@ -20,8 +21,8 @@ async function fixture(t, { initial = credentials('before'), saveFails = false }
     async markAuthInUse() { calls.push('begin'); }, async markAuthSettled() { calls.push('settled'); },
     async quarantine() { calls.push('quarantine'); } };
   const secretClient = {
-    async accessSecretVersion({ name }) { assert.equal(name, `${SECRET}/versions/latest`); calls.push('read'); return [{ payload: { data: Buffer.from(JSON.stringify(initial)) } }]; },
-    async addSecretVersion({ parent, payload }) { assert.equal(parent, SECRET); calls.push('save'); if (saveFails) throw new Error('Sensitive provider detail'); saved.push(Buffer.from(payload.data)); return [{ name: `${SECRET}/versions/2` }]; }
+    async accessSecretVersion({ name }) { assert.equal(name, `${SECRET}/versions/latest`); calls.push('read'); return [{ name: readVersionName, payload: { data: Buffer.from(JSON.stringify(initial)) } }]; },
+    async addSecretVersion({ parent, payload }) { assert.equal(parent, SECRET); calls.push('save'); if (saveFails) throw new Error('Sensitive provider detail'); saved.push(Buffer.from(payload.data)); return [{ name: savedVersionName }]; }
   };
   return { root, calls, saved, lease, controller, runner: createAuthStateRunner({ secretClient, secretName: SECRET, tempRoot: root }) };
 }
@@ -51,6 +52,46 @@ test('refresh is persisted even when model generation fails', async t => {
   assert.equal(f.saved.length, 1);
   assert.ok(f.calls.includes('settled'));
   assert.deepEqual(await readdir(f.root), []);
+});
+
+test('a project ID request accepts the same canonical project number on read and save', async t => {
+  const canonical = 'projects/123456789012/secrets/sherpa-codex-auth';
+  const f = await fixture(t, { readVersionName: `${canonical}/versions/1`, savedVersionName: `${canonical}/versions/2` });
+  const result = await f.runner.run({ lease: f.lease, execute: async home => {
+    await writeFile(join(home, 'auth.json'), JSON.stringify(credentials('refreshed')));
+    return 'reply';
+  } });
+  assert.equal(result, 'reply');
+  assert.deepEqual(JSON.parse(f.saved[0]), credentials('refreshed'));
+  assert.equal(f.calls.includes('quarantine'), false);
+  assert.ok(f.calls.includes('settled'));
+  assert.deepEqual(await readdir(f.root), []);
+});
+
+test('a saved receipt must identify a concrete version of the same canonical secret', async t => {
+  const canonical = 'projects/123456789012/secrets/sherpa-codex-auth';
+  for (const savedVersionName of [
+    'projects/999999999999/secrets/sherpa-codex-auth/versions/2',
+    'projects/123456789012/secrets/other-secret/versions/2',
+    `${canonical}/versions/2/extra`, `${canonical}/versions/latest`, `${canonical}/versions/`, null
+  ]) {
+    const f = await fixture(t, { readVersionName: `${canonical}/versions/1`, savedVersionName });
+    await assert.rejects(f.runner.run({ lease: f.lease, execute: async home => {
+      await writeFile(join(home, 'auth.json'), JSON.stringify(credentials('refreshed')));
+      return 'must not escape';
+    } }), { reason: 'AI_AUTH_PERSIST_FAILED' });
+    assert.ok(f.calls.includes('quarantine'));
+    assert.equal(f.calls.includes('settled'), false);
+  }
+});
+
+test('missing or malformed accessed version identity is rejected before using credentials', async t => {
+  for (const readVersionName of ['', 'projects/test-project/secrets/other/versions/1', `${SECRET}/versions/latest`]) {
+    const f = await fixture(t, { readVersionName });
+    await assert.rejects(f.runner.run({ lease: f.lease, execute: async () => assert.fail('Must not execute') }), { reason: 'AI_AUTH_INVALID' });
+    assert.equal(f.calls.includes('begin'), false);
+    assert.equal(f.calls.includes('save'), false);
+  }
 });
 
 test('unchanged credentials do not create redundant secret versions', async t => {
