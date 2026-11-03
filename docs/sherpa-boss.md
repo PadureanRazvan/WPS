@@ -1,5 +1,13 @@
 # Sherpa boss companion
 
+## Current status: globally inactive
+
+Quiet Companion (2026.11.03) disables Rahela's figure for every account. A static, keyboard-accessible 44px chat icon replaces the character, and the chat header uses the same neutral symbol. Opening chat hides the button; closing it restores focus. No companion modules or portrait are downloaded, no companion renderer is created, and no companion preference subscription starts.
+
+The global `SHERPA_COMPANION_ENABLED` constant in `js/chat.js` is `false`. Saved ragdoll preferences, browser storage and URL parameters cannot override it. Character markup remains in `index.html` inside the inert `chatCompanionTemplate`; the model, portrait, controller, physics, stylesheet and preference module remain in the repository unchanged. No account data is deleted.
+
+To restore the miniature in a future approved release, set the constant to `true`, refresh the release identity, and run the companion/browser checks below. The existing initialization mounts the template and loads the modules only in that enabled path; stale initialization after logout is ignored. The following sections document the preserved character's behavior while enabled.
+
 The bottom-right chat launcher is now an articulated Three.js character, modeled from the supplied portrait: chestnut waves, brown almond eyes, lilac blouse with rolled sleeves, plum paisley scarf and gold slide, silver necklace, gold earrings and watch. This is a stylized, manually modeled likeness, not a reconstructed scan. The trousers and shoes are inferred because the reference does not show a complete body. The original photograph is not copied into the site.
 
 ## Use

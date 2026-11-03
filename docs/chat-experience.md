@@ -1,5 +1,7 @@
 # Sherpa chat experience
 
+Quiet Companion (2026.11.03) keeps the chat panel and conversation behavior below, using a static 44px launcher and neutral header icon. Rahela's 3D companion is globally inactive; its implementation and saved preferences are preserved as described in [the companion guide](sherpa-boss.md).
+
 Implemented and validated on 23 October 2026. Release identity and rollout details are in [Open Dialogue](releases/2026-10-23-open-dialogue.md). The review uses offline AI/Firestore fixtures; production verification is read-only.
 
 ## Floating window

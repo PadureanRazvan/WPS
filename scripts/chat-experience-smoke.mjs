@@ -52,8 +52,20 @@ export const runTransaction = async (_db, work) => work({
     });
     await page.goto(`${base}/?session=ready&boss=dashboard&language=en`);
     await page.locator('#chatBubble').waitFor({ state: 'visible' });
+    const launcher = await page.locator('#chatBubble').boundingBox();
+    assert.equal(launcher.width, 44);
+    assert.equal(launcher.height, 44);
+    assert.equal(await page.locator('[data-boss-canvas], #bossMinimize, #bossDock, .boss-header-portrait').count(), 0);
+    assert.deepEqual(await page.evaluate(() => performance.getEntriesByType('resource')
+        .filter(entry => /sherpa-boss.*\.(?:js|png)/.test(entry.name)).map(entry => entry.name)), []);
     await page.locator('#chatBubble').focus();
     await page.keyboard.press('Enter');
+    await page.locator('#chatPanel.open').waitFor();
+    assert.equal(await page.locator('#chatInput').evaluate(el => document.activeElement === el), true);
+    await page.keyboard.press('Escape');
+    await page.locator('#chatBubble').waitFor({ state: 'visible' });
+    assert.equal(await page.locator('#chatBubble').evaluate(el => document.activeElement === el), true);
+    await page.keyboard.press('Space');
     await page.locator('#chatPanel.open').waitFor();
 }
 
@@ -129,7 +141,7 @@ try {
     assert.equal(await page.locator('#chatStopBtn').isVisible(), true);
     await page.emulateMedia({ reducedMotion: 'no-preference' });
     await page.locator('#chatCloseBtn').click();
-    for (const selector of ['.chat-activity-indicator', '#chatPanel .chat-avatar']) {
+    for (const selector of ['.chat-activity-indicator']) {
         assert.equal(await page.locator(selector).evaluate(el => getComputedStyle(el).animationPlayState), 'paused',
             `${selector}: pending work must not animate in a closed panel`);
     }
@@ -138,11 +150,11 @@ try {
     await page.locator('#chatPanel.open').waitFor();
     assert.equal(await page.locator('.chat-activity-indicator').evaluate(el => getComputedStyle(el).animationPlayState), 'running');
     await page.emulateMedia({ reducedMotion: 'reduce' });
-    for (const selector of ['.chat-activity-indicator', '#chatPanel .chat-avatar']) {
+    for (const selector of ['.chat-activity-indicator']) {
         assert.equal(await page.locator(selector).evaluate(el => getComputedStyle(el).animationName), 'none',
             `${selector}: reduced motion disables animation`);
     }
-    results.push('Closed pending chat pauses CSS animations; reopening resumes status; reduced motion disables indicator and avatar animation');
+    results.push('Closed pending chat pauses activity animation; reopening resumes status; reduced motion disables animation');
     await answer(page, [{ functionCall: { name: 'get_agent_list', args: {} } }, { functionCall: { name: 'get_today_status', args: {} } }]);
     await page.waitForFunction(() => window.chatSmoke.calls.length === 2);
     await page.locator('#chatActivity summary').click();

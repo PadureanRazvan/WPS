@@ -1,4 +1,4 @@
-import { translations } from './config.js?v=2026.10.25';
+import { translations } from './config.js?v=2026.11.03';
 
 export function t(key) {
     const language = globalThis.localStorage?.getItem('language') || 'ro';
