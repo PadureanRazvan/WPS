@@ -5,6 +5,7 @@ import { timingSafeEqual } from 'node:crypto';
 
 const MAX_AUTH_BYTES = 128_000;
 const SECRET_RESOURCE = /^projects\/[A-Za-z0-9_-]+\/secrets\/sherpa-codex-auth$/;
+const SECRET_VERSION_RESOURCE = /^(projects\/[A-Za-z0-9_-]+\/secrets\/sherpa-codex-auth)\/versions\/[1-9][0-9]*$/;
 function fault(reason) {
   return Object.assign(new Error('Sherpa AI authentication unavailable.'), { reason, code: 'failed-precondition' });
 }
@@ -40,6 +41,11 @@ export function createAuthStateRunner({ secretClient, secretName, tempRoot = tmp
           [version] = await secretClient.accessSecretVersion({ name: `${secretName}/versions/latest` }, { timeout: 10_000 });
           original = Buffer.from(version?.payload?.data || []);
         } catch { throw fault('AI_AUTH_INVALID'); }
+        // Google canonicalizes a requested project ID to its project number.
+        // Bind save receipts to the identity returned by the authenticated read,
+        // rather than comparing them with the caller's project alias.
+        const canonicalSecret = SECRET_VERSION_RESOURCE.exec(version?.name || '')?.[1];
+        if (!canonicalSecret) throw fault('AI_AUTH_INVALID');
         validateAuth(original);
         await lease.assertHeld();
         if (signal?.aborted) throw signal.reason || fault('AI_UNAVAILABLE');
@@ -62,7 +68,7 @@ export function createAuthStateRunner({ secretClient, secretName, tempRoot = tmp
           if (changed) {
             await lease.assertHeld();
             const [saved] = await secretClient.addSecretVersion({ parent: secretName, payload: { data: updated } }, { timeout: 10_000 });
-            if (!saved?.name?.startsWith(`${secretName}/versions/`)) throw fault('AI_AUTH_PERSIST_FAILED');
+            if (SECRET_VERSION_RESOURCE.exec(saved?.name || '')?.[1] !== canonicalSecret) throw fault('AI_AUTH_PERSIST_FAILED');
             await lease.assertHeld();
           }
           if (failure?.authStateUncertain === true) {
