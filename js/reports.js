@@ -1,8 +1,8 @@
 // js/reports.js
 import { getPlannerData } from './planner.js';
-import { translations } from './config.js?v=2026.11.03';
-import { buildReportReadModel } from './report-read-model.js?v=2026.11.03';
-import { renderReportsView } from './reports-view.js?v=2026.11.03';
+import { translations } from './config.js?v=2026.11.04';
+import { buildReportReadModel } from './report-read-model.js?v=2026.11.04';
+import { renderReportsView } from './reports-view.js?v=2026.11.04';
 
 function getLang() { return localStorage.getItem('language') || 'ro'; }
 function t(key) { const l = getLang(); return (translations[l] && translations[l][key]) || key; }

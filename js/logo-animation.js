@@ -1,15 +1,15 @@
-import { createGlobeCore, createHeartCore, createSummitCore, createInfinityCore } from './logo-cores.js?v=2026.11.03';
-import { createFspCore, loadFspTextures } from './logo-fsp-core.js?v=2026.11.03';
-import { createLogoStudioLighting } from './logo-materials.js?v=2026.11.03';
+import { createGlobeCore, createHeartCore, createSummitCore, createInfinityCore } from './logo-cores.js?v=2026.11.04';
+import { createFspCore, loadFspTextures } from './logo-fsp-core.js?v=2026.11.04';
+import { createLogoStudioLighting } from './logo-materials.js?v=2026.11.04';
 import { createAnimationScheduler } from './animation-scheduler.js';
 import { prepareLogoGeometries } from './logo-preparation.js';
-import { createLogoInteraction } from './logo-interaction.js?v=2026.11.03';
+import { createLogoInteraction } from './logo-interaction.js?v=2026.11.04';
 import {
     HOLD_DURATIONS, LOGO_STORY_DURATION, getLogoChapter, getChapterAge,
     getStoryMotion, getStoryVelocity, getStoryBeat, nearestStoryAngle,
     blendStoryPose, writeStoryParticle, getStoryDissolve, getStoryChapterAt
-} from './logo-story.js?v=2026.11.03';
-export { HOLD_DURATIONS } from './logo-story.js?v=2026.11.03';
+} from './logo-story.js?v=2026.11.04';
+export { HOLD_DURATIONS } from './logo-story.js?v=2026.11.04';
 import {
     LOGO_PARTICLE_COUNT,
     LOGO_SHAPE_NAMES,
@@ -17,7 +17,7 @@ import {
     createLogoShape,
     matchLogoShape,
     copyLogoPosePositions
-} from './logo-shapes.js?v=2026.11.03&fsp=20260906.3';
+} from './logo-shapes.js?v=2026.11.04&fsp=20260906.3';
 
 const TAU = Math.PI * 2;
 const MANUAL_MORPH_DURATION = 1400;
