@@ -110,6 +110,18 @@ For rollback, restore the last known-good gateway revision/configuration, or dis
 
 ## Deployment record
 
+### 4 November 2026: Steady Session recovery
+
+**Chat restored and verified.** [PR #35](https://github.com/PadureanRazvan/WPS/pull/35), merge `b0727e7`, fixes the false authentication-persistence failure caused by comparing a canonical numeric project identity with the configured project-ID alias. The browser now reports cloud-login recovery instead of a Gemini configuration issue.
+
+Cloud Build `212788ac-c065-47d3-a18d-3286fab84cc3` produced image digest `sha256:8a9fcbb15ce2f622cd4062bd9197d829d850a2c6c50d9a92b55d9d3a6f006178`. Current worker revision is `sherpa-codex-worker-00003-cx7`, with all traffic; gateway revision remains `generatesherpachat-00001-dit`. Existing private IAM, identities, environment and limits are preserved. After gating and draining old requests, the user completed a fresh dedicated login; Secret Manager version `3` was created at `2026-11-03T22:18:44.391958Z`. The exact quarantined lease was conditionally removed and the sole gateway invoker restored. No workforce records or rules changed.
+
+The live signed-in Chrome test displayed “Chatul funcționează.” with matching gateway and worker HTTP 200 requests at `2026-11-03T22:22:52Z`; the lease was absent afterward. The immediate first probe received an IAM denial shortly after restoring access; retry succeeded without another change. Allow for [IAM propagation](https://docs.cloud.google.com/iam/docs/access-change-propagation) before treating an immediate post-restore denial as a new model or credential failure. Keep the worker private throughout. Unauthenticated worker and callable probes still returned 403 and 401.
+
+Linux/container CI and the cloud build passed; 41 live Pages assets matched the release commit. Natural refresh of the fresh session and live workforce query/proposal/concurrency flows were not exercised in this recovery. See the [incident report](health/2026-11-03-chat-auth-persistence.md) for exact evidence, validation limits and unchanged dependency-audit findings; local receipts are under ignored `output/chat-recovery-20261104/`.
+
+### 23 October 2026: initial deployment
+
 Status as of 2026-10-22 UTC (23 October in Bucharest): **backend deployed; live AI responses confirmed**. Live checks confirmed project `billingEnabled: true` and linked-account `open: true`, and `-ProvisionOnly` completed successfully. Required APIs, three dedicated service accounts and their IAM grants, the dedicated Secret Manager secret, image repository and source bucket are provisioned. Firebase CLI project access was verified for the deployment account. The user completed the dedicated ChatGPT bootstrap and its session was stored in Secret Manager without printing credential values; a metadata-only lookup confirmed version `1` is `ENABLED`.
 
 The initial full-deploy attempt exited before the container build because `gcloud secrets versions list` requires positional `SECRET`, not `--secret`. Commit `eec8aae` fixes that lookup and adds exact-argument regressions; the retry does not need another ChatGPT login.
