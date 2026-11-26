@@ -2,6 +2,7 @@
 param(
     [string] $ProjectId = 'wps-sherpa-database',
     [string] $Region = 'europe-west8',
+    [string] $FirebaseAccount = '',
     [switch] $RotateToken
 )
 
@@ -113,9 +114,17 @@ Invoke-Gcloud -Arguments @(
 ) | Out-Null
 
 Write-Host '3. Deploying ONLY functions:plannerFeed (leaving generateSherpaChat untouched) ...'
+$firebaseAccountToUse = $FirebaseAccount
+if (-not $firebaseAccountToUse) {
+    $firebaseAccountToUse = Invoke-Gcloud -Arguments @('auth', 'list', '--filter=status:ACTIVE', '--format=value(account)')
+}
+$firebaseArgs = @('--yes', 'firebase-tools@15.23.0', 'deploy', '--only', 'functions:plannerFeed', '--project', $ProjectId, '--non-interactive')
+if ($firebaseAccountToUse) {
+    $firebaseArgs += @('--account', $firebaseAccountToUse)
+}
 Push-Location $repoRoot
 try {
-    & npx --yes firebase-tools@15.23.0 deploy --only functions:plannerFeed --project $ProjectId --non-interactive
+    & npx @firebaseArgs
     if ($LASTEXITCODE -ne 0) {
         throw "Firebase deploy failed with exit code $LASTEXITCODE"
     }
